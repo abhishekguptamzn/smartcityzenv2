@@ -1,0 +1,171 @@
+// "My memberships" derivation — read this before touching anything below.
+//
+// There is NO API endpoint that lists a customer's own memberships. The
+// member-show endpoint (`GET /{libraries|gyms}/{facility_id}/members/{id}`)
+// requires the facility id in the URL, but a payment record only carries
+// `payable_type` (LibraryMember/GymMember) and `payable_id` (the member id)
+// — never the owning facility id. So a payment alone can never be resolved
+// into a full member record; a genuine "my memberships" list is not
+// buildable from this API as designed.
+//
+// What IS buildable: the customer's own payment history is self-scoped
+// server-side (`GET /payments`), so we can recover which membership records
+// they've paid for and show payment-derived facts (amount, currency, last
+// paid date) without ever calling the members endpoint. `myMembershipSummaries`
+// below does exactly that and no more — it must not be extended into a fake
+// membership-resolution pipeline the API can't actually support. The
+// Membership Details screen is responsible for attempting the full member
+// lookup ONLY when a facility id is separately known (e.g. passed via
+// navigation from a screen that already fetched the facility), and must
+// degrade gracefully to a "contact staff" notice otherwise.
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../api/facilities_api.dart';
+import '../models/facility_model.dart';
+import '../models/my_membership_summary.dart';
+import '../models/pagination_meta.dart';
+import '../models/payment_model.dart';
+import 'payments_repository.dart';
+
+part 'facilities_repository.g.dart';
+
+class FacilitiesRepository {
+  FacilitiesRepository(this._api, this._paymentsRepository);
+
+  final FacilitiesApi _api;
+  final PaymentsRepository _paymentsRepository;
+
+  Future<Paginated<FacilityModel>> list({
+    required FacilityKind kind,
+    String? search,
+    String? cityId,
+    String? location,
+    String? status,
+    String? sortBy,
+    String? sortDir,
+    int perPage = 15,
+    int page = 1,
+  }) async {
+    final response = await _api.list(
+      kind: kind,
+      search: search,
+      cityId: cityId,
+      location: location,
+      status: status,
+      sortBy: sortBy,
+      sortDir: sortDir,
+      perPage: perPage,
+      page: page,
+    );
+    final paginated = Paginated.fromEnvelope(
+      response.data as Map<String, dynamic>,
+      FacilityModel.fromJson,
+    );
+    return Paginated<FacilityModel>(
+      items: paginated.items.map((f) => f.copyWith(kind: kind)).toList(),
+      meta: paginated.meta,
+    );
+  }
+
+  Future<Paginated<FacilityModel>> nearbyLibraries({
+    double? latitude,
+    double? longitude,
+    String? cityId,
+    String? search,
+    double? maxDistanceKm,
+    int perPage = 15,
+    int page = 1,
+  }) async {
+    final response = await _api.nearbyLibraries(
+      latitude: latitude,
+      longitude: longitude,
+      cityId: cityId,
+      search: search,
+      maxDistanceKm: maxDistanceKm,
+      perPage: perPage,
+      page: page,
+    );
+    final paginated = Paginated.fromEnvelope(
+      response.data as Map<String, dynamic>,
+      FacilityModel.fromJson,
+    );
+    return Paginated<FacilityModel>(
+      items: paginated.items
+          .map((f) => f.copyWith(kind: FacilityKind.library))
+          .toList(),
+      meta: paginated.meta,
+    );
+  }
+
+  Future<FacilityModel> getById(FacilityKind kind, String id) async {
+    final response = await _api.getById(kind, id);
+    final data =
+        (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
+    return FacilityModel.fromJson(data).copyWith(kind: kind);
+  }
+
+  Future<List<Map<String, dynamic>>> feePlans(
+    FacilityKind kind,
+    String facilityId,
+  ) async {
+    final response = await _api.feePlans(kind, facilityId);
+    final data = response.data;
+    // Plain array response, not the paginated envelope.
+    if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+    if (data is Map<String, dynamic> && data['data'] is List) {
+      return (data['data'] as List).whereType<Map<String, dynamic>>().toList();
+    }
+    return const [];
+  }
+
+  Future<List<MyMembershipSummary>> myMembershipSummaries() async {
+    final List<PaymentModel> all = await _paymentsRepository.listAllPages();
+    final Map<(FacilityKind, String), PaymentModel> latestByRef = {};
+
+    for (final payment in all) {
+      final payableType = payment.payableType;
+      final payableId = payment.payableId;
+      if (payableType == null || payableId == null) continue;
+
+      final FacilityKind? kind = switch (payableType) {
+        'LibraryMember' => FacilityKind.library,
+        'GymMember' => FacilityKind.gym,
+        _ => null,
+      };
+      if (kind == null) continue;
+
+      final key = (kind, payableId);
+      final existing = latestByRef[key];
+      if (existing == null ||
+          (payment.paidAt ?? payment.createdAt ?? DateTime(0)).isAfter(
+            existing.paidAt ?? existing.createdAt ?? DateTime(0),
+          )) {
+        latestByRef[key] = payment;
+      }
+    }
+
+    return latestByRef.entries.map((entry) {
+      final (kind, payableId) = entry.key;
+      final payment = entry.value;
+      return MyMembershipSummary(
+        kind: kind,
+        payableId: payableId,
+        latestPaidAt: payment.paidAt ?? payment.createdAt,
+        amount: payment.amount,
+        currency: payment.currency,
+      );
+    }).toList()..sort((a, b) {
+      final aDate = a.latestPaidAt ?? DateTime(0);
+      final bDate = b.latestPaidAt ?? DateTime(0);
+      return bDate.compareTo(aDate);
+    });
+  }
+}
+
+@Riverpod(keepAlive: true)
+FacilitiesRepository facilitiesRepository(Ref ref) {
+  return FacilitiesRepository(
+    ref.watch(facilitiesApiProvider),
+    ref.watch(paymentsRepositoryProvider),
+  );
+}
