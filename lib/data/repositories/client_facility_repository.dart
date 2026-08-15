@@ -69,6 +69,12 @@ class ClientFacilityRepository {
     return rawList.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>> addGymMember(String gymId, Map<String, dynamic> payload) async {
+    final res = await _api.addGymMember(gymId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
   Future<List<Map<String, dynamic>>> getGymAttendance(String gymId, {String? date, int page = 1}) async {
     final res = await _api.getGymAttendance(gymId, date: date, page: page);
     final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
@@ -117,6 +123,12 @@ class ClientFacilityRepository {
     final res = await _api.getLibraryMembers(libraryId, search: search, status: status, page: page);
     final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
     return rawList.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> addLibraryMember(String libraryId, Map<String, dynamic> payload) async {
+    final res = await _api.addLibraryMember(libraryId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
   }
 }
 

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/models/user_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../widgets/citizen_qr_modal.dart';
 
 class IdCardScreen extends ConsumerWidget {
   const IdCardScreen({super.key});
@@ -638,25 +639,32 @@ class _CardFrontDesign extends StatelessWidget {
                         const SizedBox(width: 12),
 
                         // White QR Code Button
-                        Container(
-                          width: 46,
-                          height: 46,
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => showCitizenQrModal(context, user),
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x25000000),
-                                blurRadius: 8,
-                                offset: Offset(0, 3),
+                            child: Container(
+                              width: 46,
+                              height: 46,
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x25000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.qr_code_2_rounded,
-                            color: Color(0xFF0F172A),
-                            size: 34,
+                              child: const Icon(
+                                Icons.qr_code_2_rounded,
+                                color: Color(0xFF0F172A),
+                                size: 34,
+                              ),
+                            ),
                           ),
                         ),
                       ],

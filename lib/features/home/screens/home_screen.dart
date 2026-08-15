@@ -17,6 +17,7 @@ import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../widgets/citizen_qr_modal.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -815,25 +816,36 @@ class _CityzenIdHeroCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              if (user is UserModel) {
+                                showCitizenQrModal(context, user as UserModel);
+                              }
+                            },
                             borderRadius: BorderRadius.circular(10),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x20000000),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x20000000),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.qr_code_2_rounded,
-                            color: Color(0xFF0F172A),
-                            size: 28,
+                              child: const Icon(
+                                Icons.qr_code_2_rounded,
+                                color: Color(0xFF0F172A),
+                                size: 28,
+                              ),
+                            ),
                           ),
                         ),
                       ],
