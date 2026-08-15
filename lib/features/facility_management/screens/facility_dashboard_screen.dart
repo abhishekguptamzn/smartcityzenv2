@@ -179,11 +179,29 @@ class FacilityDashboardScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(
             child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                'Failed to load your facilities: $err',
-                style: TextStyle(color: scheme.error),
-                textAlign: TextAlign.center,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 48, color: scheme.error),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Failed to load facilities',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    err.toString(),
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => ref.refresh(myOwnedFacilitiesProvider),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
           ),
