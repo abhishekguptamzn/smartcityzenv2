@@ -6,13 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/providers/auth_controller.dart';
-import '../../../core/providers/cities_providers.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/users_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/searchable_city_picker.dart';
 import '../../../shared/widgets/user_avatar.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -26,6 +26,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _submitting = false;
   bool _uploadingPhoto = false;
+  String? _selectedCityId;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(authControllerProvider).value;
+    _selectedCityId = user?.city?.id ?? user?.cityId;
+  }
 
   Future<void> _pickAndUploadPhoto(ImageSource source, UserModel user) async {
     final l10n = AppLocalizations.of(context);
@@ -252,7 +260,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             name: v['name'] as String?,
             email: v['email'] as String?,
             phone: v['phone'] as String?,
-            cityId: v['city'] as String?,
+            cityId: _selectedCityId ?? (v['city'] as String?),
           );
       await ref.read(authControllerProvider.notifier).refreshMe();
       if (!mounted) return;
@@ -284,7 +292,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final userAsync = ref.watch(authControllerProvider);
-    final citiesAsync = ref.watch(citiesListProvider);
 
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
@@ -451,27 +458,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    citiesAsync.when(
-                      data:
-                          (cities) => FormBuilderDropdown<String>(
-                            name: 'city',
-                            decoration: InputDecoration(
-                              labelText: l10n.selectYourCity,
-                              prefixIcon: Icon(
-                                Icons.location_city_rounded,
-                                color: scheme.primary,
-                              ),
-                            ),
-                            items: [
-                              for (final city in cities)
-                                DropdownMenuItem(
-                                  value: city.id,
-                                  child: Text(city.name),
-                                ),
-                            ],
-                          ),
-                      loading: () => const LinearProgressIndicator(),
-                      error: (_, _) => const SizedBox.shrink(),
+                    SearchableCityPicker(
+                      selectedCityId: _selectedCityId ?? user.city?.id ?? user.cityId,
+                      labelText: l10n.selectYourCity,
+                      prefixIcon: Icon(
+                        Icons.location_city_rounded,
+                        color: scheme.primary,
+                      ),
+                      onCitySelected: (city) {
+                        setState(() {
+                          _selectedCityId = city.id;
+                        });
+                        _formKey.currentState?.patchValue({'city': city.id});
+                      },
                     ),
                     const SizedBox(height: 24),
                     FilledButton(

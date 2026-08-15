@@ -8,10 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers/auth_controller.dart';
-import '../../../core/providers/cities_providers.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/searchable_city_picker.dart';
 
 class LoginRegisterScreen extends ConsumerStatefulWidget {
   const LoginRegisterScreen({super.key});
@@ -30,6 +30,7 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
   bool _loginObscure = true;
   bool _registerObscure = true;
   bool _submitting = false;
+  String? _registerCityId;
 
   final List<DateTime> _recentFailedAttempts = [];
   DateTime? _cooldownUntil;
@@ -109,13 +110,14 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
 
     setState(() => _submitting = true);
     final v = form.value;
+    final cityId = _registerCityId ?? (v['city'] as String?) ?? '';
     await ref
         .read(authControllerProvider.notifier)
         .register(
           name: v['name'] as String,
           email: v['email'] as String,
           phone: v['phone'] as String?,
-          cityId: v['city'] as String,
+          cityId: cityId,
           password: v['password'] as String,
           passwordConfirmation: v['confirmPassword'] as String,
         );
@@ -372,76 +374,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          // New Onboard Module Entry Point
-                          InkWell(
-                            onTap: () => context.push('/onboard'),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    scheme.primary.withValues(alpha: 0.1),
-                                    scheme.secondary.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: scheme.primary.withValues(alpha: 0.25),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          scheme.primary.withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.rocket_launch_rounded,
-                                      size: 18,
-                                      color: scheme.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Onboard with CityZen',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13.5,
-                                            color: scheme.primary,
-                                          ),
-                                        ),
-                                        Text(
-                                          'New User, Library, or Gym setup',
-                                          style: TextStyle(
-                                            fontSize: 11.5,
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_forward_ios_rounded,
-                                    size: 14,
-                                    color: scheme.primary,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -522,7 +454,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
   }
 
   Widget _buildRegisterForm(AppLocalizations l10n) {
-    final citiesAsync = ref.watch(citiesListProvider);
     return FormBuilder(
       key: _registerFormKey,
       child: Column(
@@ -558,20 +489,21 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
             ]),
           ),
           const SizedBox(height: 16),
-          citiesAsync.when(
-            data: (cities) => FormBuilderDropdown<String>(
-              name: 'city',
-              decoration: InputDecoration(labelText: l10n.selectYourCity),
-              validator: FormBuilderValidators.required(
-                errorText: l10n.requiredField,
-              ),
-              items: [
-                for (final city in cities)
-                  DropdownMenuItem(value: city.id, child: Text(city.name)),
-              ],
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (_, _) => Text(l10n.errorGeneric),
+          SearchableCityPicker(
+            selectedCityId: _registerCityId,
+            labelText: l10n.selectYourCity,
+            validator: (val) {
+              if (_registerCityId == null || _registerCityId!.isEmpty) {
+                return l10n.requiredField;
+              }
+              return null;
+            },
+            onCitySelected: (city) {
+              setState(() {
+                _registerCityId = city.id;
+              });
+              _registerFormKey.currentState?.patchValue({'city': city.id});
+            },
           ),
           const SizedBox(height: 16),
           StatefulBuilder(

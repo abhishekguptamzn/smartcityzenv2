@@ -10,6 +10,7 @@ import '../../../core/providers/facilities_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/my_membership_summary.dart';
+import '../../../data/models/user_model.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/empty_state_view.dart';
@@ -90,26 +91,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Onboard User / Facility',
-            icon: Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.16),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-                  width: 1.5,
+          if (user?.isOnboardingUser == true)
+            IconButton(
+              tooltip: 'Onboard User / Facility',
+              icon: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.rocket_launch_rounded,
+                  size: 18,
+                  color: Color(0xFF6366F1),
                 ),
               ),
-              child: const Icon(
-                Icons.rocket_launch_rounded,
-                size: 18,
-                color: Color(0xFF6366F1),
-              ),
+              onPressed: () => context.push('/onboard'),
             ),
-            onPressed: () => context.push('/onboard'),
-          ),
           const SizedBox(width: 2),
           IconButton(
             tooltip: l10n.comingSoon,
@@ -147,9 +149,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 10),
               const _CarouselDots(count: 3, activeIndex: 0),
               const SizedBox(height: 16),
-              const _DashboardQuickActions(),
-              const SizedBox(height: 16),
-              const _OnboardHubBanner(),
+              _DashboardQuickActions(user: user),
+              if (user?.isClientUser == true) ...[
+                const SizedBox(height: 16),
+                const _ClientFacilityHubBanner(),
+              ],
+              if (user?.isOnboardingUser == true) ...[
+                const SizedBox(height: 16),
+                const _OnboardHubBanner(),
+              ],
               const SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +202,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              _ServiceGrid(l10n: l10n),
+              _ServiceGrid(l10n: l10n, user: user),
               const SizedBox(height: 24),
               _NearbyLibrariesSection(l10n: l10n),
               const SizedBox(height: 24),
@@ -842,23 +850,29 @@ class _CityzenIdHeroCard extends StatelessWidget {
 }
 
 class _ServiceGrid extends StatelessWidget {
-  const _ServiceGrid({required this.l10n});
+  const _ServiceGrid({required this.l10n, this.user});
 
   final AppLocalizations l10n;
+  final UserModel? user;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Distinct, vivid per-category colors (independent of brand primary/
-    // secondary) so the grid reads as colorful and organized at a glance,
-    // matching the target "Explore City Services" design.
     final items = <(IconData, String, Color, VoidCallback?)>[
-      (
-        Icons.rocket_launch_rounded,
-        'Onboard',
-        const Color(0xFF6366F1),
-        () => context.push('/onboard'),
-      ),
+      if (user?.isClientUser == true)
+        (
+          Icons.business_center_rounded,
+          'My Facility',
+          const Color(0xFF0D9488),
+          () => context.push('/client/facilities'),
+        )
+      else if (user?.isOnboardingUser == true)
+        (
+          Icons.rocket_launch_rounded,
+          'Onboard',
+          const Color(0xFF6366F1),
+          () => context.push('/onboard'),
+        ),
       (
         Icons.menu_book_rounded,
         l10n.libraries,
@@ -1440,19 +1454,29 @@ class _OnboardPill extends StatelessWidget {
 }
 
 class _DashboardQuickActions extends StatelessWidget {
-  const _DashboardQuickActions();
+  const _DashboardQuickActions({this.user});
+
+  final UserModel? user;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _QuickActionCircle(
-          icon: Icons.rocket_launch_rounded,
-          label: 'Onboard',
-          accent: const Color(0xFF6366F1),
-          onTap: () => context.push('/onboard'),
-        ),
+        if (user?.isClientUser == true)
+          _QuickActionCircle(
+            icon: Icons.business_center_rounded,
+            label: 'My Facility',
+            accent: const Color(0xFF0D9488),
+            onTap: () => context.push('/client/facilities'),
+          )
+        else if (user?.isOnboardingUser == true)
+          _QuickActionCircle(
+            icon: Icons.rocket_launch_rounded,
+            label: 'Onboard',
+            accent: const Color(0xFF6366F1),
+            onTap: () => context.push('/onboard'),
+          ),
         _QuickActionCircle(
           icon: Icons.qr_code_scanner_rounded,
           label: 'Check-in',
@@ -1472,6 +1496,114 @@ class _DashboardQuickActions extends StatelessWidget {
           onTap: () => context.push('/services'),
         ),
       ],
+    );
+  }
+}
+
+class _ClientFacilityHubBanner extends StatelessWidget {
+  const _ClientFacilityHubBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D9488), Color(0xFF0284C7), Color(0xFF2563EB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => context.push('/client/facilities'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.business_center_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Facility Owner Console',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Manage Gym/Library details, plans & members',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Manage',
+                            style: TextStyle(
+                              color: Color(0xFF0D9488),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Color(0xFF0D9488),
+                            size: 14,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

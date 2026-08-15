@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserModel {
 
- String get id; String get name; String get email; String? get phone;@JsonKey(name: 'city_id') String? get cityId; CityModel? get city; String get role; String get status; String? get avatar;@JsonKey(name: 'photo_url') String? get photoUrl;@JsonKey(name: 'custom_permissions') List<String>? get customPermissions;@JsonKey(name: 'email_verified_at') DateTime? get emailVerifiedAt;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
+ String get id; String get name; String get email; String? get phone;@JsonKey(name: 'city_id') String? get cityId; CityModel? get city; String get role; String get status; String? get avatar;@JsonKey(name: 'photo_url') String? get photoUrl;@JsonKey(name: 'custom_permissions') List<String>? get customPermissions;@JsonKey(name: 'is_onboarding_user') bool get isOnboardingUser;@JsonKey(name: 'is_client_user') bool get isClientUser;@JsonKey(name: 'owned_facilities') Map<String, dynamic>? get ownedFacilities;@JsonKey(name: 'email_verified_at') DateTime? get emailVerifiedAt;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $UserModelCopyWith<UserModel> get copyWith => _$UserModelCopyWithImpl<UserModel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.cityId, cityId) || other.cityId == cityId)&&(identical(other.city, city) || other.city == city)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&const DeepCollectionEquality().equals(other.customPermissions, customPermissions)&&(identical(other.emailVerifiedAt, emailVerifiedAt) || other.emailVerifiedAt == emailVerifiedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.cityId, cityId) || other.cityId == cityId)&&(identical(other.city, city) || other.city == city)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&const DeepCollectionEquality().equals(other.customPermissions, customPermissions)&&(identical(other.isOnboardingUser, isOnboardingUser) || other.isOnboardingUser == isOnboardingUser)&&(identical(other.isClientUser, isClientUser) || other.isClientUser == isClientUser)&&const DeepCollectionEquality().equals(other.ownedFacilities, ownedFacilities)&&(identical(other.emailVerifiedAt, emailVerifiedAt) || other.emailVerifiedAt == emailVerifiedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,phone,cityId,city,role,status,avatar,photoUrl,const DeepCollectionEquality().hash(customPermissions),emailVerifiedAt,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,phone,cityId,city,role,status,avatar,photoUrl,const DeepCollectionEquality().hash(customPermissions),isOnboardingUser,isClientUser,const DeepCollectionEquality().hash(ownedFacilities),emailVerifiedAt,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, name: $name, email: $email, phone: $phone, cityId: $cityId, city: $city, role: $role, status: $status, avatar: $avatar, photoUrl: $photoUrl, customPermissions: $customPermissions, emailVerifiedAt: $emailVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'UserModel(id: $id, name: $name, email: $email, phone: $phone, cityId: $cityId, city: $city, role: $role, status: $status, avatar: $avatar, photoUrl: $photoUrl, customPermissions: $customPermissions, isOnboardingUser: $isOnboardingUser, isClientUser: $isClientUser, ownedFacilities: $ownedFacilities, emailVerifiedAt: $emailVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $UserModelCopyWith<$Res>  {
   factory $UserModelCopyWith(UserModel value, $Res Function(UserModel) _then) = _$UserModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String email, String? phone,@JsonKey(name: 'city_id') String? cityId, CityModel? city, String role, String status, String? avatar,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'custom_permissions') List<String>? customPermissions,@JsonKey(name: 'email_verified_at') DateTime? emailVerifiedAt,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id, String name, String email, String? phone,@JsonKey(name: 'city_id') String? cityId, CityModel? city, String role, String status, String? avatar,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'custom_permissions') List<String>? customPermissions,@JsonKey(name: 'is_onboarding_user') bool isOnboardingUser,@JsonKey(name: 'is_client_user') bool isClientUser,@JsonKey(name: 'owned_facilities') Map<String, dynamic>? ownedFacilities,@JsonKey(name: 'email_verified_at') DateTime? emailVerifiedAt,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? cityId = freezed,Object? city = freezed,Object? role = null,Object? status = null,Object? avatar = freezed,Object? photoUrl = freezed,Object? customPermissions = freezed,Object? emailVerifiedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? cityId = freezed,Object? city = freezed,Object? role = null,Object? status = null,Object? avatar = freezed,Object? photoUrl = freezed,Object? customPermissions = freezed,Object? isOnboardingUser = null,Object? isClientUser = null,Object? ownedFacilities = freezed,Object? emailVerifiedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -78,7 +78,10 @@ as String,status: null == status ? _self.status : status // ignore: cast_nullabl
 as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
 as String?,customPermissions: freezed == customPermissions ? _self.customPermissions : customPermissions // ignore: cast_nullable_to_non_nullable
-as List<String>?,emailVerifiedAt: freezed == emailVerifiedAt ? _self.emailVerifiedAt : emailVerifiedAt // ignore: cast_nullable_to_non_nullable
+as List<String>?,isOnboardingUser: null == isOnboardingUser ? _self.isOnboardingUser : isOnboardingUser // ignore: cast_nullable_to_non_nullable
+as bool,isClientUser: null == isClientUser ? _self.isClientUser : isClientUser // ignore: cast_nullable_to_non_nullable
+as bool,ownedFacilities: freezed == ownedFacilities ? _self.ownedFacilities : ownedFacilities // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,emailVerifiedAt: freezed == emailVerifiedAt ? _self.emailVerifiedAt : emailVerifiedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -178,10 +181,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'is_onboarding_user')  bool isOnboardingUser, @JsonKey(name: 'is_client_user')  bool isClientUser, @JsonKey(name: 'owned_facilities')  Map<String, dynamic>? ownedFacilities, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.isOnboardingUser,_that.isClientUser,_that.ownedFacilities,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -199,10 +202,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'is_onboarding_user')  bool isOnboardingUser, @JsonKey(name: 'is_client_user')  bool isClientUser, @JsonKey(name: 'owned_facilities')  Map<String, dynamic>? ownedFacilities, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _UserModel():
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.isOnboardingUser,_that.isClientUser,_that.ownedFacilities,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -219,10 +222,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email,  String? phone, @JsonKey(name: 'city_id')  String? cityId,  CityModel? city,  String role,  String status,  String? avatar, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'custom_permissions')  List<String>? customPermissions, @JsonKey(name: 'is_onboarding_user')  bool isOnboardingUser, @JsonKey(name: 'is_client_user')  bool isClientUser, @JsonKey(name: 'owned_facilities')  Map<String, dynamic>? ownedFacilities, @JsonKey(name: 'email_verified_at')  DateTime? emailVerifiedAt, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.city,_that.role,_that.status,_that.avatar,_that.photoUrl,_that.customPermissions,_that.isOnboardingUser,_that.isClientUser,_that.ownedFacilities,_that.emailVerifiedAt,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -234,7 +237,7 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.cityId,_that.c
 @JsonSerializable()
 
 class _UserModel extends UserModel {
-  const _UserModel({required this.id, required this.name, required this.email, this.phone, @JsonKey(name: 'city_id') this.cityId, this.city, this.role = 'customer', this.status = 'active', this.avatar, @JsonKey(name: 'photo_url') this.photoUrl, @JsonKey(name: 'custom_permissions') final  List<String>? customPermissions, @JsonKey(name: 'email_verified_at') this.emailVerifiedAt, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _customPermissions = customPermissions,super._();
+  const _UserModel({required this.id, required this.name, required this.email, this.phone, @JsonKey(name: 'city_id') this.cityId, this.city, this.role = 'customer', this.status = 'active', this.avatar, @JsonKey(name: 'photo_url') this.photoUrl, @JsonKey(name: 'custom_permissions') final  List<String>? customPermissions, @JsonKey(name: 'is_onboarding_user') this.isOnboardingUser = false, @JsonKey(name: 'is_client_user') this.isClientUser = false, @JsonKey(name: 'owned_facilities') final  Map<String, dynamic>? ownedFacilities, @JsonKey(name: 'email_verified_at') this.emailVerifiedAt, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _customPermissions = customPermissions,_ownedFacilities = ownedFacilities,super._();
   factory _UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
 
 @override final  String id;
@@ -256,6 +259,17 @@ class _UserModel extends UserModel {
   return EqualUnmodifiableListView(value);
 }
 
+@override@JsonKey(name: 'is_onboarding_user') final  bool isOnboardingUser;
+@override@JsonKey(name: 'is_client_user') final  bool isClientUser;
+ final  Map<String, dynamic>? _ownedFacilities;
+@override@JsonKey(name: 'owned_facilities') Map<String, dynamic>? get ownedFacilities {
+  final value = _ownedFacilities;
+  if (value == null) return null;
+  if (_ownedFacilities is EqualUnmodifiableMapView) return _ownedFacilities;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 @override@JsonKey(name: 'email_verified_at') final  DateTime? emailVerifiedAt;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
@@ -273,16 +287,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.cityId, cityId) || other.cityId == cityId)&&(identical(other.city, city) || other.city == city)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&const DeepCollectionEquality().equals(other._customPermissions, _customPermissions)&&(identical(other.emailVerifiedAt, emailVerifiedAt) || other.emailVerifiedAt == emailVerifiedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.cityId, cityId) || other.cityId == cityId)&&(identical(other.city, city) || other.city == city)&&(identical(other.role, role) || other.role == role)&&(identical(other.status, status) || other.status == status)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&const DeepCollectionEquality().equals(other._customPermissions, _customPermissions)&&(identical(other.isOnboardingUser, isOnboardingUser) || other.isOnboardingUser == isOnboardingUser)&&(identical(other.isClientUser, isClientUser) || other.isClientUser == isClientUser)&&const DeepCollectionEquality().equals(other._ownedFacilities, _ownedFacilities)&&(identical(other.emailVerifiedAt, emailVerifiedAt) || other.emailVerifiedAt == emailVerifiedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,phone,cityId,city,role,status,avatar,photoUrl,const DeepCollectionEquality().hash(_customPermissions),emailVerifiedAt,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,phone,cityId,city,role,status,avatar,photoUrl,const DeepCollectionEquality().hash(_customPermissions),isOnboardingUser,isClientUser,const DeepCollectionEquality().hash(_ownedFacilities),emailVerifiedAt,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, name: $name, email: $email, phone: $phone, cityId: $cityId, city: $city, role: $role, status: $status, avatar: $avatar, photoUrl: $photoUrl, customPermissions: $customPermissions, emailVerifiedAt: $emailVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'UserModel(id: $id, name: $name, email: $email, phone: $phone, cityId: $cityId, city: $city, role: $role, status: $status, avatar: $avatar, photoUrl: $photoUrl, customPermissions: $customPermissions, isOnboardingUser: $isOnboardingUser, isClientUser: $isClientUser, ownedFacilities: $ownedFacilities, emailVerifiedAt: $emailVerifiedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -293,7 +307,7 @@ abstract mixin class _$UserModelCopyWith<$Res> implements $UserModelCopyWith<$Re
   factory _$UserModelCopyWith(_UserModel value, $Res Function(_UserModel) _then) = __$UserModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String email, String? phone,@JsonKey(name: 'city_id') String? cityId, CityModel? city, String role, String status, String? avatar,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'custom_permissions') List<String>? customPermissions,@JsonKey(name: 'email_verified_at') DateTime? emailVerifiedAt,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id, String name, String email, String? phone,@JsonKey(name: 'city_id') String? cityId, CityModel? city, String role, String status, String? avatar,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'custom_permissions') List<String>? customPermissions,@JsonKey(name: 'is_onboarding_user') bool isOnboardingUser,@JsonKey(name: 'is_client_user') bool isClientUser,@JsonKey(name: 'owned_facilities') Map<String, dynamic>? ownedFacilities,@JsonKey(name: 'email_verified_at') DateTime? emailVerifiedAt,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -310,7 +324,7 @@ class __$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? cityId = freezed,Object? city = freezed,Object? role = null,Object? status = null,Object? avatar = freezed,Object? photoUrl = freezed,Object? customPermissions = freezed,Object? emailVerifiedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? cityId = freezed,Object? city = freezed,Object? role = null,Object? status = null,Object? avatar = freezed,Object? photoUrl = freezed,Object? customPermissions = freezed,Object? isOnboardingUser = null,Object? isClientUser = null,Object? ownedFacilities = freezed,Object? emailVerifiedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_UserModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -323,7 +337,10 @@ as String,status: null == status ? _self.status : status // ignore: cast_nullabl
 as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
 as String?,customPermissions: freezed == customPermissions ? _self._customPermissions : customPermissions // ignore: cast_nullable_to_non_nullable
-as List<String>?,emailVerifiedAt: freezed == emailVerifiedAt ? _self.emailVerifiedAt : emailVerifiedAt // ignore: cast_nullable_to_non_nullable
+as List<String>?,isOnboardingUser: null == isOnboardingUser ? _self.isOnboardingUser : isOnboardingUser // ignore: cast_nullable_to_non_nullable
+as bool,isClientUser: null == isClientUser ? _self.isClientUser : isClientUser // ignore: cast_nullable_to_non_nullable
+as bool,ownedFacilities: freezed == ownedFacilities ? _self._ownedFacilities : ownedFacilities // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,emailVerifiedAt: freezed == emailVerifiedAt ? _self.emailVerifiedAt : emailVerifiedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,

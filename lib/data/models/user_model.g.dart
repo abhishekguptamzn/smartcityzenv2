@@ -22,6 +22,9 @@ _UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
   customPermissions: (json['custom_permissions'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
+  isOnboardingUser: json['is_onboarding_user'] as bool? ?? false,
+  isClientUser: json['is_client_user'] as bool? ?? false,
+  ownedFacilities: json['owned_facilities'] as Map<String, dynamic>?,
   emailVerifiedAt: json['email_verified_at'] == null
       ? null
       : DateTime.parse(json['email_verified_at'] as String),
@@ -46,6 +49,9 @@ Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
       'avatar': instance.avatar,
       'photo_url': instance.photoUrl,
       'custom_permissions': instance.customPermissions,
+      'is_onboarding_user': instance.isOnboardingUser,
+      'is_client_user': instance.isClientUser,
+      'owned_facilities': instance.ownedFacilities,
       'email_verified_at': instance.emailVerifiedAt?.toIso8601String(),
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

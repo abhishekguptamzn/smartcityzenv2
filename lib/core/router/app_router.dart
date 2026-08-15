@@ -21,6 +21,11 @@ import '../../features/city/screens/city_origin_screen.dart';
 import '../../features/city/screens/city_personalities_screen.dart';
 import '../../features/facilities/screens/facility_detail_screen.dart';
 import '../../features/facilities/screens/services_explorer_screen.dart';
+import '../../features/facility_management/screens/edit_facility_details_screen.dart';
+import '../../features/facility_management/screens/facility_attendance_screen.dart';
+import '../../features/facility_management/screens/facility_dashboard_screen.dart';
+import '../../features/facility_management/screens/facility_members_screen.dart';
+import '../../features/facility_management/screens/manage_fee_plans_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/id_card_screen.dart';
 import '../../features/membership/screens/membership_details_screen.dart';
@@ -238,10 +243,53 @@ GoRouter goRouter(Ref ref) {
         builder: (context, state) =>
             PaymentReceiptScreen(paymentId: state.pathParameters['id']!),
       ),
-      // Onboarding Module Routes
+      // Onboarding Module Routes (Gated to authenticated onboarding users only)
       GoRoute(
         path: '/onboard',
+        redirect: (context, state) {
+          final user = ref.read(authControllerProvider).value;
+          if (user == null) return '/login';
+          if (!user.isOnboardingUser) return '/home';
+          return null;
+        },
         builder: (context, state) => const OnboardHomeScreen(),
+      ),
+      // Facility Management Routes (for Client Users / Facility Owners)
+      GoRoute(
+        path: '/client/facilities',
+        builder: (context, state) => const FacilityDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/client/manage/edit/:kind/:id',
+        builder: (context, state) => EditFacilityDetailsScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/plans/:kind/:id',
+        builder: (context, state) => ManageFeePlansScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/members/:kind/:id',
+        builder: (context, state) => FacilityMembersScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/attendance/:kind/:id',
+        builder: (context, state) => FacilityAttendanceScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
       ),
       GoRoute(
         path: '/onboard/select/:type',

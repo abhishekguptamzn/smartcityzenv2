@@ -125,6 +125,24 @@ class ProfileScreen extends ConsumerWidget {
                 Card(
                   child: Column(
                     children: [
+                      if (user.isClientUser) ...[
+                        _ProfileMenuTile(
+                          icon: Icons.business_center_rounded,
+                          accent: const Color(0xFF0D9488),
+                          title: 'Manage My Facilities (Gym/Library)',
+                          onTap: () => context.push('/client/facilities'),
+                        ),
+                        const Divider(height: 1),
+                      ],
+                      if (user.isOnboardingUser) ...[
+                        _ProfileMenuTile(
+                          icon: Icons.rocket_launch_rounded,
+                          accent: const Color(0xFF6366F1),
+                          title: 'Onboarding Portal',
+                          onTap: () => context.push('/onboard'),
+                        ),
+                        const Divider(height: 1),
+                      ],
                       _ProfileMenuTile(
                         icon: Icons.edit_rounded,
                         accent: scheme.primary,
