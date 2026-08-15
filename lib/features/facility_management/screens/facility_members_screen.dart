@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +8,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
+import '../../../data/models/onboard_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../data/repositories/onboard_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 
 final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, (FacilityKind, String)>((ref, tuple) async {
@@ -106,7 +110,7 @@ class FacilityMembersScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Scan citizen QR codes or enter citizen IDs to enroll new members.',
+                        'Scan citizen QR codes or search citizen accounts to enroll new members.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
@@ -257,7 +261,7 @@ class _AddMemberModal extends ConsumerStatefulWidget {
 }
 
 class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
-  _AddMode _mode = _AddMode.scan;
+  _AddMode _mode = _AddMode.manual;
   final TextEditingController _citizenIdCtrl = TextEditingController();
   final MobileScannerController _scannerCtrl = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
@@ -269,6 +273,11 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
   bool _submitting = false;
   DateTime _startDate = DateTime.now();
 
+  Timer? _debounceTimer;
+  bool _isSearching = false;
+  List<OwnerSearchResult> _searchResults = [];
+  OwnerSearchResult? _selectedCitizen;
+
   @override
   void initState() {
     super.initState();
@@ -277,6 +286,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _citizenIdCtrl.dispose();
     _scannerCtrl.dispose();
     super.dispose();
@@ -302,6 +312,58 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     }
   }
 
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    final trimmed = query.trim();
+
+    if (_selectedCitizen != null && _selectedCitizen!.id != trimmed && _selectedCitizen!.email != trimmed) {
+      setState(() => _selectedCitizen = null);
+    }
+
+    if (trimmed.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() => _isSearching = true);
+
+    _debounceTimer = Timer(const Duration(milliseconds: 250), () async {
+      try {
+        final repo = ref.read(onboardRepositoryProvider);
+        final results = await repo.searchOwners(trimmed);
+        if (mounted) {
+          setState(() {
+            _searchResults = results;
+            _isSearching = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _isSearching = false);
+        }
+      }
+    });
+  }
+
+  void _selectCitizen(OwnerSearchResult citizen) {
+    setState(() {
+      _selectedCitizen = citizen;
+      _citizenIdCtrl.text = citizen.name.isNotEmpty ? '${citizen.name} (${citizen.email.isNotEmpty ? citizen.email : citizen.id})' : citizen.id;
+      _searchResults = [];
+    });
+  }
+
+  void _clearSelectedCitizen() {
+    setState(() {
+      _selectedCitizen = null;
+      _citizenIdCtrl.clear();
+      _searchResults = [];
+    });
+  }
+
   void _onBarcodeDetected(BarcodeCapture capture) {
     final barcodes = capture.barcodes;
     for (final barcode in barcodes) {
@@ -312,6 +374,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
           _citizenIdCtrl.text = raw;
           _mode = _AddMode.manual; // Switch to form view with populated ID
         });
+        _onSearchChanged(raw);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Citizen QR detected: $raw'),
@@ -325,11 +388,11 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
   }
 
   Future<void> _submitEnrollment() async {
-    final code = _citizenIdCtrl.text.trim();
+    final code = _selectedCitizen?.id ?? _citizenIdCtrl.text.trim();
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please scan a QR code or enter a Citizen ID'),
+          content: Text('Please select or enter a Citizen ID / Email'),
           backgroundColor: Color(0xFFDC2626),
         ),
       );
@@ -341,7 +404,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
 
     try {
       final payload = {
-        'citizen_id': code,
+        'citizen_id': _selectedCitizen?.id ?? code,
         'fee_plan_id': _selectedPlan?.id,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
       };
@@ -383,7 +446,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     final isGym = widget.kind == FacilityKind.gym;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.88,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -459,14 +522,14 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
             child: SegmentedButton<_AddMode>(
               segments: const [
                 ButtonSegment(
+                  value: _AddMode.manual,
+                  icon: Icon(Icons.search_rounded),
+                  label: Text('Search / Citizen ID'),
+                ),
+                ButtonSegment(
                   value: _AddMode.scan,
                   icon: Icon(Icons.qr_code_scanner_rounded),
                   label: Text('Scan QR Code'),
-                ),
-                ButtonSegment(
-                  value: _AddMode.manual,
-                  icon: Icon(Icons.badge_outlined),
-                  label: Text('Citizen ID / Search'),
                 ),
               ],
               selected: {_mode},
@@ -535,8 +598,8 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: () => setState(() => _mode = _AddMode.manual),
-            icon: const Icon(Icons.edit_note_rounded),
-            label: const Text('Enter Citizen ID Manually'),
+            icon: const Icon(Icons.search_rounded),
+            label: const Text('Search Citizen Account Manually'),
           ),
         ],
       ),
@@ -547,21 +610,177 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        // Citizen ID Field
+        // Selected Citizen Card Banner
+        if (_selectedCitizen != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF0D9488), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF0D9488),
+                  child: Text(
+                    _selectedCitizen!.name.isNotEmpty ? _selectedCitizen!.name[0].toUpperCase() : 'C',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedCitizen!.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D9488),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'MATCHED',
+                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _selectedCitizen!.email.isNotEmpty ? _selectedCitizen!.email : (_selectedCitizen!.phone ?? _selectedCitizen!.id),
+                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'ID: ${_selectedCitizen!.id}',
+                        style: const TextStyle(fontSize: 10, color: Color(0xFF0D9488), fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  tooltip: 'Clear selection',
+                  onPressed: _clearSelectedCitizen,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Citizen ID / Search Field
         TextField(
           controller: _citizenIdCtrl,
+          onChanged: _onSearchChanged,
           decoration: InputDecoration(
-            labelText: 'Citizen ID / QR Code / Email / Phone',
-            hintText: 'e.g. USR8K2M1X9 or CITIZEN-USR8K...',
-            prefixIcon: const Icon(Icons.qr_code_rounded),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.qr_code_scanner_rounded),
-              tooltip: 'Open Camera Scanner',
-              onPressed: () => setState(() => _mode = _AddMode.scan),
+            labelText: 'Search Citizen by Name, Email, Phone, or ID',
+            hintText: 'e.g. chotu, chotuji1971@gmail.com, USR...',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isSearching)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_citizenIdCtrl.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 20),
+                    onPressed: _clearSelectedCitizen,
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  tooltip: 'Open Camera Scanner',
+                  onPressed: () => setState(() => _mode = _AddMode.scan),
+                ),
+              ],
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
+
+        // Live Search Results Dropdown List
+        if (_searchResults.isNotEmpty && _selectedCitizen == null) ...[
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x15000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                  child: Text(
+                    'MATCHING CITIZENS (${_searchResults.length})',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.6,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _searchResults.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (ctx, idx) {
+                    final citizen = _searchResults[idx];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: scheme.primary.withValues(alpha: 0.15),
+                        child: Text(
+                          citizen.name.isNotEmpty ? citizen.name[0].toUpperCase() : 'C',
+                          style: TextStyle(color: scheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                      title: Text(
+                        citizen.name.isNotEmpty ? citizen.name : 'Citizen User',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      subtitle: Text(
+                        '${citizen.email.isNotEmpty ? citizen.email : citizen.id}${citizen.phone != null ? ' • ${citizen.phone}' : ''}',
+                        style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                      onTap: () => _selectCitizen(citizen),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+
         const SizedBox(height: 16),
 
         // Fee Plan Dropdown

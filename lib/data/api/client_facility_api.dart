@@ -13,6 +13,81 @@ class ClientFacilityApi {
   Future<Response<dynamic>> getMyFacilities() =>
       _dio.get('/client/facilities');
 
+  // Unified Facility Operations & Dashboard Stats
+  Future<Response<dynamic>> getDashboardStats(String type, String id) =>
+      _dio.get('/client/$type/$id/dashboard-stats');
+
+  Future<Response<dynamic>> checkIn(String type, String id, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/check-in', data: data);
+
+  Future<Response<dynamic>> checkOut(String type, String id, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/check-out', data: data);
+
+  Future<Response<dynamic>> getCurrentStatus(String type, String id) =>
+      _dio.get('/client/$type/$id/current-status');
+
+  Future<Response<dynamic>> checkoutAll(String type, String id) =>
+      _dio.post('/client/$type/$id/checkout-all');
+
+  // Reports
+  Future<Response<dynamic>> getDailyCheckinsReport(String type, String id, {String? date, String? status}) =>
+      _dio.get('/client/$type/$id/reports/daily-checkins', queryParameters: {
+        if (date != null) 'date': date,
+        if (status != null && status != 'all') 'status': status,
+      });
+
+  Future<Response<dynamic>> getMonthlyCheckinsReport(String type, String id, {String? month}) =>
+      _dio.get('/client/$type/$id/reports/monthly-checkins', queryParameters: {
+        if (month != null) 'month': month,
+      });
+
+  Future<Response<dynamic>> getUnpaidMembersReport(String type, String id, {String? month}) =>
+      _dio.get('/client/$type/$id/reports/unpaid-members', queryParameters: {
+        if (month != null) 'month': month,
+      });
+
+  Future<Response<dynamic>> getCollectionsReport(
+    String type,
+    String id, {
+    String period = 'month',
+    String? dateFrom,
+    String? dateTo,
+    String? status,
+  }) =>
+      _dio.get('/client/$type/$id/reports/collections', queryParameters: {
+        'period': period,
+        if (dateFrom != null) 'date_from': dateFrom,
+        if (dateTo != null) 'date_to': dateTo,
+        if (status != null && status != 'all') 'status': status,
+      });
+
+  // Enquiries
+  Future<Response<dynamic>> getEnquiries(String type, String id, {String? status, String? search, int page = 1}) =>
+      _dio.get('/client/$type/$id/enquiries', queryParameters: {
+        if (status != null && status != 'all') 'status': status,
+        if (search != null && search.isNotEmpty) 'search': search,
+        'page': page,
+      });
+
+  Future<Response<dynamic>> getEnquiryDetails(String type, String id, String enquiryId) =>
+      _dio.get('/client/$type/$id/enquiries/$enquiryId');
+
+  Future<Response<dynamic>> replyEnquiry(String type, String id, String enquiryId, String message) =>
+      _dio.post('/client/$type/$id/enquiries/$enquiryId/reply', data: {'message': message});
+
+  Future<Response<dynamic>> updateEnquiryStatus(String type, String id, String enquiryId, String status) =>
+      _dio.patch('/client/$type/$id/enquiries/$enquiryId/status', data: {'status': status});
+
+  Future<Response<dynamic>> submitCitizenEnquiry(String type, String id, Map<String, dynamic> data) =>
+      _dio.post('/facilities/$type/$id/enquiries', data: data);
+
+  // Communications
+  Future<Response<dynamic>> getCommunications(String type, String id, {int page = 1}) =>
+      _dio.get('/client/$type/$id/communications', queryParameters: {'page': page});
+
+  Future<Response<dynamic>> sendCommunication(String type, String id, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/communications/send', data: data);
+
   // Gyms
   Future<Response<dynamic>> getGym(String gymId) =>
       _dio.get('/client/gyms/$gymId');

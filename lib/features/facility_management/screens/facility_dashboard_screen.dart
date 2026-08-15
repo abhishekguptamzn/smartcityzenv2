@@ -245,85 +245,92 @@ class _FacilityItemCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header banner
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: (isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7))
-                        .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
+          // Header banner (tappable to open full console)
+          InkWell(
+            onTap: () => context.push(
+              '/client/facility/${kind.pathSegment}/${facility.id}',
+              extra: facility,
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: (isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7))
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                      color: isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7),
+                      size: 26,
+                    ),
                   ),
-                  child: Icon(
-                    isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
-                    color: isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7),
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        facility.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 13,
-                            color: scheme.onSurfaceVariant,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          facility.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              facility.address ?? facility.city?.name ?? 'Smart City',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 13,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                facility.address ?? facility.city?.name ?? 'Smart City',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                    ),
+                    child: const Text(
+                      'ACTIVE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF059669),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'ACTIVE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF059669),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const Divider(height: 1),
 
-          // Actions Grid
+          // Actions Grid below card
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -363,20 +370,18 @@ class _FacilityItemCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (isGym) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ActionButton(
-                      icon: Icons.fact_check_outlined,
-                      label: 'Scans',
-                      color: const Color(0xFFEA580C),
-                      onTap: () => context.push(
-                        '/client/manage/attendance/${kind.pathSegment}/${facility.id}',
-                        extra: facility,
-                      ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.dashboard_customize_rounded,
+                    label: 'Console',
+                    color: const Color(0xFFEA580C),
+                    onTap: () => context.push(
+                      '/client/facility/${kind.pathSegment}/${facility.id}',
+                      extra: facility,
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),

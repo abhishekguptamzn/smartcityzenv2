@@ -1,0 +1,474 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../data/models/facility_model.dart';
+import '../../../data/models/facility_operations_models.dart';
+import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/glass_container.dart';
+
+final facilityStatsProvider = FutureProvider.autoDispose.family<FacilityDashboardStats, (FacilityKind, String)>((ref, args) async {
+  final repo = ref.watch(clientFacilityRepositoryProvider);
+  return repo.getDashboardStats(args.$1, args.$2);
+});
+
+class FacilityConsoleScreen extends ConsumerWidget {
+  const FacilityConsoleScreen({
+    super.key,
+    required this.kind,
+    required this.facilityId,
+    this.facility,
+  });
+
+  final FacilityKind kind;
+  final String facilityId;
+  final FacilityModel? facility;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isGym = kind == FacilityKind.gym;
+
+    final statsAsync = ref.watch(facilityStatsProvider((kind, facilityId)));
+
+    final facilityName = facility?.name ?? (isGym ? 'Gym Facility' : 'Library Hub');
+    final facilityAddress = facility?.address ?? facility?.city?.name ?? 'Smart City';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(facilityName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => ref.refresh(facilityStatsProvider((kind, facilityId))),
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert_rounded),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: AmbientBackground(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Top Facility Info Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: (isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7)).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                      color: isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          facilityName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 13,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                facilityAddress,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                    ),
+                    child: const Text(
+                      'ACTIVE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // 3x3 Module Grid
+            GridView.count(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _ModuleGridItem(
+                  icon: Icons.edit_document,
+                  label: 'Edit Details',
+                  color: const Color(0xFF0284C7),
+                  onTap: () => context.push(
+                    '/client/manage/edit/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.sell_rounded,
+                  label: 'Plans & Fees',
+                  color: const Color(0xFF0D9488),
+                  onTap: () => context.push(
+                    '/client/manage/plans/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.group_rounded,
+                  label: 'Members',
+                  color: const Color(0xFF8B5CF6),
+                  onTap: () => context.push(
+                    '/client/manage/members/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'Scans',
+                  color: const Color(0xFFF97316),
+                  onTap: () => context.push(
+                    '/client/manage/attendance/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.how_to_reg_rounded,
+                  label: 'Manual\nCheck-in',
+                  color: const Color(0xFF0284C7),
+                  onTap: () => context.push(
+                    '/client/manage/checkin/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.timelapse_rounded,
+                  label: 'Current\nStatus',
+                  color: const Color(0xFF0D9488),
+                  onTap: () => context.push(
+                    '/client/manage/status/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Reports',
+                  color: const Color(0xFF10B981),
+                  onTap: () => context.push(
+                    '/client/manage/reports/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.forum_rounded,
+                  label: 'Enquiries',
+                  color: const Color(0xFF8B5CF6),
+                  onTap: () => context.push(
+                    '/client/manage/enquiries/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.send_rounded,
+                  label: 'Communication',
+                  color: const Color(0xFF2563EB),
+                  onTap: () => context.push(
+                    '/client/manage/communication/${kind.pathSegment}/$facilityId',
+                    extra: facility,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Stat Summary Row (3 Mini Cards)
+            statsAsync.when(
+              data: (stats) => Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _StatMiniCol(
+                        icon: Icons.fact_check_outlined,
+                        iconColor: const Color(0xFF0284C7),
+                        title: "Today's Check-ins",
+                        value: '${stats.todayCheckins}',
+                      ),
+                    ),
+                    Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                    Expanded(
+                      child: _StatMiniCol(
+                        icon: Icons.people_outline_rounded,
+                        iconColor: const Color(0xFF0D9488),
+                        title: 'Currently Inside',
+                        value: '${stats.currentlyInside}',
+                      ),
+                    ),
+                    Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                    Expanded(
+                      child: _StatMiniCol(
+                        icon: Icons.badge_outlined,
+                        iconColor: const Color(0xFF8B5CF6),
+                        title: 'Total Members',
+                        value: '${stats.totalMembers}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 20),
+
+            // Quick Actions Section
+            Text(
+              'Quick Actions',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                children: [
+                  _QuickActionTile(
+                    icon: Icons.qr_code_scanner_rounded,
+                    color: const Color(0xFF0284C7),
+                    title: 'Scan Member QR',
+                    onTap: () => context.push(
+                      '/client/manage/attendance/${kind.pathSegment}/$facilityId',
+                      extra: facility,
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _QuickActionTile(
+                    icon: Icons.person_add_outlined,
+                    color: const Color(0xFF0D9488),
+                    title: 'Add New Member',
+                    onTap: () => context.push(
+                      '/client/manage/members/${kind.pathSegment}/$facilityId',
+                      extra: facility,
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _QuickActionTile(
+                    icon: Icons.send_rounded,
+                    color: const Color(0xFF2563EB),
+                    title: 'Send Communication',
+                    onTap: () => context.push(
+                      '/client/manage/communication/${kind.pathSegment}/$facilityId',
+                      extra: facility,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModuleGridItem extends StatelessWidget {
+  const _ModuleGridItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.25),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 22, color: color),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+                height: 1.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatMiniCol extends StatelessWidget {
+  const _StatMiniCol({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 20, color: color),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+      onTap: onTap,
+    );
+  }
+}

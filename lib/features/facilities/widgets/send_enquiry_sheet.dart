@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../data/models/facility_model.dart';
+import '../../../data/repositories/client_facility_repository.dart';
 
 class SendEnquirySheet extends ConsumerStatefulWidget {
   const SendEnquirySheet({
@@ -14,6 +16,8 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
     this.categoryName,
     this.facilityPhone,
     this.facilityEmail,
+    this.facilityId,
+    this.facilityKind,
   });
 
   final String facilityTitle;
@@ -21,6 +25,8 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
   final String? categoryName;
   final String? facilityPhone;
   final String? facilityEmail;
+  final String? facilityId;
+  final FacilityKind? facilityKind;
 
   static Future<void> show(
     BuildContext context, {
@@ -29,6 +35,8 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
     String? categoryName,
     String? facilityPhone,
     String? facilityEmail,
+    String? facilityId,
+    FacilityKind? facilityKind,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -40,6 +48,8 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
         categoryName: categoryName,
         facilityPhone: facilityPhone,
         facilityEmail: facilityEmail,
+        facilityId: facilityId,
+        facilityKind: facilityKind,
       ),
     );
   }
@@ -51,10 +61,10 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
 class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _phoneController;
-  late TextEditingController _messageController;
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _messageController = TextEditingController();
 
   String _enquiryType = 'Membership & Admission';
   bool _isSubmitting = false;
@@ -63,20 +73,23 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
 
   final List<String> _enquiryTypes = [
     'Membership & Admission',
-    'Timings & Batch Schedules',
-    'Fee Structure & Subsidies',
-    'Facility Rental & Group Booking',
-    'General Inquiry / Feedback',
+    'Pricing & Fee Plans',
+    'Timings & Schedule',
+    'Facility Amenities',
+    'Trainer / Staff Inquiry',
+    'Feedback & Suggestion',
+    'General Information',
   ];
 
   @override
   void initState() {
     super.initState();
     final user = ref.read(authControllerProvider).value;
-    _nameController = TextEditingController(text: user?.name ?? '');
-    _emailController = TextEditingController(text: user?.email ?? '');
-    _phoneController = TextEditingController(text: user?.phone ?? '');
-    _messageController = TextEditingController();
+    if (user != null) {
+      _nameController.text = user.name;
+      _emailController.text = user.email;
+      if (user.phone != null) _phoneController.text = user.phone!;
+    }
   }
 
   @override
@@ -94,11 +107,31 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
 
-    // Simulate animated asynchronous dispatch
-    await Future.delayed(const Duration(milliseconds: 1200));
+    String refCode = 'ENQ-${DateTime.now().year}-${1000 + Random().nextInt(8999)}';
 
-    final randomCode = 1000 + Random().nextInt(8999);
-    final refCode = 'ENQ-${DateTime.now().year}-$randomCode';
+    if (widget.facilityId != null && widget.facilityId!.isNotEmpty) {
+      try {
+        final kind = widget.facilityKind ?? FacilityKind.gym;
+        final res = await ref.read(clientFacilityRepositoryProvider).submitCitizenEnquiry(
+          kind,
+          widget.facilityId!,
+          {
+            'name': _nameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'phone': _phoneController.text.trim(),
+            'subject': _enquiryType,
+            'message': _messageController.text.trim(),
+          },
+        );
+        if (res['enquiry_number'] != null) {
+          refCode = res['enquiry_number'].toString();
+        }
+      } catch (_) {
+        // Fallback gracefully to local ref code
+      }
+    } else {
+      await Future.delayed(const Duration(milliseconds: 800));
+    }
 
     if (!mounted) return;
 

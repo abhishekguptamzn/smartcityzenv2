@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/client_facility_api.dart';
 import '../models/facility_model.dart';
+import '../models/facility_operations_models.dart';
 import '../models/fee_plan_model.dart';
 
 part 'client_facility_repository.g.dart';
@@ -23,6 +24,169 @@ class ClientFacilityRepository {
       'total_facilities': data['total_facilities'] ?? 0,
       'is_client_user': data['is_client_user'] ?? false,
     };
+  }
+
+  // Unified Operations
+  Future<FacilityDashboardStats> getDashboardStats(FacilityKind kind, String facilityId) async {
+    final res = await _api.getDashboardStats(kind.pathSegment, facilityId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return FacilityDashboardStats.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> checkIn(FacilityKind kind, String facilityId, {String? memberId, String? userId, String? code}) async {
+    final res = await _api.checkIn(kind.pathSegment, facilityId, {
+      if (memberId != null) 'member_id': memberId,
+      if (userId != null) 'user_id': userId,
+      if (code != null) 'code': code,
+    });
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> checkOut(FacilityKind kind, String facilityId, {String? sessionId, String? memberId, String? userId}) async {
+    final res = await _api.checkOut(kind.pathSegment, facilityId, {
+      if (sessionId != null) 'session_id': sessionId,
+      if (memberId != null) 'member_id': memberId,
+      if (userId != null) 'user_id': userId,
+    });
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> getCurrentStatus(FacilityKind kind, String facilityId) async {
+    final res = await _api.getCurrentStatus(kind.pathSegment, facilityId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final listRaw = data['members_inside'] as List? ?? [];
+    return {
+      'facility_id': data['facility_id'],
+      'facility_name': data['facility_name'],
+      'currently_inside_count': data['currently_inside_count'] ?? 0,
+      'today_checkins_count': data['today_checkins_count'] ?? 0,
+      'today_unique_users_count': data['today_unique_users_count'] ?? 0,
+      'last_updated': data['last_updated'] ?? '',
+      'members_inside': listRaw.map((j) => LiveSessionMember.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  Future<int> checkoutAll(FacilityKind kind, String facilityId) async {
+    final res = await _api.checkoutAll(kind.pathSegment, facilityId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return (data['checked_out_count'] as num?)?.toInt() ?? 0;
+  }
+
+  // Reports
+  Future<Map<String, dynamic>> getDailyCheckinsReport(FacilityKind kind, String facilityId, {String? date, String? status}) async {
+    final res = await _api.getDailyCheckinsReport(kind.pathSegment, facilityId, date: date, status: status);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final recordsRaw = data['records'] as List? ?? [];
+    return {
+      'date': data['date'] ?? '',
+      'formatted_date': data['formatted_date'] ?? '',
+      'total_checkins': data['total_checkins'] ?? 0,
+      'unique_users': data['unique_users'] ?? 0,
+      'avg_duration_minutes': data['avg_duration_minutes'] ?? 0,
+      'avg_duration_text': data['avg_duration_text'] ?? '--',
+      'records': recordsRaw.map((j) => DailyCheckinRecord.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  Future<Map<String, dynamic>> getMonthlyCheckinsReport(FacilityKind kind, String facilityId, {String? month}) async {
+    final res = await _api.getMonthlyCheckinsReport(kind.pathSegment, facilityId, month: month);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return {
+      'month': data['month'] ?? '',
+      'month_label': data['month_label'] ?? '',
+      'total_checkins': data['total_checkins'] ?? 0,
+      'unique_users': data['unique_users'] ?? 0,
+      'daily_breakdown': data['daily_breakdown'] as List? ?? [],
+    };
+  }
+
+  Future<Map<String, dynamic>> getUnpaidMembersReport(FacilityKind kind, String facilityId, {String? month}) async {
+    final res = await _api.getUnpaidMembersReport(kind.pathSegment, facilityId, month: month);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final membersRaw = data['members'] as List? ?? [];
+    return {
+      'month': data['month'] ?? '',
+      'month_label': data['month_label'] ?? '',
+      'unpaid_count': data['unpaid_count'] ?? 0,
+      'total_unpaid_amount': (data['total_unpaid_amount'] as num?)?.toDouble() ?? 0.0,
+      'members': membersRaw.map((j) => UnpaidMemberItem.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  Future<Map<String, dynamic>> getCollectionsReport(
+    FacilityKind kind,
+    String facilityId, {
+    String period = 'month',
+    String? dateFrom,
+    String? dateTo,
+    String? status,
+  }) async {
+    final res = await _api.getCollectionsReport(kind.pathSegment, facilityId, period: period, dateFrom: dateFrom, dateTo: dateTo, status: status);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final txsRaw = data['transactions'] as List? ?? [];
+    return {
+      'period': data['period'] ?? period,
+      'date_range': data['date_range'] ?? '',
+      'total_collection': (data['total_collection'] as num?)?.toDouble() ?? 0.0,
+      'total_transactions': data['total_transactions'] ?? 0,
+      'transactions': txsRaw.map((j) => CollectionTransaction.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  // Enquiries
+  Future<Map<String, dynamic>> getEnquiries(FacilityKind kind, String facilityId, {String? status, String? search, int page = 1}) async {
+    final res = await _api.getEnquiries(kind.pathSegment, facilityId, status: status, search: search, page: page);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final rawList = data['enquiries'] as List? ?? [];
+    return {
+      'counts': data['counts'] as Map<String, dynamic>? ?? {},
+      'enquiries': rawList.map((j) => FacilityEnquiryItem.fromJson(j as Map<String, dynamic>)).toList(),
+      'pagination': data['pagination'] as Map<String, dynamic>? ?? {},
+    };
+  }
+
+  Future<Map<String, dynamic>> getEnquiryDetails(FacilityKind kind, String facilityId, String enquiryId) async {
+    final res = await _api.getEnquiryDetails(kind.pathSegment, facilityId, enquiryId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final enq = data['enquiry'] as Map<String, dynamic>? ?? {};
+    final msgs = enq['messages'] as List? ?? [];
+    return {
+      'enquiry': FacilityEnquiryItem.fromJson(enq),
+      'messages': msgs.map((j) => EnquiryMessage.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  Future<void> replyEnquiry(FacilityKind kind, String facilityId, String enquiryId, String message) async {
+    await _api.replyEnquiry(kind.pathSegment, facilityId, enquiryId, message);
+  }
+
+  Future<void> updateEnquiryStatus(FacilityKind kind, String facilityId, String enquiryId, String status) async {
+    await _api.updateEnquiryStatus(kind.pathSegment, facilityId, enquiryId, status);
+  }
+
+  Future<Map<String, dynamic>> submitCitizenEnquiry(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
+    final res = await _api.submitCitizenEnquiry(kind.pathSegment, facilityId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  // Communications
+  Future<Map<String, dynamic>> getCommunications(FacilityKind kind, String facilityId, {int page = 1}) async {
+    final res = await _api.getCommunications(kind.pathSegment, facilityId, page: page);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final rawList = data['communications'] as List? ?? [];
+    return {
+      'stats': data['stats'] as Map<String, dynamic>? ?? {},
+      'communications': rawList.map((j) => FacilityCommunicationItem.fromJson(j as Map<String, dynamic>)).toList(),
+    };
+  }
+
+  Future<Map<String, dynamic>> sendCommunication(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
+    final res = await _api.sendCommunication(kind.pathSegment, facilityId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
   }
 
   // Gyms
