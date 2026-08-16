@@ -132,6 +132,9 @@ class ClientFacilityApi {
   Future<Response<dynamic>> renewGymMember(String gymId, String memberId, Map<String, dynamic> data) =>
       _dio.post('/client/gyms/$gymId/members/$memberId/renew', data: data);
 
+  Future<Response<dynamic>> getGymMemberRenewals(String gymId, String memberId) =>
+      _dio.get('/client/gyms/$gymId/members/$memberId/renewals');
+
   Future<Response<dynamic>> getGymAttendance(String gymId, {String? date, int page = 1}) =>
       _dio.get('/client/gyms/$gymId/attendance', queryParameters: {
         if (date != null) 'date': date,
@@ -172,6 +175,9 @@ class ClientFacilityApi {
 
   Future<Response<dynamic>> renewLibraryMember(String libraryId, String memberId, Map<String, dynamic> data) =>
       _dio.post('/client/libraries/$libraryId/members/$memberId/renew', data: data);
+
+  Future<Response<dynamic>> getLibraryMemberRenewals(String libraryId, String memberId) =>
+      _dio.get('/client/libraries/$libraryId/members/$memberId/renewals');
 }
 
 @Riverpod(keepAlive: true)

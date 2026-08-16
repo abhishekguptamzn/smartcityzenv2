@@ -23,7 +23,9 @@ final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<Strin
   }
 });
 
-class FacilityMembersScreen extends ConsumerWidget {
+enum MemberFilterStatus { all, active, expiring, expired }
+
+class FacilityMembersScreen extends ConsumerStatefulWidget {
   const FacilityMembersScreen({
     super.key,
     required this.kind,
@@ -35,36 +37,64 @@ class FacilityMembersScreen extends ConsumerWidget {
   final String facilityId;
   final FacilityModel? facility;
 
-  void _openAddMemberModal(BuildContext context, WidgetRef ref) {
+  @override
+  ConsumerState<FacilityMembersScreen> createState() => _FacilityMembersScreenState();
+}
+
+class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  MemberFilterStatus _selectedFilter = MemberFilterStatus.all;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openAddMemberModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _AddMemberModal(
-        kind: kind,
-        facilityId: facilityId,
-        facility: facility,
-        onSuccess: () => ref.refresh(facilityMembersProvider((kind, facilityId))),
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        facility: widget.facility,
+        onSuccess: () => ref.refresh(facilityMembersProvider((widget.kind, widget.facilityId))),
       ),
     );
   }
 
-  void _openRenewMemberModal(BuildContext context, WidgetRef ref, Map<String, dynamic> member) {
+  void _openRenewMemberModal(BuildContext context, Map<String, dynamic> member) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => RenewMemberModal(
-        kind: kind,
-        facilityId: facilityId,
-        facility: facility,
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        facility: widget.facility,
         member: member,
-        onSuccess: () => ref.refresh(facilityMembersProvider((kind, facilityId))),
+        onSuccess: () => ref.refresh(facilityMembersProvider((widget.kind, widget.facilityId))),
       ),
     );
   }
 
-  void _confirmRemoveMember(BuildContext context, WidgetRef ref, Map<String, dynamic> member) {
+  void _openHistoryModal(BuildContext context, Map<String, dynamic> member) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _MemberRenewalsHistorySheet(
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        member: member,
+      ),
+    );
+  }
+
+  void _confirmRemoveMember(BuildContext context, Map<String, dynamic> member) {
     final userName = member['user']?['name']?.toString() ?? 'this member';
     final memberId = member['id']?.toString() ?? '';
 
@@ -79,7 +109,7 @@ class FacilityMembersScreen extends ConsumerWidget {
           ],
         ),
         content: Text(
-          'Are you sure you want to remove $userName from this ${kind == FacilityKind.gym ? "gym" : "library"}? Their active digital pass will be revoked.',
+          'Are you sure you want to remove $userName from this ${widget.kind == FacilityKind.gym ? "gym" : "library"}? Their active digital pass will be revoked.',
         ),
         actions: [
           TextButton(
@@ -91,8 +121,8 @@ class FacilityMembersScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.of(ctx).pop();
               try {
-                await ref.read(clientFacilityRepositoryProvider).deleteMember(kind, facilityId, memberId);
-                ref.invalidate(facilityMembersProvider((kind, facilityId)));
+                await ref.read(clientFacilityRepositoryProvider).deleteMember(widget.kind, widget.facilityId, memberId);
+                ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Member $userName removed successfully.')),
@@ -113,252 +143,402 @@ class FacilityMembersScreen extends ConsumerWidget {
     );
   }
 
+  List<Map<String, dynamic>> _filterMembers(List<Map<String, dynamic>> members) {
+    final now = DateTime.now();
+    return members.where((m) {
+      final user = m['user'] as Map<String, dynamic>? ?? {};
+      final name = (user['name']?.toString() ?? '').toLowerCase();
+      final email = (user['email']?.toString() ?? '').toLowerCase();
+      final phone = (user['phone']?.toString() ?? '').toLowerCase();
+      final id = (m['id']?.toString() ?? '').toLowerCase();
+      final query = _searchQuery.toLowerCase();
+
+      final matchesSearch = query.isEmpty ||
+          name.contains(query) ||
+          email.contains(query) ||
+          phone.contains(query) ||
+          id.contains(query);
+
+      if (!matchesSearch) return false;
+
+      final status = (m['status']?.toString() ?? 'active').toLowerCase();
+      final endDateStr = m['end_date']?.toString();
+      DateTime? endDate;
+      if (endDateStr != null && endDateStr.isNotEmpty) {
+        endDate = DateTime.tryParse(endDateStr);
+      }
+
+      final isExpired = status != 'active' || (endDate != null && endDate.isBefore(now));
+      final daysRemaining = endDate != null ? endDate.difference(now).inDays : 999;
+      final isExpiringSoon = !isExpired && daysRemaining <= 7;
+
+      switch (_selectedFilter) {
+        case MemberFilterStatus.active:
+          return !isExpired;
+        case MemberFilterStatus.expiring:
+          return isExpiringSoon;
+        case MemberFilterStatus.expired:
+          return isExpired;
+        case MemberFilterStatus.all:
+          return true;
+      }
+    }).toList();
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final membersAsync = ref.watch(facilityMembersProvider((kind, facilityId)));
-    final isGym = kind == FacilityKind.gym;
+    final membersAsync = ref.watch(facilityMembersProvider((widget.kind, widget.facilityId)));
+    final isGym = widget.kind == FacilityKind.gym;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${facility?.name ?? (isGym ? "Gym" : "Library")} Members'),
+        title: Text('${widget.facility?.name ?? (isGym ? "Gym" : "Library")} Members'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh',
-            onPressed: () => ref.refresh(facilityMembersProvider((kind, facilityId))),
+            onPressed: () => ref.refresh(facilityMembersProvider((widget.kind, widget.facilityId))),
           ),
           IconButton(
             icon: const Icon(Icons.person_add_rounded),
             tooltip: 'Add Member',
-            onPressed: () => _openAddMemberModal(context, ref),
+            onPressed: () => _openAddMemberModal(context),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddMemberModal(context, ref),
+        onPressed: () => _openAddMemberModal(context),
         icon: const Icon(Icons.qr_code_scanner_rounded),
         label: const Text('Add Member'),
         backgroundColor: const Color(0xFF0D9488),
         foregroundColor: Colors.white,
       ),
       body: AmbientBackground(
-        child: membersAsync.when(
-          data: (members) {
-            if (members.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: scheme.primary.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.people_outline_rounded,
-                          size: 44,
-                          color: scheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No Enrolled Members Yet',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Scan citizen QR codes or search citizen accounts to enroll new members.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      FilledButton.icon(
-                        onPressed: () => _openAddMemberModal(context, ref),
-                        icon: const Icon(Icons.person_add_rounded),
-                        label: const Text('Add First Member'),
-                      ),
-                    ],
+        child: Column(
+          children: [
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                decoration: InputDecoration(
+                  hintText: 'Search member by name, email, phone, or ID...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _searchCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.3)),
                   ),
                 ),
-              );
-            }
+              ),
+            ),
 
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-              itemCount: members.length,
-              itemBuilder: (ctx, idx) {
-                final m = members[idx];
-                final user = m['user'] as Map<String, dynamic>? ?? {};
-                final plan = m['fee_plan'] as Map<String, dynamic>? ?? {};
-                final status = m['status']?.toString().toLowerCase() ?? 'active';
-                final isActive = status == 'active';
-                final startDate = m['start_date']?.toString();
-                final endDate = m['end_date']?.toString();
+            // Status Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  _buildFilterChip('All', MemberFilterStatus.all),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Active', MemberFilterStatus.active),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Expiring Soon (≤7d)', MemberFilterStatus.expiring),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Expired', MemberFilterStatus.expired),
+                ],
+              ),
+            ),
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: scheme.outlineVariant.withValues(alpha: 0.3),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x08000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                            child: Text(
-                              (user['name']?.toString().isNotEmpty == true)
-                                  ? user['name'].toString()[0].toUpperCase()
-                                  : 'C',
-                              style: TextStyle(
+            const SizedBox(height: 6),
+
+            // Members List
+            Expanded(
+              child: membersAsync.when(
+                data: (allMembers) {
+                  final filteredMembers = _filterMembers(allMembers);
+
+                  if (filteredMembers.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.people_outline_rounded,
+                                size: 44,
                                 color: scheme.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            Text(
+                              allMembers.isEmpty
+                                  ? 'No Enrolled Members Yet'
+                                  : 'No Matching Members Found',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              allMembers.isEmpty
+                                  ? 'Scan citizen QR codes or search citizen accounts to enroll new members.'
+                                  : 'Try adjusting your search query or filter chips.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (allMembers.isEmpty) ...[
+                              const SizedBox(height: 18),
+                              FilledButton.icon(
+                                onPressed: () => _openAddMemberModal(context),
+                                icon: const Icon(Icons.person_add_rounded),
+                                label: const Text('Add First Member'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                    itemCount: filteredMembers.length,
+                    itemBuilder: (ctx, idx) {
+                      final m = filteredMembers[idx];
+                      final user = m['user'] as Map<String, dynamic>? ?? {};
+                      final plan = m['fee_plan'] as Map<String, dynamic>? ?? {};
+                      final status = m['status']?.toString().toLowerCase() ?? 'active';
+                      final startDate = m['start_date']?.toString();
+                      final endDate = m['end_date']?.toString();
+
+                      final now = DateTime.now();
+                      DateTime? endDateTime;
+                      if (endDate != null && endDate.isNotEmpty) {
+                        endDateTime = DateTime.tryParse(endDate);
+                      }
+                      final isExpired = status != 'active' || (endDateTime != null && endDateTime.isBefore(now));
+                      final daysRemaining = endDateTime != null ? endDateTime.difference(now).inDays : 999;
+                      final isExpiringSoon = !isExpired && daysRemaining <= 7;
+
+                      Color statusColor = const Color(0xFF10B981);
+                      String statusText = 'ACTIVE';
+                      if (isExpired) {
+                        statusColor = const Color(0xFFEF4444);
+                        statusText = 'EXPIRED';
+                      } else if (isExpiringSoon) {
+                        statusColor = const Color(0xFFF59E0B);
+                        statusText = daysRemaining == 0 ? 'EXPIRES TODAY' : 'EXPIRES IN ${daysRemaining}D';
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isExpired
+                                ? Colors.redAccent.withValues(alpha: 0.3)
+                                : (isExpiringSoon
+                                    ? Colors.amber.withValues(alpha: 0.4)
+                                    : scheme.outlineVariant.withValues(alpha: 0.3)),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x08000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  user['name']?.toString() ?? 'Citizen Member',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: statusColor.withValues(alpha: 0.15),
+                                  child: Text(
+                                    (user['name']?.toString().isNotEmpty == true)
+                                        ? user['name'].toString()[0].toUpperCase()
+                                        : 'C',
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Pass ID: ${m['id'] ?? 'N/A'} • ${m['membership_type'] ?? plan['name'] ?? 'Standard'}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user['name']?.toString() ?? 'Citizen Member',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Pass: ${m['id'] ?? 'N/A'} • ${plan['name'] ?? m['membership_type'] ?? 'Standard'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: scheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    statusText,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: (isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444))
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              status.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      if (startDate != null || endDate != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            children: [
-                              Icon(Icons.event_available_rounded, size: 14, color: scheme.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: scheme.onSurfaceVariant,
+                            const SizedBox(height: 10),
+                            if (startDate != null || endDate != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isExpired ? Icons.event_busy_rounded : Icons.event_available_rounded,
+                                      size: 14,
+                                      color: isExpired ? Colors.redAccent : scheme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      if (user['email'] != null || user['phone'] != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${user['email'] ?? user['phone']}',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            if (user['email'] != null || user['phone'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${user['email'] ?? user['phone']}',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            const Divider(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.history_rounded, size: 18),
+                                  tooltip: 'Renewal History',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () => _openHistoryModal(context, m),
+                                ),
+                                const SizedBox(width: 4),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.redAccent,
+                                    side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.person_remove_rounded, size: 14),
+                                  label: const Text('Remove', style: TextStyle(fontSize: 12)),
+                                  onPressed: () => _confirmRemoveMember(context, m),
+                                ),
+                                const SizedBox(width: 8),
+                                FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0D9488),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.autorenew_rounded, size: 14),
+                                  label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  onPressed: () => _openRenewMemberModal(context, m),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      const Divider(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.redAccent,
-                              side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              visualDensity: VisualDensity.compact,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.person_remove_rounded, size: 14),
-                            label: const Text('Remove', style: TextStyle(fontSize: 12)),
-                            onPressed: () => _confirmRemoveMember(context, ref, m),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0D9488),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              visualDensity: VisualDensity.compact,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.autorenew_rounded, size: 14),
-                            label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            onPressed: () => _openRenewMemberModal(context, ref, m),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(
-            child: Text('Error loading members: $err', style: TextStyle(color: scheme.error)),
-          ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(
+                  child: Text('Error loading members: $err', style: TextStyle(color: scheme.error)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, MemberFilterStatus status) {
+    final isSelected = _selectedFilter == status;
+    return FilterChip(
+      selected: isSelected,
+      label: Text(label, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      onSelected: (_) => setState(() => _selectedFilter = status),
     );
   }
 }
@@ -422,7 +602,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
           : await repo.getLibraryPlans(widget.facilityId);
       if (mounted) {
         setState(() {
-          _plans = plans;
+          _plans = plans.where((p) => p.isActive).toList();
           if (_plans.isNotEmpty) {
             _selectedPlan = _plans.first;
           }
@@ -431,6 +611,33 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingPlans = false);
+    }
+  }
+
+  DateTime _calculateInitialEndDate(DateTime start, FeePlanModel? plan) {
+    if (plan == null) return start.add(const Duration(days: 30));
+    final count = plan.intervalCount;
+    final interval = plan.interval.toLowerCase();
+    switch (interval) {
+      case 'hour':
+      case 'hours':
+      case 'hourly':
+        return DateTime(start.year, start.month, start.day + 1);
+      case 'day':
+      case 'days':
+      case 'daily':
+        return start.add(Duration(days: count));
+      case 'week':
+      case 'weeks':
+      case 'weekly':
+        return start.add(Duration(days: count * 7));
+      case 'year':
+      case 'years':
+      case 'yearly':
+      case 'annual':
+        return DateTime(start.year + count, start.month, start.day);
+      default: // month
+        return DateTime(start.year, start.month + count, start.day);
     }
   }
 
@@ -494,7 +701,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
         HapticFeedback.mediumImpact();
         setState(() {
           _citizenIdCtrl.text = raw;
-          _mode = _AddMode.manual; // Switch to form view with populated ID
+          _mode = _AddMode.manual;
         });
         _onSearchChanged(raw);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -525,10 +732,12 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
+      final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
       final payload = {
         'citizen_id': _selectedCitizen?.id ?? code,
         'fee_plan_id': _selectedPlan?.id,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
+        'end_date': DateFormat('yyyy-MM-dd').format(calculatedEndDate),
       };
 
       if (widget.kind == FacilityKind.gym) {
@@ -543,7 +752,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Member enrolled successfully! Welcome pass & PDF emailed.'),
+          content: Text('Member enrolled successfully! Welcome pass & receipt emailed.'),
           backgroundColor: Color(0xFF0D9488),
           duration: Duration(seconds: 3),
         ),
@@ -568,7 +777,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     final isGym = widget.kind == FacilityKind.gym;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
+      height: MediaQuery.of(context).size.height * 0.90,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -615,7 +824,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Add Member',
+                          'Add New Member',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -713,7 +922,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Point camera at Citizen QR Code from the user\'s app',
+            'Point camera at Citizen QR Code from the citizen app',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
@@ -729,6 +938,8 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
   }
 
   Widget _buildFormView(ThemeData theme, ColorScheme scheme) {
+    final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -806,7 +1017,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             labelText: 'Search Citizen by Name, Email, Phone, or ID',
-            hintText: 'e.g. chotu, chotuji1971@gmail.com, USR...',
+            hintText: 'e.g. John, john@example.com, USR...',
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: Row(
               mainAxisSize: MainAxisSize.min,
@@ -905,21 +1116,23 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
 
         const SizedBox(height: 16),
 
-        // Fee Plan Dropdown
+        // Fee Plan Dropdown Picklist
+        Text('Select Fee Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+        const SizedBox(height: 6),
         if (_loadingPlans)
           const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
         else if (_plans.isNotEmpty)
           DropdownButtonFormField<FeePlanModel>(
             initialValue: _selectedPlan,
             decoration: InputDecoration(
-              labelText: 'Select Membership Plan',
-              prefixIcon: const Icon(Icons.card_membership_rounded),
+              prefixIcon: const Icon(Icons.sell_outlined),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             ),
             items: _plans.map((p) {
+              final intervalUnit = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
               return DropdownMenuItem(
                 value: p,
-                child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / ${p.interval}'),
+                child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalUnit'),
               );
             }).toList(),
             onChanged: (p) => setState(() => _selectedPlan = p),
@@ -966,6 +1179,36 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
             if (picked != null) setState(() => _startDate = picked);
           },
         ),
+        const SizedBox(height: 14),
+
+        // Auto-calculated Expiry Preview Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.verified_rounded, color: Color(0xFF0D9488), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Initial Membership Validity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${DateFormat('dd MMM yyyy').format(_startDate)} → ${DateFormat('dd MMM yyyy').format(calculatedEndDate)} (${_selectedPlan != null ? "${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}" : "1 month"})',
+                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
 
         // Submit Button
@@ -984,7 +1227,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
                 )
               : const Icon(Icons.check_circle_outline_rounded),
           label: Text(
-            _submitting ? 'Enrolling & Sending Pass...' : 'Enroll Member & Send Email Pass',
+            _submitting ? 'Enrolling & Issuing Pass...' : 'Enroll Member & Send Pass',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
         ),
@@ -1060,6 +1303,33 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     }
   }
 
+  DateTime _calculateRenewedEndDate(DateTime baseDate, FeePlanModel? plan) {
+    if (plan == null) return baseDate.add(const Duration(days: 30));
+    final count = plan.intervalCount;
+    final interval = plan.interval.toLowerCase();
+    switch (interval) {
+      case 'hour':
+      case 'hours':
+      case 'hourly':
+        return DateTime(baseDate.year, baseDate.month, baseDate.day + 1);
+      case 'day':
+      case 'days':
+      case 'daily':
+        return baseDate.add(Duration(days: count));
+      case 'week':
+      case 'weeks':
+      case 'weekly':
+        return baseDate.add(Duration(days: count * 7));
+      case 'year':
+      case 'years':
+      case 'yearly':
+      case 'annual':
+        return DateTime(baseDate.year + count, baseDate.month, baseDate.day);
+      default: // month
+        return DateTime(baseDate.year, baseDate.month + count, baseDate.day);
+    }
+  }
+
   Future<void> _submitRenewal() async {
     final memberId = widget.member['id']?.toString();
     if (memberId == null || memberId.isEmpty) return;
@@ -1108,7 +1378,17 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     final scheme = theme.colorScheme;
     final user = widget.member['user'] as Map<String, dynamic>? ?? {};
     final userName = user['name']?.toString() ?? 'Citizen Member';
-    final currentEnd = widget.member['end_date']?.toString() ?? 'Active';
+    final currentEndStr = widget.member['end_date']?.toString();
+
+    final now = DateTime.now();
+    DateTime? currentEnd;
+    if (currentEndStr != null && currentEndStr.isNotEmpty) {
+      currentEnd = DateTime.tryParse(currentEndStr);
+    }
+
+    final isExpired = currentEnd == null || currentEnd.isBefore(now);
+    final baseDate = isExpired ? now : currentEnd;
+    final calculatedNewEnd = _calculateRenewedEndDate(baseDate, _selectedPlan);
 
     return Container(
       decoration: BoxDecoration(
@@ -1150,12 +1430,12 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Renew Membership',
+                          'Record Payment & Renew',
                           style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Record payment & extend validity for $userName',
+                          'Select fee plan to renew membership for $userName',
                           style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ],
@@ -1173,20 +1453,37 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.08),
+                  color: isExpired
+                      ? Colors.redAccent.withValues(alpha: 0.08)
+                      : scheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: isExpired
+                        ? Colors.redAccent.withValues(alpha: 0.25)
+                        : scheme.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.badge_outlined, color: scheme.primary, size: 20),
+                    Icon(
+                      isExpired ? Icons.warning_amber_rounded : Icons.badge_outlined,
+                      color: isExpired ? Colors.redAccent : scheme.primary,
+                      size: 22,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Member: $userName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          Text('Current Expiry: $currentEnd', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                          Text(
+                            'Current Expiry: ${currentEnd != null ? DateFormat('dd MMM yyyy').format(currentEnd) : "Expired"} ${isExpired ? "(Overdue)" : "(Active)"}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isExpired ? Colors.redAccent : scheme.onSurfaceVariant,
+                              fontWeight: isExpired ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1219,7 +1516,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   ),
                   items: _plans.map((p) {
-                    final intervalStr = p.interval;
+                    final intervalStr = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
                     return DropdownMenuItem<FeePlanModel>(
                       value: p,
                       child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalStr'),
@@ -1234,6 +1531,40 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
                     }
                   },
                 ),
+              const SizedBox(height: 14),
+
+              // Dynamic Calculated Expiry Date Preview
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_available_rounded, color: Color(0xFF0D9488), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Calculated Renewal Validity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${DateFormat('dd MMM yyyy').format(baseDate)} → ${DateFormat('dd MMM yyyy').format(calculatedNewEnd)} (${_selectedPlan != null ? "${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}" : "1 month"})',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
 
               // Amount to Collect
@@ -1315,3 +1646,185 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
   }
 }
 
+class _MemberRenewalsHistorySheet extends ConsumerStatefulWidget {
+  const _MemberRenewalsHistorySheet({
+    required this.kind,
+    required this.facilityId,
+    required this.member,
+  });
+
+  final FacilityKind kind;
+  final String facilityId;
+  final Map<String, dynamic> member;
+
+  @override
+  ConsumerState<_MemberRenewalsHistorySheet> createState() => _MemberRenewalsHistorySheetState();
+}
+
+class _MemberRenewalsHistorySheetState extends ConsumerState<_MemberRenewalsHistorySheet> {
+  List<Map<String, dynamic>> _renewals = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHistory();
+  }
+
+  Future<void> _fetchHistory() async {
+    final memberId = widget.member['id']?.toString();
+    if (memberId == null || memberId.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = 'Member ID missing';
+      });
+      return;
+    }
+
+    try {
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      final history = await repo.getMemberRenewals(widget.kind, widget.facilityId, memberId);
+      if (mounted) {
+        setState(() {
+          _renewals = history;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final user = widget.member['user'] as Map<String, dynamic>? ?? {};
+    final userName = user['name']?.toString() ?? 'Citizen Member';
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.70,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Renewal & Payment History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(userName, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(child: Text('Error loading history: $_error', style: TextStyle(color: scheme.error)))
+                    : _renewals.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.receipt_long_outlined, size: 40, color: scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                const SizedBox(height: 10),
+                                Text('No previous renewal logs found for this member.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _renewals.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (ctx, idx) {
+                              final item = _renewals[idx];
+                              final amount = (item['amount_paid'] as num?)?.toDouble() ?? 0.0;
+                              final plan = item['fee_plan'] as Map<String, dynamic>? ?? {};
+                              final payment = item['payment'] as Map<String, dynamic>? ?? {};
+                              final prevEnd = item['previous_end_date']?.toString() ?? '--';
+                              final newEnd = item['new_end_date']?.toString() ?? '--';
+                              final date = item['created_at']?.toString() ?? '';
+
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          plan['name']?.toString() ?? 'Membership Extension',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                        Text(
+                                          '₹${amount.toStringAsFixed(0)}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488), fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Extended: $prevEnd → $newEnd',
+                                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                                    ),
+                                    if (payment['invoice_number'] != null)
+                                      Text(
+                                        'Invoice: ${payment['invoice_number']} • Mode: ${(payment['payment_method'] ?? 'cash').toString().toUpperCase()}',
+                                        style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                                      ),
+                                    if (date.isNotEmpty)
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          date.length > 10 ? date.substring(0, 10) : date,
+                                          style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import 'facility_members_screen.dart';
 
 final unpaidMembersReportProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -43,12 +44,9 @@ class _FacilityUnpaidMembersScreenState extends ConsumerState<FacilityUnpaidMemb
         title: const Text('Unpaid Members Report'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Exporting unpaid members list...'), behavior: SnackBarBehavior.floating),
-              );
-            },
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+            onPressed: () => ref.refresh(unpaidMembersReportProvider((widget.kind, widget.facilityId, _selectedMonth))),
           ),
         ],
       ),
@@ -78,15 +76,6 @@ class _FacilityUnpaidMembersScreenState extends ConsumerState<FacilityUnpaidMemb
                         ),
                       ],
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.filter_list_rounded),
-                    onPressed: () {},
                   ),
                 ],
               ),
@@ -156,50 +145,88 @@ class _FacilityUnpaidMembersScreenState extends ConsumerState<FacilityUnpaidMemb
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                              child: Text(
-                                item.userName.isNotEmpty ? item.userName[0].toUpperCase() : 'M',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.userName,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.planName,
-                                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            Row(
                               children: [
-                                Text(
-                                  '₹${item.dueAmount.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFDC2626),
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                  child: Text(
+                                    item.userName.isNotEmpty ? item.userName[0].toUpperCase() : 'M',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Due: ${item.dueDateFormatted}',
-                                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.userName,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.planName,
+                                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '₹${item.dueAmount.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFDC2626),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Due: ${item.dueDateFormatted}',
+                                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                    ),
+                                  ],
                                 ),
                               ],
+                            ),
+                            const Divider(height: 16),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0D9488),
+                                  foregroundColor: Colors.white,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                icon: const Icon(Icons.payment_rounded, size: 14),
+                                label: const Text('Record Payment', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (ctx) => RenewMemberModal(
+                                      kind: widget.kind,
+                                      facilityId: widget.facilityId,
+                                      facility: widget.facility,
+                                      member: {
+                                        'id': item.memberId,
+                                        'user': {'name': item.userName, 'id': item.userId},
+                                        'end_date': item.dueDate,
+                                      },
+                                      onSuccess: () => ref.refresh(unpaidMembersReportProvider((widget.kind, widget.facilityId, _selectedMonth))),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ],
                         ),

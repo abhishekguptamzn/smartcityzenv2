@@ -187,6 +187,15 @@ class ClientFacilityRepository {
     return data is Map ? data.cast<String, dynamic>() : {};
   }
 
+  Future<List<Map<String, dynamic>>> getMemberRenewals(FacilityKind kind, String facilityId, String memberId) async {
+    final res = kind == FacilityKind.gym
+        ? await _api.getGymMemberRenewals(facilityId, memberId)
+        : await _api.getLibraryMemberRenewals(facilityId, memberId);
+
+    final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
+    return rawList.cast<Map<String, dynamic>>();
+  }
+
   // Enquiries
   Future<Map<String, dynamic>> getEnquiries(FacilityKind kind, String facilityId, {String? status, String? search, int page = 1}) async {
     final res = await _api.getEnquiries(kind.pathSegment, facilityId, status: status, search: search, page: page);
