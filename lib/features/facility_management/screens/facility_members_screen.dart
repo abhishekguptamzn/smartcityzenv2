@@ -49,6 +49,70 @@ class FacilityMembersScreen extends ConsumerWidget {
     );
   }
 
+  void _openRenewMemberModal(BuildContext context, WidgetRef ref, Map<String, dynamic> member) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => RenewMemberModal(
+        kind: kind,
+        facilityId: facilityId,
+        facility: facility,
+        member: member,
+        onSuccess: () => ref.refresh(facilityMembersProvider((kind, facilityId))),
+      ),
+    );
+  }
+
+  void _confirmRemoveMember(BuildContext context, WidgetRef ref, Map<String, dynamic> member) {
+    final userName = member['user']?['name']?.toString() ?? 'this member';
+    final memberId = member['id']?.toString() ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            SizedBox(width: 8),
+            Text('Remove Member'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to remove $userName from this ${kind == FacilityKind.gym ? "gym" : "library"}? Their active digital pass will be revoked.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                await ref.read(clientFacilityRepositoryProvider).deleteMember(kind, facilityId, memberId);
+                ref.invalidate(facilityMembersProvider((kind, facilityId)));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Member $userName removed successfully.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to remove member: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -142,6 +206,7 @@ class FacilityMembersScreen extends ConsumerWidget {
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
                     borderRadius: BorderRadius.circular(16),
@@ -156,76 +221,133 @@ class FacilityMembersScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    leading: CircleAvatar(
-                      backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                      child: Text(
-                        (user['name']?.toString().isNotEmpty == true)
-                            ? user['name'].toString()[0].toUpperCase()
-                            : 'C',
-                        style: TextStyle(
-                          color: scheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: scheme.primary.withValues(alpha: 0.15),
+                            child: Text(
+                              (user['name']?.toString().isNotEmpty == true)
+                                  ? user['name'].toString()[0].toUpperCase()
+                                  : 'C',
+                              style: TextStyle(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user['name']?.toString() ?? 'Citizen Member',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Pass ID: ${m['id'] ?? 'N/A'} • ${m['membership_type'] ?? plan['name'] ?? 'Standard'}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              status.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            user['name']?.toString() ?? 'Citizen Member',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(height: 10),
+                      if (startDate != null || endDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.event_available_rounded, size: 14, color: scheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: (isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444))
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            status.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 3),
-                        Text(
-                          'Pass ID: ${m['id'] ?? 'N/A'} • Type: ${m['membership_type'] ?? plan['name'] ?? 'Standard'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
+                      if (user['email'] != null || user['phone'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            children: [
+                              Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${user['email'] ?? user['phone']}',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        if (startDate != null || endDate != null)
-                          Text(
-                            'Valid: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                      const Divider(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
+                            icon: const Icon(Icons.person_remove_rounded, size: 14),
+                            label: const Text('Remove', style: TextStyle(fontSize: 12)),
+                            onPressed: () => _confirmRemoveMember(context, ref, m),
                           ),
-                        if (user['email'] != null || user['phone'] != null)
-                          Text(
-                            '👤 ${user['email'] ?? user['phone']}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
+                            icon: const Icon(Icons.autorenew_rounded, size: 14),
+                            label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            onPressed: () => _openRenewMemberModal(context, ref, m),
                           ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
               },
@@ -870,3 +992,326 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
     );
   }
 }
+
+class RenewMemberModal extends ConsumerStatefulWidget {
+  const RenewMemberModal({
+    super.key,
+    required this.kind,
+    required this.facilityId,
+    this.facility,
+    required this.member,
+    required this.onSuccess,
+  });
+
+  final FacilityKind kind;
+  final String facilityId;
+  final FacilityModel? facility;
+  final Map<String, dynamic> member;
+  final VoidCallback onSuccess;
+
+  @override
+  ConsumerState<RenewMemberModal> createState() => _RenewMemberModalState();
+}
+
+class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
+  List<FeePlanModel> _plans = [];
+  FeePlanModel? _selectedPlan;
+  bool _loadingPlans = true;
+  bool _submitting = false;
+
+  final TextEditingController _amountCtrl = TextEditingController();
+  final TextEditingController _refCtrl = TextEditingController();
+  final TextEditingController _notesCtrl = TextEditingController();
+  String _paymentMethod = 'cash';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPlans();
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _refCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchPlans() async {
+    try {
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      final plans = widget.kind == FacilityKind.gym
+          ? await repo.getGymPlans(widget.facilityId)
+          : await repo.getLibraryPlans(widget.facilityId);
+
+      if (mounted) {
+        setState(() {
+          _plans = plans.where((p) => p.isActive).toList();
+          _loadingPlans = false;
+          if (_plans.isNotEmpty) {
+            _selectedPlan = _plans.first;
+            _amountCtrl.text = _selectedPlan!.amount.toStringAsFixed(0);
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPlans = false);
+    }
+  }
+
+  Future<void> _submitRenewal() async {
+    final memberId = widget.member['id']?.toString();
+    if (memberId == null || memberId.isEmpty) return;
+
+    final amount = double.tryParse(_amountCtrl.text.trim()) ?? _selectedPlan?.amount ?? 0.0;
+
+    setState(() => _submitting = true);
+
+    try {
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      await repo.renewMember(
+        widget.kind,
+        widget.facilityId,
+        memberId,
+        feePlanId: _selectedPlan?.id,
+        amount: amount,
+        paymentMethod: _paymentMethod,
+        transactionReference: _refCtrl.text.trim().isNotEmpty ? _refCtrl.text.trim() : null,
+        notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Membership renewed and payment recorded successfully!'),
+            backgroundColor: Color(0xFF059669),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to renew membership: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final user = widget.member['user'] as Map<String, dynamic>? ?? {};
+    final userName = user['name']?.toString() ?? 'Citizen Member';
+    final currentEnd = widget.member['end_date']?.toString() ?? 'Active';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 20,
+        right: 20,
+        top: 20,
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag pill
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Renew Membership',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Record payment & extend validity for $userName',
+                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Current status card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.badge_outlined, color: scheme.primary, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Member: $userName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text('Current Expiry: $currentEnd', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Fee Plan Picklist
+              Text('Select Fee Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+              const SizedBox(height: 8),
+
+              if (_loadingPlans)
+                const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+              else if (_plans.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text('No active fee plans configured. You can specify a custom amount below.', style: TextStyle(fontSize: 12)),
+                )
+              else
+                DropdownButtonFormField<FeePlanModel>(
+                  initialValue: _selectedPlan,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.sell_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  ),
+                  items: _plans.map((p) {
+                    final intervalStr = p.interval;
+                    return DropdownMenuItem<FeePlanModel>(
+                      value: p,
+                      child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalStr'),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedPlan = val;
+                        _amountCtrl.text = val.amount.toStringAsFixed(0);
+                      });
+                    }
+                  },
+                ),
+              const SizedBox(height: 16),
+
+              // Amount to Collect
+              Text('Payment Amount (₹)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _amountCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  hintText: 'Enter renewal amount',
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Payment Method
+              Text('Payment Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _paymentMethod,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.payments_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'cash', child: Text('Cash at Desk')),
+                  DropdownMenuItem(value: 'upi', child: Text('UPI / QR Payment')),
+                  DropdownMenuItem(value: 'card', child: Text('Credit / Debit Card')),
+                  DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer / Netbanking')),
+                ],
+                onChanged: (val) => setState(() => _paymentMethod = val ?? 'cash'),
+              ),
+              const SizedBox(height: 16),
+
+              // Transaction Reference / Notes
+              TextField(
+                controller: _refCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Transaction Reference / Receipt ID (Optional)',
+                  prefixIcon: const Icon(Icons.receipt_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              TextField(
+                controller: _notesCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Internal Notes (Optional)',
+                  prefixIcon: const Icon(Icons.notes_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Submit Action
+              FilledButton.icon(
+                onPressed: _submitting ? null : _submitRenewal,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: _submitting
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.check_circle_rounded),
+                label: Text(
+                  _submitting ? 'Recording Renewal...' : 'Confirm & Renew Membership',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

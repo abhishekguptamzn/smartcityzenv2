@@ -494,20 +494,36 @@ class _CardFrontDesign extends StatelessWidget {
                         ],
                       ),
                       child: Container(
+                        clipBehavior: Clip.antiAlias,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.white,
                         ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1E40AF), // Bold Royal Blue
-                            ),
-                          ),
-                        ),
+                        child: (user.effectiveAvatarUrl != null && user.effectiveAvatarUrl!.isNotEmpty)
+                            ? Image.network(
+                                user.effectiveAvatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Center(
+                                  child: Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF1E40AF),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E40AF),
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 16),

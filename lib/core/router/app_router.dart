@@ -32,8 +32,11 @@ import '../../features/facility_management/screens/facility_daily_checkin_report
 import '../../features/facility_management/screens/facility_dashboard_screen.dart';
 import '../../features/facility_management/screens/facility_enquiries_screen.dart';
 import '../../features/facility_management/screens/facility_enquiry_conversation_screen.dart';
+import '../../features/facility_management/screens/facility_expiring_members_screen.dart';
 import '../../features/facility_management/screens/facility_manual_checkin_screen.dart';
 import '../../features/facility_management/screens/facility_members_screen.dart';
+import '../../features/facility_management/screens/facility_monthly_attendance_report_screen.dart';
+import '../../features/facility_management/screens/facility_plan_distribution_screen.dart';
 import '../../features/facility_management/screens/facility_reports_screen.dart';
 import '../../features/facility_management/screens/facility_unpaid_members_screen.dart';
 import '../../features/facility_management/screens/manage_fee_plans_screen.dart';
@@ -344,7 +347,23 @@ GoRouter goRouter(Ref ref) {
       ),
       GoRoute(
         path: '/client/manage/reports/monthly/:kind/:id',
-        builder: (context, state) => FacilityDailyCheckinReportScreen(
+        builder: (context, state) => FacilityMonthlyAttendanceReportScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/reports/expiring/:kind/:id',
+        builder: (context, state) => FacilityExpiringMembersScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/reports/plans/:kind/:id',
+        builder: (context, state) => FacilityPlanDistributionScreen(
           kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
           facilityId: state.pathParameters['id']!,
           facility: state.extra as FacilityModel?,

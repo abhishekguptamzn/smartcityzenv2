@@ -135,6 +135,58 @@ class ClientFacilityRepository {
     };
   }
 
+  Future<Map<String, dynamic>> getExpiringMembersReport(FacilityKind kind, String facilityId, {int days = 30}) async {
+    final res = await _api.getExpiringMembersReport(kind.pathSegment, facilityId, days: days);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> getPlanDistributionReport(FacilityKind kind, String facilityId) async {
+    final res = await _api.getPlanDistributionReport(kind.pathSegment, facilityId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> citizenScanAttendance(FacilityKind kind, String facilityId) async {
+    final res = await _api.citizenScanAttendance(kind.pathSegment, facilityId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<void> deleteMember(FacilityKind kind, String facilityId, String memberId) async {
+    if (kind == FacilityKind.gym) {
+      await _api.deleteGymMember(facilityId, memberId);
+    } else {
+      await _api.deleteLibraryMember(facilityId, memberId);
+    }
+  }
+
+  Future<Map<String, dynamic>> renewMember(
+    FacilityKind kind,
+    String facilityId,
+    String memberId, {
+    String? feePlanId,
+    double? amount,
+    String paymentMethod = 'cash',
+    String? transactionReference,
+    String? notes,
+  }) async {
+    final payload = {
+      if (feePlanId != null) 'fee_plan_id': feePlanId,
+      if (amount != null) 'amount': amount,
+      'payment_method': paymentMethod,
+      if (transactionReference != null) 'transaction_reference': transactionReference,
+      if (notes != null) 'notes': notes,
+    };
+
+    final res = kind == FacilityKind.gym
+        ? await _api.renewGymMember(facilityId, memberId, payload)
+        : await _api.renewLibraryMember(facilityId, memberId, payload);
+
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
   // Enquiries
   Future<Map<String, dynamic>> getEnquiries(FacilityKind kind, String facilityId, {String? status, String? search, int page = 1}) async {
     final res = await _api.getEnquiries(kind.pathSegment, facilityId, status: status, search: search, page: page);

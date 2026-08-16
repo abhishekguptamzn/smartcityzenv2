@@ -147,8 +147,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
               _CityzenIdHeroCard(user: user),
-              const SizedBox(height: 10),
-              const _CarouselDots(count: 3, activeIndex: 0),
               const SizedBox(height: 16),
               _DashboardQuickActions(user: user),
               if (user?.isClientUser == true) ...[
@@ -261,37 +259,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
   );
 }
-}
-
-class _CarouselDots extends StatelessWidget {
-  const _CarouselDots({required this.count, required this.activeIndex});
-
-  final int count;
-  final int activeIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < count; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: Container(
-              width: i == activeIndex ? 18 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: i == activeIndex
-                    ? scheme.secondary
-                    : scheme.outlineVariant,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 }
 
 class _SearchFilterButton extends StatelessWidget {
@@ -679,20 +646,36 @@ class _CityzenIdHeroCard extends StatelessWidget {
                         ],
                       ),
                       child: Container(
+                        clipBehavior: Clip.antiAlias,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.white,
                         ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1E40AF),
-                            ),
-                          ),
-                        ),
+                        child: (user?.effectiveAvatarUrl != null && user!.effectiveAvatarUrl!.isNotEmpty)
+                            ? Image.network(
+                                user!.effectiveAvatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Center(
+                                  child: Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF1E40AF),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E40AF),
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 14),

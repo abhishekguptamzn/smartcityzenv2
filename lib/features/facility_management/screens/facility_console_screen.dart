@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_qr_modal.dart';
 
 final facilityStatsProvider = FutureProvider.autoDispose.family<FacilityDashboardStats, (FacilityKind, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -40,12 +41,18 @@ class FacilityConsoleScreen extends ConsumerWidget {
         title: Text(facilityName),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => ref.refresh(facilityStatsProvider((kind, facilityId))),
+            icon: const Icon(Icons.qr_code_2_rounded),
+            tooltip: 'Facility QR Code',
+            onPressed: () => showFacilityQrModal(
+              context: context,
+              kind: kind,
+              facilityId: facilityId,
+              facilityName: facilityName,
+            ),
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () {},
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => ref.refresh(facilityStatsProvider((kind, facilityId))),
           ),
         ],
       ),
@@ -229,6 +236,17 @@ class FacilityConsoleScreen extends ConsumerWidget {
                   onTap: () => context.push(
                     '/client/manage/communication/${kind.pathSegment}/$facilityId',
                     extra: facility,
+                  ),
+                ),
+                _ModuleGridItem(
+                  icon: Icons.qr_code_2_rounded,
+                  label: 'Facility QR',
+                  color: const Color(0xFF0F766E),
+                  onTap: () => showFacilityQrModal(
+                    context: context,
+                    kind: kind,
+                    facilityId: facilityId,
+                    facilityName: facilityName,
                   ),
                 ),
               ],

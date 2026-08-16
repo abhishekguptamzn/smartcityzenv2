@@ -13,6 +13,7 @@ import '../../../core/providers/facilities_providers.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/gym_attendance_model.dart';
+import '../../../data/repositories/client_facility_repository.dart';
 import '../../../data/repositories/gym_attendance_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../gym_checkin_qr_payload.dart';
@@ -82,6 +83,66 @@ class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
     HapticFeedback.mediumImpact();
 
     final trimmed = raw.trim();
+
+    // 0. Check if JSON encoded Facility Check-in QR
+    try {
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map && decoded['type'] == 'facility_checkin' && decoded['facility_id'] != null) {
+          final rawKind = decoded['facility_type']?.toString().toLowerCase() ?? 'gym';
+          final kind = (rawKind == 'gym' || rawKind == 'gyms') ? FacilityKind.gym : FacilityKind.library;
+          final facilityId = decoded['facility_id'].toString();
+          final facilityName = decoded['facility_name']?.toString() ?? (kind == FacilityKind.gym ? 'Gym Facility' : 'Library Hub');
+
+          setState(() => _status = _ScanStatus.checkingIn);
+          try {
+            final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, facilityId);
+            if (!mounted) return;
+            setState(() {
+              _status = _ScanStatus.success;
+              _decodedInfo = _DecodedQrInfo(
+                type: kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess,
+                title: facilityName,
+                subtitle: '${kind.displayName} Attendance Recorded',
+                rawValue: trimmed,
+                categoryLabel: '${kind.displayName} Check-In',
+                categoryIcon: kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                accentColor: const Color(0xFF10B981),
+                metadata: {
+                  'Facility': facilityName,
+                  'Type': kind.displayName,
+                  'Status': checkinRes['status']?.toString() ?? 'Attendance Logged',
+                  'Check-in Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+                },
+              );
+            });
+            return;
+          } catch (e) {
+            final appException = AppException.from(e);
+            if (!mounted) return;
+            setState(() {
+              _status = _ScanStatus.success;
+              _decodedInfo = _DecodedQrInfo(
+                type: kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess,
+                title: facilityName,
+                subtitle: '${kind.displayName} QR Scanned',
+                rawValue: trimmed,
+                categoryLabel: '${kind.displayName} Check-In',
+                categoryIcon: kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                accentColor: const Color(0xFF0D9488),
+                metadata: {
+                  'Facility': facilityName,
+                  'Info': appException?.message ?? 'Check-in request processed.',
+                  'Scanned At': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+                },
+              );
+            });
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+
     final summaries =
         ref.read(myMembershipSummariesProvider).value ?? const [];
     final gymMemberships =

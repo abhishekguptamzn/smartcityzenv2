@@ -61,6 +61,15 @@ class ClientFacilityApi {
         if (status != null && status != 'all') 'status': status,
       });
 
+  Future<Response<dynamic>> getExpiringMembersReport(String type, String id, {int days = 30}) =>
+      _dio.get('/client/$type/$id/reports/expiring-members', queryParameters: {'days': days});
+
+  Future<Response<dynamic>> getPlanDistributionReport(String type, String id) =>
+      _dio.get('/client/$type/$id/reports/plan-distribution');
+
+  Future<Response<dynamic>> citizenScanAttendance(String type, String facilityId) =>
+      _dio.post('/facilities/$type/$facilityId/attendance/check-in');
+
   // Enquiries
   Future<Response<dynamic>> getEnquiries(String type, String id, {String? status, String? search, int page = 1}) =>
       _dio.get('/client/$type/$id/enquiries', queryParameters: {
@@ -117,6 +126,12 @@ class ClientFacilityApi {
   Future<Response<dynamic>> addGymMember(String gymId, Map<String, dynamic> data) =>
       _dio.post('/client/gyms/$gymId/members', data: data);
 
+  Future<Response<dynamic>> deleteGymMember(String gymId, String memberId) =>
+      _dio.delete('/client/gyms/$gymId/members/$memberId');
+
+  Future<Response<dynamic>> renewGymMember(String gymId, String memberId, Map<String, dynamic> data) =>
+      _dio.post('/client/gyms/$gymId/members/$memberId/renew', data: data);
+
   Future<Response<dynamic>> getGymAttendance(String gymId, {String? date, int page = 1}) =>
       _dio.get('/client/gyms/$gymId/attendance', queryParameters: {
         if (date != null) 'date': date,
@@ -151,6 +166,12 @@ class ClientFacilityApi {
 
   Future<Response<dynamic>> addLibraryMember(String libraryId, Map<String, dynamic> data) =>
       _dio.post('/client/libraries/$libraryId/members', data: data);
+
+  Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId) =>
+      _dio.delete('/client/libraries/$libraryId/members/$memberId');
+
+  Future<Response<dynamic>> renewLibraryMember(String libraryId, String memberId, Map<String, dynamic> data) =>
+      _dio.post('/client/libraries/$libraryId/members/$memberId/renew', data: data);
 }
 
 @Riverpod(keepAlive: true)

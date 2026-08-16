@@ -15,6 +15,8 @@ enum FacilityKind {
 
   String get pathSegment => this == FacilityKind.library ? 'libraries' : 'gyms';
 
+  String get displayName => this == FacilityKind.library ? 'Library' : 'Gym';
+
   String get payableMemberType =>
       this == FacilityKind.library ? 'LibraryMember' : 'GymMember';
 

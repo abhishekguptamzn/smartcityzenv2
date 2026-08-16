@@ -214,6 +214,28 @@ class FacilityReportsScreen extends ConsumerWidget {
                       extra: facility,
                     ),
                   ),
+                  const Divider(height: 1, indent: 56),
+                  _ReportMenuTile(
+                    icon: Icons.timer_outlined,
+                    iconColor: const Color(0xFFDC2626),
+                    title: 'Expiring Memberships',
+                    subtitle: 'Members expiring in next 7, 15, 30 days',
+                    onTap: () => context.push(
+                      '/client/manage/reports/expiring/${kind.pathSegment}/$facilityId',
+                      extra: facility,
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _ReportMenuTile(
+                    icon: Icons.pie_chart_outline_rounded,
+                    iconColor: const Color(0xFF8B5CF6),
+                    title: 'Plan Distribution',
+                    subtitle: 'Enrolled members per fee plan',
+                    onTap: () => context.push(
+                      '/client/manage/reports/plans/${kind.pathSegment}/$facilityId',
+                      extra: facility,
+                    ),
+                  ),
                 ],
               ),
             ),
