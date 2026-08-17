@@ -433,6 +433,26 @@ class ClientFacilityRepository {
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
   }
+
+  Future<Map<String, dynamic>> getPaymentDetails(
+    FacilityKind kind,
+    String facilityId,
+    String paymentId,
+  ) async {
+    final res = await _api.getPaymentDetails(kind.pathSegment, facilityId, paymentId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> emailPaymentInvoice(
+    FacilityKind kind,
+    String facilityId,
+    String paymentId,
+  ) async {
+    final res = await _api.emailPaymentInvoice(kind.pathSegment, facilityId, paymentId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
 }
 
 @Riverpod(keepAlive: true)

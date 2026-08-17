@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../screens/facility_console_screen.dart';
 
 class RenewMemberModal extends ConsumerStatefulWidget {
@@ -116,7 +117,30 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     final memberId = widget.member['id']?.toString();
     if (memberId == null || memberId.isEmpty) return;
 
+    final user = widget.member['user'] as Map<String, dynamic>? ?? {};
+    final userName = user['name']?.toString() ?? widget.member['name']?.toString() ?? 'Citizen Member';
     final amount = double.tryParse(_amountCtrl.text.trim()) ?? _selectedPlan?.amount ?? 0.0;
+    final planTitle = _selectedPlan != null
+        ? '${_selectedPlan!.name} (${_selectedPlan!.intervalCount} ${_selectedPlan!.interval})'
+        : 'Custom Fee Pass';
+    final endDate = _calculateRenewedEndDate(_startDate, _selectedPlan);
+    final validityStr = '${DateFormat("d MMM yyyy").format(_startDate)} → ${DateFormat("d MMM yyyy").format(endDate)}';
+
+    final confirm = await showAppConfirmDialog(
+      context: context,
+      title: 'Confirm Pass Renewal',
+      message: 'Please verify the membership pass renewal details before recording the payment.',
+      confirmLabel: 'Confirm & Renew',
+      details: [
+        ConfirmDetailRow(label: 'Member', value: userName),
+        ConfirmDetailRow(label: 'Plan', value: planTitle),
+        ConfirmDetailRow(label: 'Validity Window', value: validityStr),
+        ConfirmDetailRow(label: 'Amount Payable', value: '₹${amount.toStringAsFixed(0)}', isHighlighted: true),
+        ConfirmDetailRow(label: 'Payment Method', value: _paymentMethod.toUpperCase()),
+      ],
+    );
+
+    if (!confirm) return;
 
     setState(() => _submitting = true);
 

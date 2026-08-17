@@ -6,6 +6,8 @@ import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/show_confirm_dialog.dart';
+import '../widgets/payment_detail_modal.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_console_screen.dart';
 
@@ -185,6 +187,20 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                             );
                             return;
                           }
+
+                          final confirm = await showAppConfirmDialog(
+                            context: sheetContext,
+                            title: 'Send Direct Email',
+                            message: 'Are you sure you want to dispatch this email to $name?',
+                            confirmLabel: 'Send Email',
+                            details: [
+                              ConfirmDetailRow(label: 'Member', value: name),
+                              ConfirmDetailRow(label: 'Email', value: email),
+                              ConfirmDetailRow(label: 'Subject', value: subjectController.text.trim()),
+                            ],
+                          );
+                          if (!confirm) return;
+
                           setSheetState(() => isSending = true);
                           try {
                             await ref.read(clientFacilityRepositoryProvider).sendMemberDirectCommunication(
@@ -879,42 +895,73 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                   final planName = p['plan_name'] ?? p['notes'] ?? 'Membership Pass';
                   final txnRef = p['transaction_reference']?.toString();
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.receipt_rounded, color: Color(0xFF10B981), size: 20),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        showPaymentDetailModal(
+                          context: context,
+                          kind: widget.kind,
+                          facilityId: widget.facilityId,
+                          paymentId: (p['id'] ?? '').toString(),
+                          initialData: p,
+                          facility: widget.facility,
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                              const SizedBox(height: 2),
-                              Text('$invoiceNo • $date', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-                              const SizedBox(height: 2),
-                              Text('Paid via $method${txnRef != null && txnRef.isNotEmpty ? " • $txnRef" : ""}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8))),
-                            ],
-                          ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.receipt_rounded, color: Color(0xFF10B981), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                  const SizedBox(height: 2),
+                                  Text('$invoiceNo • $date', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                                  const SizedBox(height: 2),
+                                  Text('Paid via $method${txnRef != null && txnRef.isNotEmpty ? " • $txnRef" : ""}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8))),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹${amount.toStringAsFixed(0)}',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('View', style: TextStyle(fontSize: 11, color: scheme.primary, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 2),
+                                    Icon(Icons.chevron_right_rounded, size: 14, color: scheme.primary),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        Text(
-                          '₹${amount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 }),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_console_screen.dart';
@@ -57,6 +58,32 @@ class _FacilityManualCheckinScreenState extends ConsumerState<FacilityManualChec
   Future<void> _handleCheckin(Map<String, dynamic> member) async {
     final memberId = member['id']?.toString() ?? '';
     if (memberId.isEmpty) return;
+
+    final endStr = member['end_date']?.toString();
+    DateTime? endDate;
+    if (endStr != null && endStr.isNotEmpty) {
+      endDate = DateTime.tryParse(endStr);
+    }
+    final now = DateTime.now();
+    final isExpired = endDate != null && endDate.isBefore(now);
+
+    if (isExpired) {
+      final userName = member['user']?['name'] ?? member['name'] ?? 'Member';
+      final formattedEnd = DateFormat('d MMM yyyy').format(endDate);
+      final proceed = await showAppConfirmDialog(
+        context: context,
+        title: 'Membership Expired',
+        message: '$userName\'s membership pass expired on $formattedEnd. Log desk check-in anyway or renew pass?',
+        confirmLabel: 'Allow Check-in',
+        cancelLabel: 'Cancel',
+        type: ConfirmDialogType.warning,
+        details: [
+          ConfirmDetailRow(label: 'Member', value: userName),
+          ConfirmDetailRow(label: 'Expired On', value: formattedEnd, isHighlighted: true),
+        ],
+      );
+      if (!proceed) return;
+    }
 
     setState(() => _loadingMemberIds.add(memberId));
 
