@@ -4,7 +4,7 @@ import '../../shared/widgets/glass_bottom_nav.dart';
 import '../../shared/widgets/glass_sidebar.dart';
 import '../../shared/widgets/no_connection_banner.dart';
 
-const double kWideBreakpoint = 900;
+const double kWideBreakpoint = 800;
 
 /// The persistent authenticated-area scaffold: a left [GlassSidebar] on wide
 /// viewports, a [GlassBottomNav] below the breakpoint, and a centered
@@ -28,7 +28,7 @@ class AppShell extends StatelessWidget {
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth > 960 ? 960.0 : constraints.maxWidth;
+        final width = constraints.maxWidth > 1200 ? 1200.0 : constraints.maxWidth;
         return Align(
           alignment: Alignment.topCenter,
           child: SizedBox(
