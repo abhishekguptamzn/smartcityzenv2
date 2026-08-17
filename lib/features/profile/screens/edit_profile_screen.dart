@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -391,6 +392,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         const SnackBar(content: Text('Please enter your email address.'), behavior: SnackBarBehavior.floating),
       );
       setState(() => _activeTab = ProfileTab.personal);
+      return;
+    }
+
+    final phone = _phoneController.text.trim();
+    if (phone.isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mobile number must be exactly 10 digits.'), behavior: SnackBarBehavior.floating),
+      );
+      setState(() => _activeTab = ProfileTab.personal);
+      return;
+    }
+
+    final pincode = _pincodeController.text.trim();
+    if (pincode.isNotEmpty && !RegExp(r'^\d{6}$').hasMatch(pincode)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pincode must be exactly 6 digits.'), behavior: SnackBarBehavior.floating),
+      );
+      setState(() => _activeTab = ProfileTab.location);
       return;
     }
 
@@ -806,6 +825,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 icon: Icons.phone_outlined,
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
             ),
           ],
@@ -961,6 +984,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 icon: Icons.pin_drop_outlined,
                 controller: _pincodeController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
               ),
             ),
             const SizedBox(width: 10),
@@ -1131,6 +1158,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required IconData icon,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     int maxLines = 1,
   }) {
     final theme = Theme.of(context);
@@ -1174,6 +1202,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             maxLines: maxLines,
             style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
             decoration: const InputDecoration(

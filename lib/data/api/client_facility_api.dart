@@ -173,6 +173,44 @@ class ClientFacilityApi {
   Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId) =>
       _dio.delete('/client/libraries/$libraryId/members/$memberId');
 
+  // Active Session Status (Citizen)
+  Future<Response<dynamic>> getActiveCheckinSession() =>
+      _dio.get('/facilities/active-checkin');
+
+  // Unified Member Details & Analytics (Facility Owner/Admin)
+  Future<Response<dynamic>> getMemberDetails(String type, String facilityId, String memberId) =>
+      _dio.get('/client/$type/$facilityId/members/$memberId/details');
+
+  Future<Response<dynamic>> getMemberAttendanceReport(
+    String type,
+    String facilityId,
+    String memberId, {
+    String period = 'month',
+    String? dateFrom,
+    String? dateTo,
+  }) =>
+      _dio.get('/client/$type/$facilityId/members/$memberId/attendance-report', queryParameters: {
+        'period': period,
+        if (dateFrom != null) 'date_from': dateFrom,
+        if (dateTo != null) 'date_to': dateTo,
+      });
+
+  Future<Response<dynamic>> getMemberPayments(
+    String type,
+    String facilityId,
+    String memberId, {
+    int page = 1,
+  }) =>
+      _dio.get('/client/$type/$facilityId/members/$memberId/payments', queryParameters: {'page': page});
+
+  Future<Response<dynamic>> sendMemberDirectCommunication(
+    String type,
+    String facilityId,
+    String memberId,
+    Map<String, dynamic> data,
+  ) =>
+      _dio.post('/client/$type/$facilityId/members/$memberId/send-communication', data: data);
+
   Future<Response<dynamic>> renewLibraryMember(String libraryId, String memberId, Map<String, dynamic> data) =>
       _dio.post('/client/libraries/$libraryId/members/$memberId/renew', data: data);
 

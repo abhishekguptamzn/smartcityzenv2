@@ -57,305 +57,311 @@ class FacilityConsoleScreen extends ConsumerWidget {
         ],
       ),
       body: AmbientBackground(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Top Facility Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.3),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(facilityStatsProvider((kind, facilityId)));
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // Top Facility Info Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.3),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: (isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7)).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: (isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7)).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                        color: isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7),
+                        size: 28,
+                      ),
                     ),
-                    child: Icon(
-                      isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
-                      color: isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7),
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          facilityName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 13,
-                              color: scheme.onSurfaceVariant,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            facilityName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                facilityAddress,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  facilityAddress,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      tooltip: 'Edit Facility Details',
+                      onPressed: () async {
+                        await context.push(
+                          '/client/manage/edit/${kind.pathSegment}/$facilityId',
+                          extra: facility,
+                        );
+                        ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Operations Grid (3 cols on tablet, 2 on phone)
+              Text(
+                'Operations & Management',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = constraints.maxWidth > 600 ? 4 : 3;
+                  return GridView.count(
+                    crossAxisCount: crossAxisCount,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: constraints.maxWidth > 600 ? 1.0 : 0.9,
+                    children: [
+                      _ModuleGridItem(
+                        icon: Icons.people_alt_rounded,
+                        label: 'Members',
+                        color: const Color(0xFF0D9488),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/members/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.payments_rounded,
+                        label: 'Fee Plans',
+                        color: const Color(0xFF10B981),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/plans/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.how_to_reg_rounded,
+                        label: 'Manual\nCheck-in',
+                        color: const Color(0xFF0284C7),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/checkin/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.timelapse_rounded,
+                        label: 'Current\nStatus',
+                        color: const Color(0xFF0D9488),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/status/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.bar_chart_rounded,
+                        label: 'Reports',
+                        color: const Color(0xFF10B981),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/reports/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.forum_rounded,
+                        label: 'Enquiries',
+                        color: const Color(0xFF8B5CF6),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/enquiries/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.send_rounded,
+                        label: 'Communication',
+                        color: const Color(0xFF2563EB),
+                        onTap: () async {
+                          await context.push(
+                            '/client/manage/communication/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          );
+                          ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                        },
+                      ),
+                      _ModuleGridItem(
+                        icon: Icons.qr_code_2_rounded,
+                        label: 'Facility QR',
+                        color: const Color(0xFF0F766E),
+                        onTap: () => showFacilityQrModal(
+                          context: context,
+                          kind: kind,
+                          facilityId: facilityId,
+                          facilityName: facilityName,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
+                  // Stat Summary Row (3 Mini Cards)
+                  statsAsync.when(
+                    data: (stats) => Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _StatMiniCol(
+                              icon: Icons.fact_check_outlined,
+                              iconColor: const Color(0xFF0284C7),
+                              title: "Today's Check-ins",
+                              value: '${stats.todayCheckins}',
                             ),
-                          ],
+                          ),
+                          Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                          Expanded(
+                            child: _StatMiniCol(
+                              icon: Icons.people_outline_rounded,
+                              iconColor: const Color(0xFF0D9488),
+                              title: 'Currently Inside',
+                              value: '${stats.currentlyInside}',
+                            ),
+                          ),
+                          Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
+                          Expanded(
+                            child: _StatMiniCol(
+                              icon: Icons.badge_outlined,
+                              iconColor: const Color(0xFF8B5CF6),
+                              title: 'Total Members',
+                              value: '${stats.totalMembers}',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Quick Actions Section
+                  Text(
+                    'Quick Actions',
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        _QuickActionTile(
+                          icon: Icons.qr_code_scanner_rounded,
+                          color: const Color(0xFF0284C7),
+                          title: 'Scan Member QR',
+                          onTap: () => context.push(
+                            '/client/manage/attendance/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          ),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _QuickActionTile(
+                          icon: Icons.person_add_outlined,
+                          color: const Color(0xFF0D9488),
+                          title: 'Add New Member',
+                          onTap: () => context.push(
+                            '/client/manage/members/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          ),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        _QuickActionTile(
+                          icon: Icons.send_rounded,
+                          color: const Color(0xFF2563EB),
+                          title: 'Send Communication',
+                          onTap: () => context.push(
+                            '/client/manage/communication/${kind.pathSegment}/$facilityId',
+                            extra: facility,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                    ),
-                    child: const Text(
-                      'ACTIVE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-
-            // Responsive Module Grid
-            Builder(
-              builder: (context) {
-                final width = MediaQuery.sizeOf(context).width;
-                final crossCount = width > 900 ? 5 : (width > 600 ? 4 : 3);
-                return GridView.count(
-                  crossAxisCount: crossCount,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: width > 900 ? 1.25 : (width > 600 ? 1.15 : 1.0),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _ModuleGridItem(
-                      icon: Icons.edit_document,
-                      label: 'Edit Details',
-                      color: const Color(0xFF0284C7),
-                      onTap: () => context.push(
-                        '/client/manage/edit/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.sell_rounded,
-                      label: 'Plans & Fees',
-                      color: const Color(0xFF0D9488),
-                      onTap: () => context.push(
-                        '/client/manage/plans/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.group_rounded,
-                      label: 'Members',
-                      color: const Color(0xFF8B5CF6),
-                      onTap: () => context.push(
-                        '/client/manage/members/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.qr_code_scanner_rounded,
-                      label: 'Scans',
-                      color: const Color(0xFFF97316),
-                      onTap: () => context.push(
-                        '/client/manage/attendance/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.how_to_reg_rounded,
-                      label: 'Manual\nCheck-in',
-                      color: const Color(0xFF0284C7),
-                      onTap: () => context.push(
-                        '/client/manage/checkin/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.timelapse_rounded,
-                      label: 'Current\nStatus',
-                      color: const Color(0xFF0D9488),
-                      onTap: () => context.push(
-                        '/client/manage/status/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.bar_chart_rounded,
-                      label: 'Reports',
-                      color: const Color(0xFF10B981),
-                      onTap: () => context.push(
-                        '/client/manage/reports/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.forum_rounded,
-                      label: 'Enquiries',
-                      color: const Color(0xFF8B5CF6),
-                      onTap: () => context.push(
-                        '/client/manage/enquiries/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.send_rounded,
-                      label: 'Communication',
-                      color: const Color(0xFF2563EB),
-                      onTap: () => context.push(
-                        '/client/manage/communication/${kind.pathSegment}/$facilityId',
-                        extra: facility,
-                      ),
-                    ),
-                    _ModuleGridItem(
-                      icon: Icons.qr_code_2_rounded,
-                      label: 'Facility QR',
-                      color: const Color(0xFF0F766E),
-                      onTap: () => showFacilityQrModal(
-                        context: context,
-                        kind: kind,
-                        facilityId: facilityId,
-                        facilityName: facilityName,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Stat Summary Row (3 Mini Cards)
-            statsAsync.when(
-              data: (stats) => Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _StatMiniCol(
-                        icon: Icons.fact_check_outlined,
-                        iconColor: const Color(0xFF0284C7),
-                        title: "Today's Check-ins",
-                        value: '${stats.todayCheckins}',
-                      ),
-                    ),
-                    Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
-                    Expanded(
-                      child: _StatMiniCol(
-                        icon: Icons.people_outline_rounded,
-                        iconColor: const Color(0xFF0D9488),
-                        title: 'Currently Inside',
-                        value: '${stats.currentlyInside}',
-                      ),
-                    ),
-                    Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
-                    Expanded(
-                      child: _StatMiniCol(
-                        icon: Icons.badge_outlined,
-                        iconColor: const Color(0xFF8B5CF6),
-                        title: 'Total Members',
-                        value: '${stats.totalMembers}',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 20),
-
-            // Quick Actions Section
-            Text(
-              'Quick Actions',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                children: [
-                  _QuickActionTile(
-                    icon: Icons.qr_code_scanner_rounded,
-                    color: const Color(0xFF0284C7),
-                    title: 'Scan Member QR',
-                    onTap: () => context.push(
-                      '/client/manage/attendance/${kind.pathSegment}/$facilityId',
-                      extra: facility,
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _QuickActionTile(
-                    icon: Icons.person_add_outlined,
-                    color: const Color(0xFF0D9488),
-                    title: 'Add New Member',
-                    onTap: () => context.push(
-                      '/client/manage/members/${kind.pathSegment}/$facilityId',
-                      extra: facility,
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _QuickActionTile(
-                    icon: Icons.send_rounded,
-                    color: const Color(0xFF2563EB),
-                    title: 'Send Communication',
-                    onTap: () => context.push(
-                      '/client/manage/communication/${kind.pathSegment}/$facilityId',
-                      extra: facility,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
   }
 }
 

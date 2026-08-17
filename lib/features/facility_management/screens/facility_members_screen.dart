@@ -12,6 +12,7 @@ import '../../../data/models/onboard_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../data/repositories/onboard_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import 'facility_member_detail_screen.dart';
 
 final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, (FacilityKind, String)>((ref, tuple) async {
   final (kind, facilityId) = tuple;
@@ -358,164 +359,184 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                         statusText = daysRemaining == 0 ? 'EXPIRES TODAY' : 'EXPIRES IN ${daysRemaining}D';
                       }
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isExpired
-                                ? Colors.redAccent.withValues(alpha: 0.3)
-                                : (isExpiringSoon
-                                    ? Colors.amber.withValues(alpha: 0.4)
-                                    : scheme.outlineVariant.withValues(alpha: 0.3)),
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x08000000),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: statusColor.withValues(alpha: 0.15),
-                                  child: Text(
-                                    (user['name']?.toString().isNotEmpty == true)
-                                        ? user['name'].toString()[0].toUpperCase()
-                                        : 'C',
-                                    style: TextStyle(
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => FacilityMemberDetailScreen(
+                                  kind: widget.kind,
+                                  facilityId: widget.facilityId,
+                                  memberId: m['id'].toString(),
+                                  facility: widget.facility,
+                                  initialMember: m,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user['name']?.toString() ?? 'Citizen Member',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Pass: ${m['id'] ?? 'N/A'} • ${plan['name'] ?? m['membership_type'] ?? 'Standard'}',
+                              ),
+                            );
+                            ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isExpired
+                                    ? Colors.redAccent.withValues(alpha: 0.3)
+                                    : (isExpiringSoon
+                                        ? Colors.amber.withValues(alpha: 0.4)
+                                        : scheme.outlineVariant.withValues(alpha: 0.3)),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x08000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: statusColor.withValues(alpha: 0.15),
+                                      child: Text(
+                                        (user['name']?.toString().isNotEmpty == true)
+                                            ? user['name'].toString()[0].toUpperCase()
+                                            : 'C',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          color: scheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w500,
+                                          color: statusColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    statusText,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: statusColor,
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            if (startDate != null || endDate != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isExpired ? Icons.event_busy_rounded : Icons.event_available_rounded,
-                                      size: 14,
-                                      color: isExpired ? Colors.redAccent : scheme.primary,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user['name']?.toString() ?? 'Citizen Member',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Pass: ${m['id'] ?? 'N/A'} • ${plan['name'] ?? m['membership_type'] ?? 'Standard'}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: scheme.onSurfaceVariant,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: scheme.onSurfaceVariant,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        statusText,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: statusColor,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            if (user['email'] != null || user['phone'] != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
+                                const SizedBox(height: 10),
+                                if (startDate != null || endDate != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isExpired ? Icons.event_busy_rounded : Icons.event_available_rounded,
+                                          size: 14,
+                                          color: isExpired ? Colors.redAccent : scheme.primary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (user['email'] != null || user['phone'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${user['email'] ?? user['phone']}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${user['email'] ?? user['phone']}',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                    IconButton(
+                                      icon: const Icon(Icons.history_rounded, size: 18),
+                                      tooltip: 'Renewal History',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => _openHistoryModal(context, m),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.redAccent,
+                                        side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        visualDensity: VisualDensity.compact,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
+                                      icon: const Icon(Icons.person_remove_rounded, size: 14),
+                                      label: const Text('Remove', style: TextStyle(fontSize: 12)),
+                                      onPressed: () => _confirmRemoveMember(context, m),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFF0D9488),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        visualDensity: VisualDensity.compact,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      icon: const Icon(Icons.autorenew_rounded, size: 14),
+                                      label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      onPressed: () => _openRenewMemberModal(context, m),
                                     ),
                                   ],
                                 ),
-                              ),
-                            const Divider(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.history_rounded, size: 18),
-                                  tooltip: 'Renewal History',
-                                  visualDensity: VisualDensity.compact,
-                                  onPressed: () => _openHistoryModal(context, m),
-                                ),
-                                const SizedBox(width: 4),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.redAccent,
-                                    side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    visualDensity: VisualDensity.compact,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.person_remove_rounded, size: 14),
-                                  label: const Text('Remove', style: TextStyle(fontSize: 12)),
-                                  onPressed: () => _confirmRemoveMember(context, m),
-                                ),
-                                const SizedBox(width: 8),
-                                FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D9488),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    visualDensity: VisualDensity.compact,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.autorenew_rounded, size: 14),
-                                  label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  onPressed: () => _openRenewMemberModal(context, m),
-                                ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       );
                     },
@@ -603,9 +624,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
       if (mounted) {
         setState(() {
           _plans = plans.where((p) => p.isActive).toList();
-          if (_plans.isNotEmpty) {
-            _selectedPlan = _plans.first;
-          }
+          _selectedPlan = null; // Fee plan is optional!
           _loadingPlans = false;
         });
       }
@@ -728,6 +747,38 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
       return;
     }
 
+    if (_selectedPlan != null) {
+      final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
+      final intervalUnit = _selectedPlan!.intervalCount > 1 ? '${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}s' : _selectedPlan!.interval;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF0D9488)),
+              SizedBox(width: 8),
+              Text('Confirm Fee Plan Assignment'),
+            ],
+          ),
+          content: Text(
+            'You are enrolling this member with the fee plan "${_selectedPlan!.name}" (₹${_selectedPlan!.amount.toStringAsFixed(0)} / $intervalUnit).\n\n• Start Date: ${DateFormat("dd MMM yyyy").format(_startDate)}\n• End Date: ${DateFormat("dd MMM yyyy").format(calculatedEndDate)}\n\nDo you want to confirm and generate this membership pass?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Back / Edit'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Confirm & Enroll'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     setState(() => _submitting = true);
     final repo = ref.read(clientFacilityRepositoryProvider);
 
@@ -735,7 +786,7 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
       final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
       final payload = {
         'citizen_id': _selectedCitizen?.id ?? code,
-        'fee_plan_id': _selectedPlan?.id,
+        if (_selectedPlan != null) 'fee_plan_id': _selectedPlan!.id,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
         'end_date': DateFormat('yyyy-MM-dd').format(calculatedEndDate),
       };
@@ -1116,25 +1167,37 @@ class _AddMemberModalState extends ConsumerState<_AddMemberModal> {
 
         const SizedBox(height: 16),
 
-        // Fee Plan Dropdown Picklist
-        Text('Select Fee Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+        // Fee Plan Dropdown Picklist (Optional)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Select Fee Plan (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+            Text('Optional', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+          ],
+        ),
         const SizedBox(height: 6),
         if (_loadingPlans)
           const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
         else if (_plans.isNotEmpty)
-          DropdownButtonFormField<FeePlanModel>(
+          DropdownButtonFormField<FeePlanModel?>(
             initialValue: _selectedPlan,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.sell_outlined),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             ),
-            items: _plans.map((p) {
-              final intervalUnit = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
-              return DropdownMenuItem(
-                value: p,
-                child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalUnit'),
-              );
-            }).toList(),
+            items: [
+              const DropdownMenuItem<FeePlanModel?>(
+                value: null,
+                child: Text('None / Free Pass (Standard Monthly)'),
+              ),
+              ..._plans.map((p) {
+                final intervalUnit = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
+                return DropdownMenuItem<FeePlanModel?>(
+                  value: p,
+                  child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalUnit'),
+                );
+              }),
+            ],
             onChanged: (p) => setState(() => _selectedPlan = p),
           )
         else
@@ -1262,6 +1325,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
   bool _loadingPlans = true;
   bool _submitting = false;
 
+  late DateTime _startDate;
   final TextEditingController _amountCtrl = TextEditingController();
   final TextEditingController _refCtrl = TextEditingController();
   final TextEditingController _notesCtrl = TextEditingController();
@@ -1270,6 +1334,15 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
   @override
   void initState() {
     super.initState();
+    final currentEndStr = widget.member['end_date']?.toString();
+    final now = DateTime.now();
+    DateTime? currentEnd;
+    if (currentEndStr != null && currentEndStr.isNotEmpty) {
+      currentEnd = DateTime.tryParse(currentEndStr);
+    }
+    final isExpired = currentEnd == null || currentEnd.isBefore(now);
+    _startDate = isExpired ? now : currentEnd;
+
     _fetchPlans();
   }
 
@@ -1346,6 +1419,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
         memberId,
         feePlanId: _selectedPlan?.id,
         amount: amount,
+        startDate: DateFormat('yyyy-MM-dd').format(_startDate),
         paymentMethod: _paymentMethod,
         transactionReference: _refCtrl.text.trim().isNotEmpty ? _refCtrl.text.trim() : null,
         notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
@@ -1387,8 +1461,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     }
 
     final isExpired = currentEnd == null || currentEnd.isBefore(now);
-    final baseDate = isExpired ? now : currentEnd;
-    final calculatedNewEnd = _calculateRenewedEndDate(baseDate, _selectedPlan);
+    final calculatedNewEnd = _calculateRenewedEndDate(_startDate, _selectedPlan);
 
     return Container(
       decoration: BoxDecoration(
@@ -1533,6 +1606,29 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
                 ),
               const SizedBox(height: 14),
 
+              // Start Date Picker (Editable, defaults to current end date or today)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                leading: const Icon(Icons.calendar_today_rounded, color: Color(0xFF0D9488)),
+                title: const Text('Renewal Start Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                subtitle: Text('${DateFormat('dd MMM yyyy').format(_startDate)} ${isExpired ? "(Started from today)" : "(Continuing from current expiry)"}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                trailing: const Icon(Icons.edit_calendar_rounded, size: 20),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _startDate,
+                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 730)),
+                  );
+                  if (picked != null) setState(() => _startDate = picked);
+                },
+              ),
+              const SizedBox(height: 12),
+
               // Dynamic Calculated Expiry Date Preview
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1552,7 +1648,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
                           const Text('Calculated Renewal Validity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           const SizedBox(height: 2),
                           Text(
-                            '${DateFormat('dd MMM yyyy').format(baseDate)} → ${DateFormat('dd MMM yyyy').format(calculatedNewEnd)} (${_selectedPlan != null ? "${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}" : "1 month"})',
+                            '${DateFormat('dd MMM yyyy').format(_startDate)} → ${DateFormat('dd MMM yyyy').format(calculatedNewEnd)} (${_selectedPlan != null ? "${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}" : "1 month"})',
                             style: TextStyle(
                               fontSize: 11.5,
                               color: scheme.onSurfaceVariant,

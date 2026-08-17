@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -165,13 +166,24 @@ class _EditFacilityDetailsScreenState
                           name: 'contact_phone',
                           initialValue: f?.contactPhone ?? '',
                           keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Contact Phone',
+                            hintText: '10-digit phone number',
                             prefixIcon: Icon(
                               Icons.phone_outlined,
                               color: scheme.primary,
                             ),
                           ),
+                          validator: FormBuilderValidators.compose([
+                            FormBuilderValidators.match(
+                              RegExp(r'^\d{10}$'),
+                              errorText: 'Contact phone must be exactly 10 digits',
+                            ),
+                          ]),
                         ),
                       ),
                       const SizedBox(width: 12),

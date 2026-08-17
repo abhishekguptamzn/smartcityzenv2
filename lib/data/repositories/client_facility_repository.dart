@@ -167,6 +167,7 @@ class ClientFacilityRepository {
     String memberId, {
     String? feePlanId,
     double? amount,
+    String? startDate,
     String paymentMethod = 'cash',
     String? transactionReference,
     String? notes,
@@ -174,6 +175,7 @@ class ClientFacilityRepository {
     final payload = {
       if (feePlanId != null) 'fee_plan_id': feePlanId,
       if (amount != null) 'amount': amount,
+      if (startDate != null) 'start_date': startDate,
       'payment_method': paymentMethod,
       if (transactionReference != null) 'transaction_reference': transactionReference,
       if (notes != null) 'notes': notes,
@@ -352,6 +354,70 @@ class ClientFacilityRepository {
 
   Future<Map<String, dynamic>> addLibraryMember(String libraryId, Map<String, dynamic> payload) async {
     final res = await _api.addLibraryMember(libraryId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  // Active Citizen Session Status
+  Future<Map<String, dynamic>> getActiveCheckinSession() async {
+    try {
+      final res = await _api.getActiveCheckinSession();
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      return data is Map ? data.cast<String, dynamic>() : {};
+    } catch (_) {
+      return {'has_active_session': false};
+    }
+  }
+
+  // Unified Member Details & Analytics
+  Future<Map<String, dynamic>> getMemberDetails(FacilityKind kind, String facilityId, String memberId) async {
+    final res = await _api.getMemberDetails(kind.pathSegment, facilityId, memberId);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> getMemberAttendanceReport(
+    FacilityKind kind,
+    String facilityId,
+    String memberId, {
+    String period = 'month',
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final res = await _api.getMemberAttendanceReport(
+      kind.pathSegment,
+      facilityId,
+      memberId,
+      period: period,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+    );
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> getMemberPayments(
+    FacilityKind kind,
+    String facilityId,
+    String memberId, {
+    int page = 1,
+  }) async {
+    final res = await _api.getMemberPayments(kind.pathSegment, facilityId, memberId, page: page);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<Map<String, dynamic>> sendMemberDirectCommunication(
+    FacilityKind kind,
+    String facilityId,
+    String memberId, {
+    required String subject,
+    required String message,
+  }) async {
+    final res = await _api.sendMemberDirectCommunication(kind.pathSegment, facilityId, memberId, {
+      'subject': subject,
+      'message': message,
+    });
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
   }

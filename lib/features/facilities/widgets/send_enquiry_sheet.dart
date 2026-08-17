@@ -399,8 +399,12 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
                         decoration: InputDecoration(
-                          hintText: '+91 9876543210',
+                          hintText: '10-digit phone',
                           prefixIcon: const Icon(Icons.phone_outlined, size: 18),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(
@@ -410,6 +414,12 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
                           filled: true,
                           fillColor: const Color(0xFFF9FAFB),
                         ),
+                        validator: (v) {
+                          if (v != null && v.trim().isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(v.trim())) {
+                            return 'Must be 10 digits';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),

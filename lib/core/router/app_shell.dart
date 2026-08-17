@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/active_checkin_provider.dart';
 import '../../shared/widgets/glass_bottom_nav.dart';
 import '../../shared/widgets/glass_sidebar.dart';
 import '../../shared/widgets/no_connection_banner.dart';
@@ -9,8 +11,8 @@ const double kWideBreakpoint = 800;
 /// The persistent authenticated-area scaffold: a left [GlassSidebar] on wide
 /// viewports, a [GlassBottomNav] below the breakpoint, and a centered
 /// max-width column for [body] so cards don't stretch edge-to-edge on very
-/// wide screens.
-class AppShell extends StatelessWidget {
+/// wide screens. Also displays a persistent Checked-In indicator across all pages.
+class AppShell extends ConsumerWidget {
   const AppShell({
     super.key,
     required this.body,
@@ -23,8 +25,123 @@ class AppShell extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isWide = MediaQuery.sizeOf(context).width >= kWideBreakpoint;
+    final activeCheckinAsync = ref.watch(activeCheckinProvider);
+
+    Widget? activeSessionBanner;
+    activeCheckinAsync.whenData((session) {
+      if (session['has_active_session'] == true) {
+        final facilityName = session['facility_name'] ?? 'Facility';
+        final facilityType = session['facility_type'] ?? '';
+        final checkInAt = session['check_in_at_formatted'] ?? 'Active';
+
+        activeSessionBanner = Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF10B981).withValues(alpha: 0.92),
+                const Color(0xFF059669).withValues(alpha: 0.92),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.sensors_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF34D399),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Currently Checked In',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '$facilityName ${facilityType.isNotEmpty ? "($facilityType)" : ""} • $checkInAt',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ref.invalidate(activeCheckinProvider);
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Refresh',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -34,7 +151,12 @@ class AppShell extends StatelessWidget {
           child: SizedBox(
             width: width,
             height: constraints.maxHeight,
-            child: body,
+            child: Column(
+              children: [
+                if (activeSessionBanner != null) activeSessionBanner!,
+                Expanded(child: body),
+              ],
+            ),
           ),
         );
       },

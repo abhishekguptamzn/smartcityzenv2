@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -479,12 +480,17 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
           const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'phone',
-            decoration: InputDecoration(labelText: l10n.mobileNumber),
+            decoration: InputDecoration(labelText: l10n.mobileNumber, hintText: '10-digit mobile number'),
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
             validator: FormBuilderValidators.compose([
+              FormBuilderValidators.required(errorText: l10n.requiredField),
               FormBuilderValidators.match(
-                RegExp(r'^\+?[0-9]{7,15}$'),
-                errorText: l10n.invalidPhone,
+                RegExp(r'^\d{10}$'),
+                errorText: 'Mobile number must be exactly 10 digits',
               ),
             ]),
           ),

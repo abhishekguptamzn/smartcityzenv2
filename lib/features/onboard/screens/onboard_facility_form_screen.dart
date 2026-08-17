@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -207,17 +208,27 @@ class _OnboardFacilityFormScreenState
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
                         decoration: InputDecoration(
                           labelText: 'Contact Number',
-                          hintText: '+91 98765 43210',
+                          hintText: '10-digit mobile number',
                           prefixIcon: const Icon(Icons.phone_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Please enter contact number'
-                            : null,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Please enter contact number';
+                          }
+                          if (!RegExp(r'^\d{10}$').hasMatch(v.trim())) {
+                            return 'Contact number must be exactly 10 digits';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 18),
 

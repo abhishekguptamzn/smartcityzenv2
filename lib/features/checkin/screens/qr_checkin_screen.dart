@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/providers/active_checkin_provider.dart';
 import '../../../core/providers/facilities_providers.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
@@ -22,6 +23,7 @@ enum _ScanStatus { scanning, checkingIn, success, error, permissionDenied }
 
 enum _QrType {
   gymCheckIn,
+  gymCheckOut,
   libraryAccess,
   citizenId,
   url,
@@ -54,16 +56,18 @@ class _DecodedQrInfo {
   final Map<String, String> metadata;
 }
 
-class QrCheckInScreen extends ConsumerStatefulWidget {
-  const QrCheckInScreen({super.key});
+class QrCheckinScreen extends ConsumerStatefulWidget {
+  const QrCheckinScreen({super.key});
 
   @override
-  ConsumerState<QrCheckInScreen> createState() => _QrCheckInScreenState();
+  ConsumerState<QrCheckinScreen> createState() => _QrCheckinScreenState();
 }
 
-class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
+class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+    torchEnabled: false,
   );
   _ScanStatus _status = _ScanStatus.scanning;
   _DecodedQrInfo? _decodedInfo;
@@ -97,22 +101,29 @@ class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
           setState(() => _status = _ScanStatus.checkingIn);
           try {
             final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, facilityId);
+            ref.invalidate(activeCheckinProvider);
             if (!mounted) return;
+
+            final statusStr = checkinRes['status']?.toString() ?? 'checked_in';
+            final isCheckOut = statusStr == 'checked_out';
+            final durationMinutes = checkinRes['duration_minutes'];
+
             setState(() {
               _status = _ScanStatus.success;
               _decodedInfo = _DecodedQrInfo(
-                type: kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess,
+                type: isCheckOut ? _QrType.gymCheckOut : (kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess),
                 title: facilityName,
-                subtitle: '${kind.displayName} Attendance Recorded',
+                subtitle: isCheckOut ? 'Check-Out Confirmed' : '${kind.displayName} Check-In Confirmed',
                 rawValue: trimmed,
-                categoryLabel: '${kind.displayName} Check-In',
-                categoryIcon: kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
-                accentColor: const Color(0xFF10B981),
+                categoryLabel: isCheckOut ? '${kind.displayName} Check-Out' : '${kind.displayName} Check-In',
+                categoryIcon: isCheckOut ? Icons.logout_rounded : (kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded),
+                accentColor: isCheckOut ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
                 metadata: {
                   'Facility': facilityName,
                   'Type': kind.displayName,
-                  'Status': checkinRes['status']?.toString() ?? 'Attendance Logged',
-                  'Check-in Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+                  'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
+                  if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
+                  'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
                 },
               );
             });
@@ -121,21 +132,8 @@ class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
             final appException = AppException.from(e);
             if (!mounted) return;
             setState(() {
-              _status = _ScanStatus.success;
-              _decodedInfo = _DecodedQrInfo(
-                type: kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess,
-                title: facilityName,
-                subtitle: '${kind.displayName} QR Scanned',
-                rawValue: trimmed,
-                categoryLabel: '${kind.displayName} Check-In',
-                categoryIcon: kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
-                accentColor: const Color(0xFF0D9488),
-                metadata: {
-                  'Facility': facilityName,
-                  'Info': appException?.message ?? 'Check-in request processed.',
-                  'Scanned At': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
-                },
-              );
+              _status = _ScanStatus.error;
+              _errorMessage = appException?.message ?? 'Check-in failed. Please verify your membership pass.';
             });
             return;
           }
@@ -162,6 +160,7 @@ class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
         final attendance = await ref
             .read(gymAttendanceRepositoryProvider)
             .checkIn(gymPayload.gymId, memberId: gymPayload.memberId);
+        ref.invalidate(activeCheckinProvider);
         if (!mounted) return;
 
         setState(() {
@@ -186,28 +185,11 @@ class _QrCheckInScreenState extends ConsumerState<QrCheckInScreen> {
         });
         return;
       } catch (e) {
-        // If API fails, fall back to successful generic scan so the user isn't blocked
         final appException = AppException.from(e);
         if (!mounted) return;
         setState(() {
-          _status = _ScanStatus.success;
-          _decodedInfo = _DecodedQrInfo(
-            type: _QrType.gymCheckIn,
-            title: 'Gym Facility Pass',
-            subtitle: 'Check-in Recorded (${gymPayload.gymId})',
-            rawValue: trimmed,
-            categoryLabel: 'Gym Facility',
-            categoryIcon: Icons.fitness_center_rounded,
-            accentColor: const Color(0xFF059669),
-            metadata: {
-              'Gym Code': gymPayload.gymId,
-              'Scanned At': DateFormat('hh:mm a, dd MMM yyyy').format(
-                DateTime.now(),
-              ),
-              if (appException?.message.isNotEmpty == true)
-                'Note': appException!.message,
-            },
-          );
+          _status = _ScanStatus.error;
+          _errorMessage = appException?.message ?? 'Gym Check-in failed. Please ensure your pass is active.';
         });
         return;
       }
@@ -968,28 +950,95 @@ class _ErrorView extends StatelessWidget {
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.cancel_rounded,
+                  size: 64,
+                  color: Colors.redAccent,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
-                message,
+                'Check-In Failed',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+              Text(
+                'The system could not verify or complete your check-in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Reason for Failure',
+                          style: TextStyle(
+                            color: Colors.red.shade800,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                height: 48,
+                child: FilledButton.icon(
                   onPressed: onRetry,
-                  child: Text(retryLabel),
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  label: Text(retryLabel),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Back to Home'),
                 ),
               ),
             ],

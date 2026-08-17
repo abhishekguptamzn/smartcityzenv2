@@ -34,6 +34,7 @@ import '../../features/facility_management/screens/facility_enquiries_screen.dar
 import '../../features/facility_management/screens/facility_enquiry_conversation_screen.dart';
 import '../../features/facility_management/screens/facility_expiring_members_screen.dart';
 import '../../features/facility_management/screens/facility_manual_checkin_screen.dart';
+import '../../features/facility_management/screens/facility_member_detail_screen.dart';
 import '../../features/facility_management/screens/facility_members_screen.dart';
 import '../../features/facility_management/screens/facility_monthly_attendance_report_screen.dart';
 import '../../features/facility_management/screens/facility_plan_distribution_screen.dart';
@@ -154,7 +155,7 @@ GoRouter goRouter(Ref ref) {
           ),
           GoRoute(
             path: '/checkin',
-            builder: (context, state) => const QrCheckInScreen(),
+            builder: (context, state) => const QrCheckinScreen(),
           ),
           GoRoute(
             path: '/id-card',
@@ -303,6 +304,18 @@ GoRouter goRouter(Ref ref) {
           kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
           facilityId: state.pathParameters['id']!,
           facility: state.extra as FacilityModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/client/manage/members/:kind/:id/detail/:memberId',
+        builder: (context, state) => FacilityMemberDetailScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          memberId: state.pathParameters['memberId']!,
+          facility: (state.extra is Map ? (state.extra as Map)['facility'] : null) as FacilityModel?,
+          initialMember: state.extra is Map<String, dynamic>
+              ? state.extra as Map<String, dynamic>
+              : (state.extra is Map ? (state.extra as Map)['initialMember'] as Map<String, dynamic>? : null),
         ),
       ),
       GoRoute(
