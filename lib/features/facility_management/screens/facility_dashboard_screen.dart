@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,8 +8,8 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/add_member_modal.dart';
 import '../widgets/facility_analytics_dashboard_widget.dart';
-import '../widgets/facility_qr_modal.dart';
 
 final myOwnedFacilitiesProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -41,6 +42,7 @@ class _FacilityDashboardScreenState
     extends ConsumerState<FacilityDashboardScreen> {
   String? _selectedFacilityId;
   FacilityKind? _selectedKind;
+  int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -49,19 +51,146 @@ class _FacilityDashboardScreenState
     _selectedKind = widget.initialKind;
   }
 
+  void _showShortcutsSheet(BuildContext context, FacilityKind kind, FacilityModel facility) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Quick Shortcuts',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.person_add_rounded, color: Color(0xFF0D9488)),
+              title: const Text('Add Member (Scan Citizen QR)'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                showAddMemberModal(
+                  context: context,
+                  kind: kind,
+                  facilityId: facility.id,
+                  facility: facility,
+                  initialMode: AddMemberMode.scan,
+                  onSuccess: () {
+                    ref.invalidate(facilityStatsProvider((kind, facility.id)));
+                  },
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded, color: Color(0xFF0284C7)),
+              title: const Text('Edit Facility Details'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/client/manage/edit/${kind.pathSegment}/${facility.id}', extra: facility);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.payments_rounded, color: Color(0xFF10B981)),
+              title: const Text('Manage Fee Plans'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/client/manage/plans/${kind.pathSegment}/${facility.id}', extra: facility);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bar_chart_rounded, color: Color(0xFF8B5CF6)),
+              title: const Text('Attendance & Revenue Reports'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/client/manage/reports/${kind.pathSegment}/${facility.id}', extra: facility);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final scheme = theme.colorScheme;
     final user = ref.watch(authControllerProvider).value;
     final facilitiesAsync = ref.watch(myOwnedFacilitiesProvider);
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Facility Management'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: const Text(
+          'Facility Management',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+        ),
         actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none_rounded, size: 24),
+                tooltip: 'Notifications',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('All facility operations are normal.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              Positioned(
+                top: 14,
+                right: 14,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0284C7),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 22),
             tooltip: 'Refresh Dashboard',
             onPressed: () {
               ref.invalidate(myOwnedFacilitiesProvider);
@@ -138,8 +267,6 @@ class _FacilityDashboardScreenState
             final activeKind = selectedPair.$1;
             final activeFacility = selectedPair.$2;
             final isGym = activeKind == FacilityKind.gym;
-            final primaryColor =
-                isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7);
 
             final statsAsync = ref.watch(
               facilityStatsProvider((activeKind, activeFacility.id)),
@@ -153,7 +280,7 @@ class _FacilityDashboardScreenState
                 );
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
                   // Multi-facility switcher pills if more than 1 facility
                   if (allFacilities.length > 1) ...[
@@ -168,7 +295,7 @@ class _FacilityDashboardScreenState
                               : const Color(0xFF0284C7);
 
                           return Padding(
-                            padding: const EdgeInsets.only(right: 8, bottom: 8),
+                            padding: const EdgeInsets.only(right: 8, bottom: 10),
                             child: ChoiceChip(
                               avatar: Icon(
                                 pairIsGym
@@ -183,10 +310,10 @@ class _FacilityDashboardScreenState
                               labelStyle: TextStyle(
                                 color: isSelected
                                     ? Colors.white
-                                    : theme.textTheme.bodyMedium?.color,
+                                    : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                 fontWeight: isSelected
                                     ? FontWeight.bold
-                                    : FontWeight.normal,
+                                    : FontWeight.w600,
                               ),
                               onSelected: (selected) {
                                 if (selected) {
@@ -201,137 +328,77 @@ class _FacilityDashboardScreenState
                         }).toList(),
                       ),
                     ),
-                    const SizedBox(height: 8),
                   ],
 
-                  // Facility Hero Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: scheme.outlineVariant.withValues(alpha: 0.3),
+                  // Top Facility Card matching Screenshot
+                  _buildFacilityHeroCard(
+                    context: context,
+                    facility: activeFacility,
+                    kind: activeKind,
+                    isGym: isGym,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Operations & Management Section Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Operations & Management',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            isGym
-                                ? Icons.fitness_center_rounded
-                                : Icons.local_library_rounded,
-                            color: primaryColor,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      InkWell(
+                        onTap: () => _showShortcutsSheet(context, activeKind, activeFacility),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Row(
                             children: [
                               Text(
-                                activeFacility.name,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                'Shortcuts',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade600,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    size: 14,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      activeFacility.address ??
-                                          activeFacility.city?.name ??
-                                          'Smart City',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.tune_rounded, size: 16, color: Colors.grey.shade600),
                             ],
                           ),
                         ),
-                        IconButton.filledTonal(
-                          icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-                          tooltip: 'Facility QR Code',
-                          onPressed: () => showFacilityQrModal(
-                            context: context,
-                            kind: activeKind,
-                            facilityId: activeFacility.id,
-                            facilityName: activeFacility.name,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton.filledTonal(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          tooltip: 'Edit Facility Details',
-                          onPressed: () async {
-                            await context.push(
-                              '/client/manage/edit/${activeKind.pathSegment}/${activeFacility.id}',
-                              extra: activeFacility,
-                            );
-                            ref.invalidate(myOwnedFacilitiesProvider);
-                            ref.invalidate(
-                              facilityStatsProvider(
-                                (activeKind, activeFacility.id),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Operations & Management Grid
-                  Text(
-                    'Operations & Management',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Operations & Management Grid matching Screenshot
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossAxisCount = constraints.maxWidth > 600 ? 4 : 3;
+                      final isWide = constraints.maxWidth > 550;
+                      final crossAxisCount = isWide ? 4 : 3;
+
                       return GridView.count(
                         crossAxisCount: crossAxisCount,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio:
-                            constraints.maxWidth > 600 ? 1.0 : 0.9,
+                        childAspectRatio: isWide ? 0.95 : 0.82,
                         children: [
-                          _ModuleGridItem(
+                          // 1. Members
+                          _OperationsCard(
                             icon: Icons.people_alt_rounded,
-                            label: 'Members',
-                            color: const Color(0xFF0D9488),
+                            iconColor: const Color(0xFF059669),
+                            iconBg: const Color(0xFFECFDF5),
+                            title: 'Members',
+                            subtitle: 'View and manage all members',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/members/${activeKind.pathSegment}/${activeFacility.id}',
@@ -344,10 +411,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
+
+                          // 2. Fee Plans
+                          _OperationsCard(
                             icon: Icons.payments_rounded,
-                            label: 'Fee Plans',
-                            color: const Color(0xFF10B981),
+                            iconColor: const Color(0xFF10B981),
+                            iconBg: const Color(0xFFECFDF5),
+                            title: 'Fee Plans',
+                            subtitle: 'Create and manage membership plans',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/plans/${activeKind.pathSegment}/${activeFacility.id}',
@@ -360,10 +431,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
+
+                          // 3. Manual Check-in
+                          _OperationsCard(
                             icon: Icons.how_to_reg_rounded,
-                            label: 'Manual\nCheck-in',
-                            color: const Color(0xFF0284C7),
+                            iconColor: const Color(0xFF0284C7),
+                            iconBg: const Color(0xFFEFF6FF),
+                            title: 'Manual Check-in',
+                            subtitle: 'Check-in members manually',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/checkin/${activeKind.pathSegment}/${activeFacility.id}',
@@ -376,10 +451,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
+
+                          // 4. Current Status
+                          _OperationsCard(
                             icon: Icons.timelapse_rounded,
-                            label: 'Current\nStatus',
-                            color: const Color(0xFF0D9488),
+                            iconColor: const Color(0xFF0D9488),
+                            iconBg: const Color(0xFFF0FDFA),
+                            title: 'Current Status',
+                            subtitle: 'See real-time facility activity',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/status/${activeKind.pathSegment}/${activeFacility.id}',
@@ -392,10 +471,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
+
+                          // 5. Reports
+                          _OperationsCard(
                             icon: Icons.bar_chart_rounded,
-                            label: 'Reports',
-                            color: const Color(0xFF10B981),
+                            iconColor: const Color(0xFF8B5CF6),
+                            iconBg: const Color(0xFFF5F3FF),
+                            title: 'Reports',
+                            subtitle: 'View usage and performance reports',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/reports/${activeKind.pathSegment}/${activeFacility.id}',
@@ -408,10 +491,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
-                            icon: Icons.forum_rounded,
-                            label: 'Enquiries',
-                            color: const Color(0xFF8B5CF6),
+
+                          // 6. Enquiries
+                          _OperationsCard(
+                            icon: Icons.chat_bubble_rounded,
+                            iconColor: const Color(0xFFEA580C),
+                            iconBg: const Color(0xFFFFF7ED),
+                            title: 'Enquiries',
+                            subtitle: 'Manage and respond to enquiries',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/enquiries/${activeKind.pathSegment}/${activeFacility.id}',
@@ -424,10 +511,14 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
+
+                          // 7. Communication
+                          _OperationsCard(
                             icon: Icons.send_rounded,
-                            label: 'Communication',
-                            color: const Color(0xFF2563EB),
+                            iconColor: const Color(0xFF2563EB),
+                            iconBg: const Color(0xFFEFF6FF),
+                            title: 'Communication',
+                            subtitle: 'Send updates and announcements',
                             onTap: () async {
                               await context.push(
                                 '/client/manage/communication/${activeKind.pathSegment}/${activeFacility.id}',
@@ -440,24 +531,13 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
-                          _ModuleGridItem(
-                            icon: Icons.qr_code_2_rounded,
-                            label: 'Facility QR',
-                            color: const Color(0xFF0F766E),
-                            onTap: () => showFacilityQrModal(
-                              context: context,
-                              kind: activeKind,
-                              facilityId: activeFacility.id,
-                              facilityName: activeFacility.name,
-                            ),
-                          ),
                         ],
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Full Facility Analytics & Earnings Dashboard embedded directly
+                  // Facility Analytics & Earnings Modules (Preserved exactly as requested)
                   statsAsync.when(
                     data: (stats) => FacilityAnalyticsDashboardWidget(
                       kind: activeKind,
@@ -497,21 +577,339 @@ class _FacilityDashboardScreenState
           ),
         ),
       ),
+
+      // Bottom Navigation Bar matching Screenshot
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              width: 1,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBottomNavItem(
+                  icon: Icons.grid_view_rounded,
+                  label: 'Dashboard',
+                  isSelected: _currentNavIndex == 0,
+                  isDark: isDark,
+                  onTap: () => setState(() => _currentNavIndex = 0),
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.people_outline_rounded,
+                  label: 'Members',
+                  isSelected: _currentNavIndex == 1,
+                  isDark: isDark,
+                  onTap: () {
+                    if (_selectedKind != null && _selectedFacilityId != null) {
+                      context.push('/client/manage/members/${_selectedKind!.pathSegment}/$_selectedFacilityId');
+                    }
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'Check-in',
+                  isSelected: _currentNavIndex == 2,
+                  isDark: isDark,
+                  onTap: () {
+                    if (_selectedKind != null && _selectedFacilityId != null) {
+                      context.push('/client/manage/checkin/${_selectedKind!.pathSegment}/$_selectedFacilityId');
+                    }
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.more_horiz_rounded,
+                  label: 'More',
+                  isSelected: _currentNavIndex == 3,
+                  isDark: isDark,
+                  onTap: () {
+                    final facilities = facilitiesAsync.value;
+                    final gyms = facilities?['gyms'] as List<FacilityModel>? ?? [];
+                    final libs = facilities?['libraries'] as List<FacilityModel>? ?? [];
+                    final all = [...gyms.map((g) => (FacilityKind.gym, g)), ...libs.map((l) => (FacilityKind.library, l))];
+                    if (all.isNotEmpty) {
+                      final current = all.firstWhere((p) => p.$2.id == _selectedFacilityId, orElse: () => all.first);
+                      _showShortcutsSheet(context, current.$1, current.$2);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFacilityHeroCard({
+    required BuildContext context,
+    required FacilityModel facility,
+    required FacilityKind kind,
+    required bool isGym,
+    required bool isDark,
+  }) {
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left Facility Squircle Icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Center(
+              child: Icon(
+                isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded,
+                color: const Color(0xFF2563EB),
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Name and Address
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  facility.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15.5,
+                    letterSpacing: -0.3,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 13,
+                      color: Colors.grey.shade500,
+                    ),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        facility.address ?? facility.city?.name ?? 'Pantheon Road, Egmore',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // First Action: "Add Member" (Camera scanner to enroll citizen)
+          InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              showAddMemberModal(
+                context: context,
+                kind: kind,
+                facilityId: facility.id,
+                facility: facility,
+                initialMode: AddMemberMode.scan,
+                onSuccess: () {
+                  ref.invalidate(facilityStatsProvider((kind, facility.id)));
+                },
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      size: 19,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Add Member',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Second Action: "Edit"
+          InkWell(
+            onTap: () async {
+              HapticFeedback.lightImpact();
+              await context.push(
+                '/client/manage/edit/${kind.pathSegment}/${facility.id}',
+                extra: facility,
+              );
+              ref.invalidate(myOwnedFacilitiesProvider);
+              ref.invalidate(
+                facilityStatsProvider(
+                  (kind, facility.id),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Edit',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: isSelected
+                  ? BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                    )
+                  : null,
+              child: Icon(
+                icon,
+                size: 22,
+                color: isSelected
+                    ? const Color(0xFF2563EB)
+                    : (isDark ? Colors.white60 : const Color(0xFF94A3B8)),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                color: isSelected
+                    ? const Color(0xFF2563EB)
+                    : (isDark ? Colors.white60 : const Color(0xFF94A3B8)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _ModuleGridItem extends StatelessWidget {
-  const _ModuleGridItem({
+class _OperationsCard extends StatelessWidget {
+  const _OperationsCard({
     required this.icon,
-    required this.label,
-    required this.color,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
-  final Color color;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
@@ -522,46 +920,83 @@ class _ModuleGridItem extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7),
+              width: 1.1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 22),
+              // Top Row: Colored Squircle Icon + Right Arrow
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 17),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: Colors.grey.shade400,
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                ),
+              const SizedBox(height: 6),
+
+              // Title and Subtitle
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.25,
+                      color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
