@@ -10,6 +10,7 @@ import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/facility_analytics_dashboard_widget.dart';
+import '../widgets/facility_qr_modal.dart';
 
 final myOwnedFacilitiesProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -159,6 +160,29 @@ class _FacilityDashboardScreenState
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_2_rounded, size: 24),
+            tooltip: 'Facility Check-in / Check-out QR Code',
+            onPressed: () {
+              final facilities = facilitiesAsync.value;
+              final gyms = facilities?['gyms'] as List<FacilityModel>? ?? [];
+              final libs = facilities?['libraries'] as List<FacilityModel>? ?? [];
+              final all = [...gyms.map((g) => (FacilityKind.gym, g)), ...libs.map((l) => (FacilityKind.library, l))];
+              if (all.isNotEmpty) {
+                final current = all.firstWhere(
+                  (p) => p.$2.id == _selectedFacilityId,
+                  orElse: () => all.first,
+                );
+                HapticFeedback.lightImpact();
+                showFacilityQrModal(
+                  context: context,
+                  kind: current.$1,
+                  facilityId: current.$2.id,
+                  facilityName: current.$2.name,
+                );
+              }
+            },
+          ),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -390,7 +414,7 @@ class _FacilityDashboardScreenState
                         physics: const NeverScrollableScrollPhysics(),
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: isWide ? 0.95 : 0.82,
+                        childAspectRatio: isWide ? 1.25 : 1.05,
                         children: [
                           // 1. Members
                           _OperationsCard(
@@ -944,7 +968,7 @@ class _OperationsCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Top Row: Colored Squircle Icon + Right Arrow
               Row(
@@ -966,37 +990,31 @@ class _OperationsCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
 
               // Title and Subtitle
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      height: 1.25,
-                      color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  height: 1.25,
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),

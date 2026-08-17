@@ -112,7 +112,7 @@ class _FacilityQrModalContent extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${kind.displayName} Check-in QR Code',
+                            '${kind.displayName} Check-in / Check-out QR',
                             style: TextStyle(
                               fontSize: 12,
                               color: scheme.onSurfaceVariant,
@@ -196,7 +196,7 @@ class _FacilityQrModalContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Citizens and members can scan this QR code with their Smart Cityzen app scanner to record attendance check-in.',
+                        'Citizens and members can scan this QR code with their Smart Cityzen app scanner to check-in, or scan again when leaving to check-out automatically.',
                         style: TextStyle(
                           fontSize: 12,
                           color: scheme.onSurface,
