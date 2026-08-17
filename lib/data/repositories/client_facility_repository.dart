@@ -458,11 +458,14 @@ class ClientFacilityRepository {
   Future<List<AmenityModel>> getGlobalAmenities({String? search}) async {
     try {
       final res = await _api.getGlobalAmenities(search: search);
-      final raw = res.data is Map ? (res.data['data'] ?? res.data) : [];
+      dynamic raw = res.data;
+      if (raw is Map) {
+        raw = raw['data'] ?? raw;
+      }
       final list = raw is List ? raw : (raw is Map && raw['data'] is List ? raw['data'] as List : []);
       return list
-          .whereType<Map<String, dynamic>>()
-          .map(AmenityModel.fromJson)
+          .whereType<Map>()
+          .map((item) => AmenityModel.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } catch (_) {
       return [];
@@ -472,11 +475,14 @@ class ClientFacilityRepository {
   Future<List<AmenityModel>> getFacilityAmenities(FacilityKind kind, String facilityId) async {
     try {
       final res = await _api.getFacilityAmenities(kind.pathSegment, facilityId);
-      final raw = res.data is Map ? (res.data['data'] ?? res.data) : [];
+      dynamic raw = res.data;
+      if (raw is Map) {
+        raw = raw['data'] ?? raw;
+      }
       final list = raw is List ? raw : (raw is Map && raw['data'] is List ? raw['data'] as List : []);
       return list
-          .whereType<Map<String, dynamic>>()
-          .map(AmenityModel.fromJson)
+          .whereType<Map>()
+          .map((item) => AmenityModel.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } catch (_) {
       return [];
@@ -486,9 +492,12 @@ class ClientFacilityRepository {
   Future<AmenityModel?> createAmenity(String name, {String? icon}) async {
     try {
       final res = await _api.createAmenity(name, icon: icon);
-      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
-      if (data is Map<String, dynamic>) {
-        return AmenityModel.fromJson(data);
+      dynamic raw = res.data;
+      if (raw is Map) {
+        raw = raw['data'] ?? raw;
+      }
+      if (raw is Map) {
+        return AmenityModel.fromJson(Map<String, dynamic>.from(raw));
       }
     } catch (_) {}
     return null;

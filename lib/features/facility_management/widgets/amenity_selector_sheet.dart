@@ -235,10 +235,17 @@ class _AmenitySelectorSheetState extends ConsumerState<AmenitySelectorSheet> {
           Expanded(
             child: amenitiesAsync.when(
               data: (amenitiesList) {
-                final allMap = {for (var a in amenitiesList) a.id: a};
-                // Ensure initially selected or custom created are present in map
+                final allMap = <String, AmenityModel>{};
+                for (var a in amenitiesList) {
+                  allMap[a.id] = a;
+                }
                 for (var entry in _selectedMap.entries) {
                   allMap.putIfAbsent(entry.key, () => entry.value);
+                }
+                for (var a in amenitiesList) {
+                  if (_selectedIds.contains(a.id)) {
+                    _selectedMap.putIfAbsent(a.id, () => a);
+                  }
                 }
                 final list = allMap.values.toList();
 
@@ -441,8 +448,14 @@ class _AmenitySelectorSheetState extends ConsumerState<AmenitySelectorSheet> {
                 ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
-                  final selectedList = _selectedIds.map((id) => _selectedMap[id]).whereType<AmenityModel>().toList();
-                  Navigator.of(context).pop(selectedList);
+                  final resultList = <AmenityModel>[];
+                  for (final id in _selectedIds) {
+                    final item = _selectedMap[id];
+                    if (item != null) {
+                      resultList.add(item);
+                    }
+                  }
+                  Navigator.of(context).pop(resultList);
                 },
                 child: Text(
                   'Apply ${_selectedIds.length} Amenities',

@@ -1350,7 +1350,7 @@ class _ClientFacilityHubBanner extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Facility Owner Console',
+                            'Facility Management',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
