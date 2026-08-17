@@ -29,7 +29,7 @@ class ImageUrlResolver {
     final String activeBase =
         baseApiUrl ?? activeBaseUrl ?? AppConfig.platformDefaultBaseUrl();
     final Uri baseUri =
-        Uri.tryParse(activeBase) ?? Uri.parse('https://smartct.online/api/v1');
+        Uri.tryParse(activeBase) ?? Uri.parse('https://admin.smartct.online/api/v1');
 
     final String targetHost = baseUri.host.isNotEmpty ? baseUri.host : 'localhost';
     final int? targetPort = baseUri.hasPort ? baseUri.port : null;

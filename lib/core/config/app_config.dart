@@ -30,7 +30,7 @@ class AppConfig {
   /// default and not hardcoded elsewhere in the app.
   static String platformDefaultBaseUrl() {
     if (_compileTimeApiBaseUrl.isNotEmpty) return _compileTimeApiBaseUrl;
-    return 'https://smartct.online/api/v1';
+    return 'https://admin.smartct.online/api/v1';
   }
 
   static AppConfig defaults() {
