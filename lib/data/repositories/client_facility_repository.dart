@@ -403,8 +403,20 @@ class ClientFacilityRepository {
     int page = 1,
   }) async {
     final res = await _api.getMemberPayments(kind.pathSegment, facilityId, memberId, page: page);
-    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
-    return data is Map ? data.cast<String, dynamic>() : {};
+    if (res.data is Map) {
+      final raw = res.data['data'] ?? res.data;
+      if (raw is Map) {
+        return raw.cast<String, dynamic>();
+      } else if (raw is List) {
+        final list = raw.cast<Map<String, dynamic>>();
+        final total = list.fold<double>(0.0, (sum, p) => sum + ((p['amount'] as num?)?.toDouble() ?? 0.0));
+        return {
+          'payments': list,
+          'total_collected': total,
+        };
+      }
+    }
+    return {};
   }
 
   Future<Map<String, dynamic>> sendMemberDirectCommunication(

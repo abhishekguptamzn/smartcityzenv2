@@ -798,8 +798,10 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
       },
       child: paymentsAsync.when(
         data: (data) {
-          final payments = (data['payments'] as List? ?? []).cast<Map<String, dynamic>>();
-          final totalCollected = (data['total_collected'] as num?)?.toDouble() ?? 0.0;
+          final rawPayments = data['payments'] ?? data['data'];
+          final payments = (rawPayments is List ? rawPayments : []).cast<Map<String, dynamic>>();
+          final totalCollected = (data['total_collected'] as num?)?.toDouble() ??
+              payments.fold<double>(0.0, (sum, p) => sum + ((p['amount'] as num?)?.toDouble() ?? 0.0));
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -830,7 +832,24 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                 ),
               ),
               const SizedBox(height: 20),
-              Text('Payment Invoices & Receipts', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Payment Invoices & Receipts', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  if (payments.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${payments.length} Records',
+                        style: const TextStyle(color: Color(0xFF059669), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 12),
               if (payments.isEmpty)
                 Container(
@@ -840,15 +859,25 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
                   ),
-                  child: Center(child: Text('No payment records logged yet.', style: TextStyle(color: scheme.onSurfaceVariant))),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.receipt_long_rounded, size: 40, color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                        const SizedBox(height: 8),
+                        Text('No payment records logged yet.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
                 )
               else
                 ...payments.map((p) {
                   final amount = (p['amount'] as num?)?.toDouble() ?? 0.0;
                   final method = (p['payment_method'] ?? 'cash').toString().toUpperCase();
-                  final date = p['created_at_formatted'] ?? p['created_at'] ?? '';
-                  final invoiceNo = p['invoice_number'] ?? 'INV-${p["id"]}';
-                  final planName = p['plan_name'] ?? 'Membership Pass';
+                  final date = p['created_at_formatted'] ?? p['paid_at_formatted'] ?? p['created_at'] ?? p['date'] ?? '';
+                  final invoiceNo = p['invoice_number'] ?? (p['id'] != null ? 'INV-${p["id"]}' : 'INV-PAID');
+                  final planName = p['plan_name'] ?? p['notes'] ?? 'Membership Pass';
+                  final txnRef = p['transaction_reference']?.toString();
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -873,17 +902,17 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                               const SizedBox(height: 2),
-                              Text('$invoiceNo • $date', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                              Text('$invoiceNo • $date', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 2),
-                              Text('Paid via $method', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                              Text('Paid via $method${txnRef != null && txnRef.isNotEmpty ? " • $txnRef" : ""}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8))),
                             ],
                           ),
                         ),
                         Text(
                           '₹${amount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
                         ),
                       ],
                     ),
@@ -892,8 +921,8 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Failed to load payments: $err')),
+        loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+        error: (err, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text('Failed to load payments: $err'))),
       ),
     );
   }

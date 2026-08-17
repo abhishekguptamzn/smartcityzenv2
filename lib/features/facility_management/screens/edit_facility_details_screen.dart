@@ -32,6 +32,46 @@ class _EditFacilityDetailsScreenState
   final _formKey = GlobalKey<FormBuilderState>();
   bool _submitting = false;
 
+  late TimeOfDay? _openingTime;
+  late TimeOfDay? _closingTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _openingTime = _parseTimeString(widget.facility?.openingTime) ?? const TimeOfDay(hour: 6, minute: 0);
+    _closingTime = _parseTimeString(widget.facility?.closingTime) ?? const TimeOfDay(hour: 22, minute: 0);
+  }
+
+  TimeOfDay? _parseTimeString(String? timeStr) {
+    if (timeStr == null || timeStr.trim().isEmpty) return null;
+    try {
+      final parts = timeStr.trim().split(':');
+      if (parts.length >= 2) {
+        return TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _formatTimeDisplay(TimeOfDay? time) {
+    if (time == null) return 'Select Time';
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
   Future<void> _submit() async {
     final form = _formKey.currentState;
     if (form == null || !form.saveAndValidate()) return;
@@ -41,30 +81,20 @@ class _EditFacilityDetailsScreenState
     final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
+      final payload = {
+        'name': v['name'],
+        'description': v['description'],
+        'address': v['address'],
+        'contact_phone': v['contact_phone'],
+        'contact_email': v['contact_email'],
+        if (_openingTime != null) 'opening_time': _formatTimeOfDay(_openingTime!),
+        if (_closingTime != null) 'closing_time': _formatTimeOfDay(_closingTime!),
+      };
+
       if (widget.kind == FacilityKind.gym) {
-        await repo.updateGymDetails(widget.facilityId, {
-          'name': v['name'],
-          'description': v['description'],
-          'address': v['address'],
-          'contact_phone': v['contact_phone'],
-          'contact_email': v['contact_email'],
-          if (v['opening_time'] != null && (v['opening_time'] as String).isNotEmpty)
-            'opening_time': v['opening_time'],
-          if (v['closing_time'] != null && (v['closing_time'] as String).isNotEmpty)
-            'closing_time': v['closing_time'],
-        });
+        await repo.updateGymDetails(widget.facilityId, payload);
       } else {
-        await repo.updateLibraryDetails(widget.facilityId, {
-          'name': v['name'],
-          'description': v['description'],
-          'address': v['address'],
-          'contact_phone': v['contact_phone'],
-          'contact_email': v['contact_email'],
-          if (v['opening_time'] != null && (v['opening_time'] as String).isNotEmpty)
-            'opening_time': v['opening_time'],
-          if (v['closing_time'] != null && (v['closing_time'] as String).isNotEmpty)
-            'closing_time': v['closing_time'],
-        });
+        await repo.updateLibraryDetails(widget.facilityId, payload);
       }
 
       ref.invalidate(myOwnedFacilitiesProvider);
@@ -102,60 +132,94 @@ class _EditFacilityDetailsScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit ${isGym ? "Gym" : "Library"} Details'),
+        centerTitle: true,
       ),
       body: AmbientBackground(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: Container(
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(24),
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x10000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
             child: FormBuilder(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (isGym
+                                  ? const Color(0xFF0D9488)
+                                  : const Color(0xFF0284C7))
+                              .withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isGym
+                              ? Icons.fitness_center_rounded
+                              : Icons.local_library_rounded,
+                          color: isGym
+                              ? const Color(0xFF0D9488)
+                              : const Color(0xFF0284C7),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              f?.name ?? 'Manage Facility',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Update public profile, operating hours & contact info',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
                   FormBuilderTextField(
                     name: 'name',
                     initialValue: f?.name ?? '',
                     decoration: InputDecoration(
-                      labelText: 'Facility Name *',
+                      labelText: 'Facility Name',
                       prefixIcon: Icon(
-                        isGym ? Icons.fitness_center : Icons.local_library,
+                        Icons.store_mall_directory_outlined,
                         color: scheme.primary,
                       ),
                     ),
-                    validator: FormBuilderValidators.required(
-                      errorText: 'Facility name is required',
-                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(errorText: 'Facility name is required'),
+                      FormBuilderValidators.minLength(3, errorText: 'Must be at least 3 characters'),
+                    ]),
                   ),
                   const SizedBox(height: 16),
 
                   FormBuilderTextField(
                     name: 'address',
                     initialValue: f?.address ?? '',
+                    maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'Full Address *',
+                      labelText: 'Full Address',
                       prefixIcon: Icon(
-                        Icons.place_outlined,
+                        Icons.location_on_outlined,
                         color: scheme.primary,
                       ),
                     ),
-                    validator: FormBuilderValidators.required(
-                      errorText: 'Address is required',
-                    ),
+                    validator: FormBuilderValidators.compose([
+                      FormBuilderValidators.required(errorText: 'Address is required'),
+                    ]),
                   ),
                   const SizedBox(height: 16),
 
@@ -172,18 +236,11 @@ class _EditFacilityDetailsScreenState
                           ],
                           decoration: InputDecoration(
                             labelText: 'Contact Phone',
-                            hintText: '10-digit phone number',
                             prefixIcon: Icon(
                               Icons.phone_outlined,
                               color: scheme.primary,
                             ),
                           ),
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.match(
-                              RegExp(r'^\d{10}$'),
-                              errorText: 'Contact phone must be exactly 10 digits',
-                            ),
-                          ]),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -205,31 +262,101 @@ class _EditFacilityDetailsScreenState
                   ),
                   const SizedBox(height: 16),
 
+                  Text(
+                    'Operating Hours',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: FormBuilderTextField(
-                          name: 'opening_time',
-                          initialValue: f?.openingTime ?? '06:00',
-                          decoration: InputDecoration(
-                            labelText: 'Opening Time (HH:MM)',
-                            prefixIcon: Icon(
-                              Icons.access_time_rounded,
-                              color: scheme.primary,
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: _openingTime ?? const TimeOfDay(hour: 6, minute: 0),
+                            );
+                            if (picked != null) {
+                              setState(() => _openingTime = picked);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.access_time_rounded, color: scheme.primary, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Opening Time',
+                                        style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _formatTimeDisplay(_openingTime),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: FormBuilderTextField(
-                          name: 'closing_time',
-                          initialValue: f?.closingTime ?? '22:00',
-                          decoration: InputDecoration(
-                            labelText: 'Closing Time (HH:MM)',
-                            prefixIcon: Icon(
-                              Icons.access_time_filled_rounded,
-                              color: scheme.primary,
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: _closingTime ?? const TimeOfDay(hour: 22, minute: 0),
+                            );
+                            if (picked != null) {
+                              setState(() => _closingTime = picked);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.access_time_filled_rounded, color: scheme.primary, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Closing Time',
+                                        style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _formatTimeDisplay(_closingTime),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
