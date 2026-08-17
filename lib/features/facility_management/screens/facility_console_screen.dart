@@ -149,107 +149,114 @@ class FacilityConsoleScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
 
-            // 3x3 Module Grid
-            GridView.count(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _ModuleGridItem(
-                  icon: Icons.edit_document,
-                  label: 'Edit Details',
-                  color: const Color(0xFF0284C7),
-                  onTap: () => context.push(
-                    '/client/manage/edit/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.sell_rounded,
-                  label: 'Plans & Fees',
-                  color: const Color(0xFF0D9488),
-                  onTap: () => context.push(
-                    '/client/manage/plans/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.group_rounded,
-                  label: 'Members',
-                  color: const Color(0xFF8B5CF6),
-                  onTap: () => context.push(
-                    '/client/manage/members/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'Scans',
-                  color: const Color(0xFFF97316),
-                  onTap: () => context.push(
-                    '/client/manage/attendance/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.how_to_reg_rounded,
-                  label: 'Manual\nCheck-in',
-                  color: const Color(0xFF0284C7),
-                  onTap: () => context.push(
-                    '/client/manage/checkin/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.timelapse_rounded,
-                  label: 'Current\nStatus',
-                  color: const Color(0xFF0D9488),
-                  onTap: () => context.push(
-                    '/client/manage/status/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Reports',
-                  color: const Color(0xFF10B981),
-                  onTap: () => context.push(
-                    '/client/manage/reports/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.forum_rounded,
-                  label: 'Enquiries',
-                  color: const Color(0xFF8B5CF6),
-                  onTap: () => context.push(
-                    '/client/manage/enquiries/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.send_rounded,
-                  label: 'Communication',
-                  color: const Color(0xFF2563EB),
-                  onTap: () => context.push(
-                    '/client/manage/communication/${kind.pathSegment}/$facilityId',
-                    extra: facility,
-                  ),
-                ),
-                _ModuleGridItem(
-                  icon: Icons.qr_code_2_rounded,
-                  label: 'Facility QR',
-                  color: const Color(0xFF0F766E),
-                  onTap: () => showFacilityQrModal(
-                    context: context,
-                    kind: kind,
-                    facilityId: facilityId,
-                    facilityName: facilityName,
-                  ),
-                ),
-              ],
+            // Responsive Module Grid
+            Builder(
+              builder: (context) {
+                final width = MediaQuery.sizeOf(context).width;
+                final crossCount = width > 900 ? 5 : (width > 600 ? 4 : 3);
+                return GridView.count(
+                  crossAxisCount: crossCount,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: width > 900 ? 1.25 : (width > 600 ? 1.15 : 1.0),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _ModuleGridItem(
+                      icon: Icons.edit_document,
+                      label: 'Edit Details',
+                      color: const Color(0xFF0284C7),
+                      onTap: () => context.push(
+                        '/client/manage/edit/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.sell_rounded,
+                      label: 'Plans & Fees',
+                      color: const Color(0xFF0D9488),
+                      onTap: () => context.push(
+                        '/client/manage/plans/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.group_rounded,
+                      label: 'Members',
+                      color: const Color(0xFF8B5CF6),
+                      onTap: () => context.push(
+                        '/client/manage/members/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.qr_code_scanner_rounded,
+                      label: 'Scans',
+                      color: const Color(0xFFF97316),
+                      onTap: () => context.push(
+                        '/client/manage/attendance/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.how_to_reg_rounded,
+                      label: 'Manual\nCheck-in',
+                      color: const Color(0xFF0284C7),
+                      onTap: () => context.push(
+                        '/client/manage/checkin/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.timelapse_rounded,
+                      label: 'Current\nStatus',
+                      color: const Color(0xFF0D9488),
+                      onTap: () => context.push(
+                        '/client/manage/status/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.bar_chart_rounded,
+                      label: 'Reports',
+                      color: const Color(0xFF10B981),
+                      onTap: () => context.push(
+                        '/client/manage/reports/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.forum_rounded,
+                      label: 'Enquiries',
+                      color: const Color(0xFF8B5CF6),
+                      onTap: () => context.push(
+                        '/client/manage/enquiries/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.send_rounded,
+                      label: 'Communication',
+                      color: const Color(0xFF2563EB),
+                      onTap: () => context.push(
+                        '/client/manage/communication/${kind.pathSegment}/$facilityId',
+                        extra: facility,
+                      ),
+                    ),
+                    _ModuleGridItem(
+                      icon: Icons.qr_code_2_rounded,
+                      label: 'Facility QR',
+                      color: const Color(0xFF0F766E),
+                      onTap: () => showFacilityQrModal(
+                        context: context,
+                        kind: kind,
+                        facilityId: facilityId,
+                        facilityName: facilityName,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
 

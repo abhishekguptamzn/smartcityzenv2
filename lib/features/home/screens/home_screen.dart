@@ -524,12 +524,16 @@ class _CityzenIdHeroCard extends StatelessWidget {
         ? user!.displayCitizenId
         : 'CID-SCCSK6';
 
-    return GestureDetector(
-      onTap: () => context.push('/id-card'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: GestureDetector(
+          onTap: () => context.push('/id-card'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(26),
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
@@ -840,8 +844,10 @@ class _CityzenIdHeroCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 }
 
 class _ServiceGrid extends StatelessWidget {
@@ -859,14 +865,7 @@ class _ServiceGrid extends StatelessWidget {
           Icons.business_center_rounded,
           'My Facility',
           const Color(0xFF0D9488),
-          () => context.push('/client/facilities'),
-        )
-      else if (user?.isOnboardingUser == true)
-        (
-          Icons.rocket_launch_rounded,
-          'Onboard',
-          const Color(0xFF6366F1),
-          () => context.push('/onboard'),
+          () => context.push('/client/manage'),
         ),
       (
         Icons.menu_book_rounded,
@@ -912,15 +911,18 @@ class _ServiceGrid extends StatelessWidget {
       ),
     ];
 
+    final width = MediaQuery.sizeOf(context).width;
+    final crossCount = width > 900 ? 8 : (width > 600 ? 6 : 4);
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossCount,
         mainAxisSpacing: 16,
         crossAxisSpacing: 8,
-        childAspectRatio: 0.8,
+        childAspectRatio: width > 900 ? 0.95 : (width > 600 ? 0.9 : 0.8),
       ),
       itemBuilder: (context, i) {
         final (icon, label, accent, onTap) = items[i];

@@ -1246,6 +1246,9 @@ class _ServicesExplorerScreenState
       ),
     ];
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final crossCount = screenWidth > 900 ? 4 : (screenWidth > 600 ? 3 : 2);
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -1285,27 +1288,18 @@ class _ServicesExplorerScreenState
               ],
             ),
           ),
-          for (int i = 0; i < categories.length; i += 2) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCategoryCard(
-                    categories[i],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (i + 1 < categories.length)
-                  Expanded(
-                    child: _buildCategoryCard(
-                      categories[i + 1],
-                    ),
-                  )
-                else
-                  const Expanded(child: SizedBox.shrink()),
-              ],
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: categories.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossCount,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: screenWidth > 900 ? 1.5 : (screenWidth > 600 ? 1.4 : 1.3),
             ),
-            if (i + 2 < categories.length) const SizedBox(height: 12),
-          ],
+            itemBuilder: (context, i) => _buildCategoryCard(categories[i]),
+          ),
         ],
       ),
     );
@@ -1457,6 +1451,39 @@ class _ServicesExplorerScreenState
             ),
           ],
         ),
+      );
+    }
+
+    final isWide = MediaQuery.sizeOf(context).width > 700;
+    if (isWide) {
+      return GridView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        itemCount: services.length,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 480,
+          mainAxisExtent: 210,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+        ),
+        itemBuilder: (context, i) {
+          final item = services[i];
+          final localizedLocation = item.location.replaceAll('City', cityName);
+
+          return _CivicServiceCard(
+            item: item,
+            cityName: cityName,
+            onTap: () => _showServiceDetailModal(item, cityName),
+            onSendEnquiry: () => SendEnquirySheet.show(
+              context,
+              facilityTitle: item.title,
+              facilitySubtitle: localizedLocation,
+              categoryName: item.title,
+              facilityPhone: item.phone,
+            ),
+            onCall: item.phone != null ? () => _makeCall(item.phone!) : null,
+            onDirections: () => _openDirections(localizedLocation),
+          );
+        },
       );
     }
 
@@ -1613,6 +1640,117 @@ class _ServicesExplorerScreenState
             );
           }
 
+          final isWide = MediaQuery.sizeOf(context).width > 700;
+          final content = isWide
+              ? GridView.builder(
+                  controller: _liveScrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  itemCount: items.length,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 480,
+                    mainAxisExtent: 380,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                  ),
+                  itemBuilder: (context, i) {
+                    final facility = items[i];
+                    final isFav = _favoriteIds.contains(facility.id);
+                    return _FacilityCard(
+                      facility: facility,
+                      isLibrary: isLibrary,
+                      isFavorite: isFav,
+                      cityName: cityName,
+                      onToggleFavorite: () {
+                        setState(() {
+                          if (isFav) {
+                            _favoriteIds.remove(facility.id);
+                          } else {
+                            _favoriteIds.add(facility.id);
+                          }
+                        });
+                      },
+                      onTap: () => _showFacilityDetailsModal(facility, cityName),
+                      onViewDetails: () {
+                        context.push(
+                          '/services/${facility.kind.name}/${facility.id}',
+                        );
+                      },
+                      onSendEnquiry: () {
+                        SendEnquirySheet.show(
+                          context,
+                          facilityTitle: facility.name,
+                          facilitySubtitle: facility.address ?? cityName,
+                          categoryName: isLibrary
+                              ? 'Public Library'
+                              : 'Gym & Fitness Center',
+                          facilityPhone: facility.contactPhone,
+                          facilityEmail: facility.contactEmail,
+                        );
+                      },
+                      onCall: facility.contactPhone != null
+                          ? () => _makeCall(facility.contactPhone!)
+                          : null,
+                      onDirections: () => _openDirections(
+                        facility.address ?? cityName,
+                        lat: facility.latitude,
+                        lng: facility.longitude,
+                      ),
+                    );
+                  },
+                )
+              : ListView.separated(
+                  controller: _liveScrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (context, i) {
+                    final facility = items[i];
+                    final isFav = _favoriteIds.contains(facility.id);
+
+                    return _FacilityCard(
+                      facility: facility,
+                      isLibrary: isLibrary,
+                      isFavorite: isFav,
+                      cityName: cityName,
+                      onToggleFavorite: () {
+                        setState(() {
+                          if (isFav) {
+                            _favoriteIds.remove(facility.id);
+                          } else {
+                            _favoriteIds.add(facility.id);
+                          }
+                        });
+                      },
+                      onTap: () => _showFacilityDetailsModal(facility, cityName),
+                      onViewDetails: () {
+                        context.push(
+                          '/services/${facility.kind.name}/${facility.id}',
+                        );
+                      },
+                      onSendEnquiry: () {
+                        SendEnquirySheet.show(
+                          context,
+                          facilityTitle: facility.name,
+                          facilitySubtitle: facility.address ?? cityName,
+                          categoryName: isLibrary
+                              ? 'Public Library'
+                              : 'Gym & Fitness Center',
+                          facilityPhone: facility.contactPhone,
+                          facilityEmail: facility.contactEmail,
+                        );
+                      },
+                      onCall: facility.contactPhone != null
+                          ? () => _makeCall(facility.contactPhone!)
+                          : null,
+                      onDirections: () => _openDirections(
+                        facility.address ?? cityName,
+                        lat: facility.latitude,
+                        lng: facility.longitude,
+                      ),
+                    );
+                  },
+                );
+
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(
@@ -1625,58 +1763,7 @@ class _ServicesExplorerScreenState
                 ),
               );
             },
-            child: ListView.separated(
-              controller: _liveScrollController,
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 14),
-              itemBuilder: (context, i) {
-                final facility = items[i];
-                final isFav = _favoriteIds.contains(facility.id);
-
-                return _FacilityCard(
-                  facility: facility,
-                  isLibrary: isLibrary,
-                  isFavorite: isFav,
-                  cityName: cityName,
-                  onToggleFavorite: () {
-                    setState(() {
-                      if (isFav) {
-                        _favoriteIds.remove(facility.id);
-                      } else {
-                        _favoriteIds.add(facility.id);
-                      }
-                    });
-                  },
-                  onTap: () => _showFacilityDetailsModal(facility, cityName),
-                  onViewDetails: () {
-                    context.push(
-                      '/services/${facility.kind.name}/${facility.id}',
-                    );
-                  },
-                  onSendEnquiry: () {
-                    SendEnquirySheet.show(
-                      context,
-                      facilityTitle: facility.name,
-                      facilitySubtitle: facility.address ?? cityName,
-                      categoryName: isLibrary
-                          ? 'Public Library'
-                          : 'Gym & Fitness Center',
-                      facilityPhone: facility.contactPhone,
-                      facilityEmail: facility.contactEmail,
-                    );
-                  },
-                  onCall: facility.contactPhone != null
-                      ? () => _makeCall(facility.contactPhone!)
-                      : null,
-                  onDirections: () => _openDirections(
-                    facility.address ?? cityName,
-                    lat: facility.latitude,
-                    lng: facility.longitude,
-                  ),
-                );
-              },
-            ),
+            child: content,
           );
         },
       );

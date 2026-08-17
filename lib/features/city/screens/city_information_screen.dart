@@ -223,21 +223,25 @@ class _CityHubBody extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // 2-Column Grid of 8 Navigation Options
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.25,
-          ),
-          itemCount: navItems.length,
-          itemBuilder: (context, index) {
-            final (icon, title, route, sub) = navItems[index];
+        // Responsive Grid of 8 Navigation Options
+        Builder(
+          builder: (context) {
+            final width = MediaQuery.sizeOf(context).width;
+            final crossCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: width > 900 ? 1.4 : (width > 600 ? 1.3 : 1.25),
+              ),
+              itemCount: navItems.length,
+              itemBuilder: (context, index) {
+                final (icon, title, route, sub) = navItems[index];
 
-            return GlassContainer(
+                return GlassContainer(
               level: GlassLevel.card,
               borderRadius: BorderRadius.circular(20),
               padding: const EdgeInsets.all(14),
@@ -281,8 +285,10 @@ class _CityHubBody extends StatelessWidget {
               ),
             );
           },
-        ),
-      ],
-    );
-  }
+        );
+      },
+    ),
+  ],
+);
+}
 }

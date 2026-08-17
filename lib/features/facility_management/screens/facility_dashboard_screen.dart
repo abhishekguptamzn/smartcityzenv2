@@ -146,11 +146,37 @@ class FacilityDashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  for (final gym in gyms)
-                    _FacilityItemCard(
-                      facility: gym,
-                      kind: FacilityKind.gym,
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 650;
+                      if (isWide) {
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: gyms.length,
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 480,
+                            mainAxisExtent: 180,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemBuilder: (context, i) => _FacilityItemCard(
+                            facility: gyms[i],
+                            kind: FacilityKind.gym,
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: [
+                          for (final gym in gyms)
+                            _FacilityItemCard(
+                              facility: gym,
+                              kind: FacilityKind.gym,
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                   const SizedBox(height: 20),
                 ],
 
@@ -167,11 +193,37 @@ class FacilityDashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  for (final lib in libraries)
-                    _FacilityItemCard(
-                      facility: lib,
-                      kind: FacilityKind.library,
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 650;
+                      if (isWide) {
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: libraries.length,
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 480,
+                            mainAxisExtent: 180,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemBuilder: (context, i) => _FacilityItemCard(
+                            facility: libraries[i],
+                            kind: FacilityKind.library,
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: [
+                          for (final lib in libraries)
+                            _FacilityItemCard(
+                              facility: lib,
+                              kind: FacilityKind.library,
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ],
             );
