@@ -216,7 +216,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
     final memberSearchCtrl = TextEditingController();
     String targetFilter = 'active';
     int expiringDays = 7;
-    final Set<int> selectedMemberIds = <int>{};
+    final Set<String> selectedMemberIds = <String>{};
     List<Map<String, dynamic>> availableMembers = [];
     bool loadingMembers = false;
     String memberSearchQuery = '';
@@ -449,8 +449,8 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                                         : () {
                                             setSheetState(() {
                                               for (final m in availableMembers) {
-                                                final id = int.tryParse(m['id']?.toString() ?? '');
-                                                if (id != null) selectedMemberIds.add(id);
+                                                final id = m['id']?.toString() ?? '';
+                                                if (id.isNotEmpty) selectedMemberIds.add(id);
                                               }
                                             });
                                           },
@@ -494,19 +494,19 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                                 itemCount: filteredMemberList.length,
                                 itemBuilder: (c, idx) {
                                   final m = filteredMemberList[idx];
-                                  final id = int.tryParse(m['id']?.toString() ?? '');
+                                  final id = m['id']?.toString() ?? '';
                                   final user = m['user'] as Map<String, dynamic>? ?? {};
                                   final name = user['name']?.toString() ?? 'Member';
                                   final email = user['email']?.toString() ?? '';
-                                  final isChecked = id != null && selectedMemberIds.contains(id);
+                                  final isChecked = id.isNotEmpty && selectedMemberIds.contains(id);
 
                                   return CheckboxListTile(
                                     dense: true,
                                     value: isChecked,
                                     contentPadding: EdgeInsets.zero,
                                     title: Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                                    subtitle: Text(email, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
-                                    onChanged: id == null
+                                    subtitle: Text(email.isNotEmpty ? email : '#$id', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                                    onChanged: id.isEmpty
                                         ? null
                                         : (val) {
                                             setSheetState(() {
@@ -579,7 +579,10 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                             'message': messageCtrl.text.trim(),
                             'target_filter': targetFilter,
                             if (targetFilter == 'expiring_in_days') 'days': expiringDays,
-                            if (targetFilter == 'selected_members') 'recipient_ids': selectedMemberIds.toList(),
+                            if (targetFilter == 'selected_members') ...{
+                              'recipient_ids': selectedMemberIds.toList(),
+                              'member_ids': selectedMemberIds.toList(),
+                            },
                           };
 
                           final res = await ref.read(clientFacilityRepositoryProvider).sendCommunication(
