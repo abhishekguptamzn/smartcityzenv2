@@ -230,6 +230,22 @@ class ClientFacilityApi {
 
   Future<Response<dynamic>> getLibraryMemberRenewals(String libraryId, String memberId) =>
       _dio.get('/client/libraries/$libraryId/members/$memberId/renewals');
+
+  Future<Response<dynamic>> getGlobalAmenities({String? search, int perPage = 50}) =>
+      _dio.get('/amenities', queryParameters: {
+        if (search != null && search.isNotEmpty) 'search': search,
+        'per_page': perPage,
+      });
+
+  Future<Response<dynamic>> createAmenity(String name, {String? icon}) =>
+      _dio.post('/amenities', data: {
+        'name': name,
+        if (icon != null) 'icon': icon,
+        'is_active': true,
+      });
+
+  Future<Response<dynamic>> getFacilityAmenities(String type, String facilityId) =>
+      _dio.get('/$type/$facilityId/amenities');
 }
 
 @Riverpod(keepAlive: true)

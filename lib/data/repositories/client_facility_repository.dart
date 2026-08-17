@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/client_facility_api.dart';
+import '../models/amenity_model.dart';
 import '../models/facility_model.dart';
 import '../models/facility_operations_models.dart';
 import '../models/fee_plan_model.dart';
@@ -452,6 +453,45 @@ class ClientFacilityRepository {
     final res = await _api.emailPaymentInvoice(kind.pathSegment, facilityId, paymentId);
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  Future<List<AmenityModel>> getGlobalAmenities({String? search}) async {
+    try {
+      final res = await _api.getGlobalAmenities(search: search);
+      final raw = res.data is Map ? (res.data['data'] ?? res.data) : [];
+      final list = raw is List ? raw : (raw is Map && raw['data'] is List ? raw['data'] as List : []);
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(AmenityModel.fromJson)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<AmenityModel>> getFacilityAmenities(FacilityKind kind, String facilityId) async {
+    try {
+      final res = await _api.getFacilityAmenities(kind.pathSegment, facilityId);
+      final raw = res.data is Map ? (res.data['data'] ?? res.data) : [];
+      final list = raw is List ? raw : (raw is Map && raw['data'] is List ? raw['data'] as List : []);
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(AmenityModel.fromJson)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<AmenityModel?> createAmenity(String name, {String? icon}) async {
+    try {
+      final res = await _api.createAmenity(name, icon: icon);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      if (data is Map<String, dynamic>) {
+        return AmenityModel.fromJson(data);
+      }
+    } catch (_) {}
+    return null;
   }
 }
 
