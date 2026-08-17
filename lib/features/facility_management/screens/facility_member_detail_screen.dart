@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
-import '../../../data/models/fee_plan_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/renew_member_modal.dart';
 import 'facility_console_screen.dart';
 
 final memberDetailsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
@@ -223,239 +221,25 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
     );
   }
 
-  Future<void> _openRenewPassModal(Map<String, dynamic> member) async {
-    final currentEndDateRaw = member['end_date']?.toString();
-    DateTime defaultStartDate = DateTime.now();
-    if (currentEndDateRaw != null && currentEndDateRaw.isNotEmpty) {
-      try {
-        final parsed = DateTime.parse(currentEndDateRaw);
-        if (parsed.isAfter(DateTime.now())) {
-          defaultStartDate = parsed;
-        }
-      } catch (_) {}
-    }
-
-    DateTime selectedStartDate = defaultStartDate;
-    FeePlanModel? selectedPlan;
-    final amountController = TextEditingController();
-    final notesController = TextEditingController();
-    String paymentMethod = 'cash';
-    bool isSubmitting = false;
-
-    List<FeePlanModel> plans = [];
-    try {
-      if (widget.kind == FacilityKind.gym) {
-        plans = await ref.read(clientFacilityRepositoryProvider).getGymPlans(widget.facilityId);
-      } else {
-        plans = await ref.read(clientFacilityRepositoryProvider).getLibraryPlans(widget.facilityId);
-      }
-    } catch (_) {}
-
-    if (plans.isNotEmpty) {
-      selectedPlan = plans.first;
-      amountController.text = selectedPlan.amount.toStringAsFixed(0);
-    }
-
-    if (!mounted) return;
-
-    await showModalBottomSheet(
+  void _openRenewPassModal(Map<String, dynamic> member) {
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (modalContext) => StatefulBuilder(
-        builder: (ctx, setModalState) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.autorenew_rounded, color: Color(0xFF10B981), size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Renew Membership Pass', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        Text('Member: ${member["name"] ?? "Citizen"}', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Start Date Picker
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedStartDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2035),
-                  );
-                  if (picked != null) {
-                    setModalState(() => selectedStartDate = picked);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Pass Start Date', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                          const SizedBox(height: 2),
-                          Text(DateFormat('dd MMM yyyy').format(selectedStartDate), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        ],
-                      ),
-                      const Icon(Icons.calendar_today_rounded, size: 20, color: Color(0xFF0D9488)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Fee Plan Selector
-              if (plans.isNotEmpty)
-                DropdownButtonFormField<FeePlanModel>(
-                  initialValue: selectedPlan,
-                  decoration: InputDecoration(
-                    labelText: 'Fee Plan',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.card_membership_rounded),
-                  ),
-                  items: plans.map((p) {
-                    final intervalStr = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
-                    return DropdownMenuItem(value: p, child: Text('${p.name} (₹${p.amount.toStringAsFixed(0)} / $intervalStr)'));
-                  }).toList(),
-                  onChanged: (p) {
-                    setModalState(() {
-                      selectedPlan = p;
-                      if (p != null) {
-                        amountController.text = p.amount.toStringAsFixed(0);
-                      }
-                    });
-                  },
-                ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: 'Payment Amount (₹)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.currency_rupee_rounded),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: paymentMethod,
-                decoration: InputDecoration(
-                  labelText: 'Payment Mode',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.payment_rounded),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'cash', child: Text('Cash at Desk')),
-                  DropdownMenuItem(value: 'upi', child: Text('UPI / QR Transfer')),
-                  DropdownMenuItem(value: 'card', child: Text('Card / POS')),
-                  DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer')),
-                ],
-                onChanged: (val) {
-                  if (val != null) setModalState(() => paymentMethod = val);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  labelText: 'Notes / Remarks (Optional)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.note_alt_outlined),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          setModalState(() => isSubmitting = true);
-                          try {
-                            await ref.read(clientFacilityRepositoryProvider).renewMember(
-                                  widget.kind,
-                                  widget.facilityId,
-                                  widget.memberId,
-                                  feePlanId: selectedPlan?.id,
-                                  amount: double.tryParse(amountController.text) ?? 0,
-                                  startDate: DateFormat('yyyy-MM-dd').format(selectedStartDate),
-                                  paymentMethod: paymentMethod,
-                                  notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
-                                );
-
-                            ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
-                            if (!mounted) return;
-                            if (modalContext.mounted) {
-                              Navigator.of(modalContext).pop();
-                            }
-                            _refreshAll();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Membership renewed, payment recorded & digital pass emailed!')),
-                            );
-                          } catch (e) {
-                            final err = AppException.from(e);
-                            setModalState(() => isSubmitting = false);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(err?.message ?? 'Renewal failed.')),
-                            );
-                          }
-                        },
-                  icon: isSubmitting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.check_circle_rounded),
-                  label: Text(isSubmitting ? 'Renewing Pass...' : 'Confirm Renewal & Payment'),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => RenewMemberModal(
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        facility: widget.facility,
+        member: {
+          'id': widget.memberId,
+          'user': member['user'] ?? {'name': member['name'], 'email': member['email']},
+          'name': member['name'],
+          'email': member['email'],
+          'end_date': member['end_date'],
+        },
+        onSuccess: () {
+          _refreshAll();
+        },
       ),
     );
   }

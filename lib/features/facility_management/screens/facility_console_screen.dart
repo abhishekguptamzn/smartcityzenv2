@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_analytics_dashboard_widget.dart';
 import '../widgets/facility_qr_modal.dart';
 
 final facilityStatsProvider = FutureProvider.autoDispose.family<FacilityDashboardStats, (FacilityKind, String)>((ref, args) async {
@@ -265,50 +266,31 @@ class FacilityConsoleScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-                  // Stat Summary Row (3 Mini Cards)
-                  statsAsync.when(
-                    data: (stats) => Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _StatMiniCol(
-                              icon: Icons.fact_check_outlined,
-                              iconColor: const Color(0xFF0284C7),
-                              title: "Today's Check-ins",
-                              value: '${stats.todayCheckins}',
-                            ),
-                          ),
-                          Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
-                          Expanded(
-                            child: _StatMiniCol(
-                              icon: Icons.people_outline_rounded,
-                              iconColor: const Color(0xFF0D9488),
-                              title: 'Currently Inside',
-                              value: '${stats.currentlyInside}',
-                            ),
-                          ),
-                          Container(height: 36, width: 1, color: scheme.outlineVariant.withValues(alpha: 0.4)),
-                          Expanded(
-                            child: _StatMiniCol(
-                              icon: Icons.badge_outlined,
-                              iconColor: const Color(0xFF8B5CF6),
-                              title: 'Total Members',
-                              value: '${stats.totalMembers}',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-                    error: (_, _) => const SizedBox.shrink(),
+              // Full Facility Analytics & Earnings Dashboard
+              statsAsync.when(
+                data: (stats) => FacilityAnalyticsDashboardWidget(
+                  kind: kind,
+                  facilityId: facilityId,
+                  facility: facility,
+                  stats: stats,
+                ),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
                   ),
-                  const SizedBox(height: 20),
+                ),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Failed to load analytics: $err',
+                      style: TextStyle(color: scheme.error, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
                   // Quick Actions Section
                   Text(
@@ -432,43 +414,6 @@ class _ModuleGridItem extends StatelessWidget {
   }
 }
 
-class _StatMiniCol extends StatelessWidget {
-  const _StatMiniCol({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.value,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18, color: iconColor),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-}
 
 class _QuickActionTile extends StatelessWidget {
   const _QuickActionTile({

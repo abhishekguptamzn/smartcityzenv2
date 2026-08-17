@@ -1,22 +1,200 @@
+class MonthlyEarningPoint {
+  const MonthlyEarningPoint({
+    required this.month,
+    required this.year,
+    required this.earnings,
+    required this.count,
+  });
+
+  final String month;
+  final String year;
+  final double earnings;
+  final int count;
+
+  factory MonthlyEarningPoint.fromJson(Map<String, dynamic> json) {
+    return MonthlyEarningPoint(
+      month: json['month']?.toString() ?? '',
+      year: json['year']?.toString() ?? '',
+      earnings: (json['earnings'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class WeeklyEarningPoint {
+  const WeeklyEarningPoint({
+    required this.day,
+    required this.date,
+    required this.earnings,
+    required this.count,
+  });
+
+  final String day;
+  final String date;
+  final double earnings;
+  final int count;
+
+  factory WeeklyEarningPoint.fromJson(Map<String, dynamic> json) {
+    return WeeklyEarningPoint(
+      day: json['day']?.toString() ?? '',
+      date: json['date']?.toString() ?? '',
+      earnings: (json['earnings'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class PaymentMethodStat {
+  const PaymentMethodStat({
+    required this.method,
+    required this.amount,
+    required this.count,
+    required this.percentage,
+  });
+
+  final String method;
+  final double amount;
+  final int count;
+  final double percentage;
+
+  factory PaymentMethodStat.fromJson(Map<String, dynamic> json) {
+    return PaymentMethodStat(
+      method: json['method']?.toString() ?? 'Other',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      percentage: (json['percentage'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+class PlanDistributionStat {
+  const PlanDistributionStat({
+    required this.planId,
+    required this.planName,
+    required this.amount,
+    required this.interval,
+    required this.intervalCount,
+    required this.memberCount,
+  });
+
+  final String planId;
+  final String planName;
+  final double amount;
+  final String interval;
+  final int intervalCount;
+  final int memberCount;
+
+  factory PlanDistributionStat.fromJson(Map<String, dynamic> json) {
+    return PlanDistributionStat(
+      planId: json['plan_id']?.toString() ?? '',
+      planName: json['plan_name']?.toString() ?? 'Plan',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      interval: json['interval']?.toString() ?? 'month',
+      intervalCount: (json['interval_count'] as num?)?.toInt() ?? 1,
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class RecentPaymentRecord {
+  const RecentPaymentRecord({
+    required this.id,
+    required this.invoiceNumber,
+    required this.memberId,
+    required this.memberName,
+    this.memberEmail,
+    required this.amount,
+    required this.paymentMethod,
+    required this.status,
+    required this.date,
+    this.paidAt,
+  });
+
+  final String id;
+  final String invoiceNumber;
+  final String memberId;
+  final String memberName;
+  final String? memberEmail;
+  final double amount;
+  final String paymentMethod;
+  final String status;
+  final String date;
+  final String? paidAt;
+
+  factory RecentPaymentRecord.fromJson(Map<String, dynamic> json) {
+    return RecentPaymentRecord(
+      id: json['id']?.toString() ?? '',
+      invoiceNumber: json['invoice_number']?.toString() ?? '',
+      memberId: json['member_id']?.toString() ?? '',
+      memberName: json['member_name']?.toString() ?? 'Citizen Member',
+      memberEmail: json['member_email']?.toString(),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      paymentMethod: json['payment_method']?.toString() ?? 'CASH',
+      status: json['status']?.toString() ?? 'paid',
+      date: json['date']?.toString() ?? '',
+      paidAt: json['paid_at']?.toString(),
+    );
+  }
+}
+
 class FacilityDashboardStats {
   const FacilityDashboardStats({
     required this.todayCheckins,
     required this.currentlyInside,
     required this.totalMembers,
     required this.activeMembers,
+    this.expiringSoonMembers = 0,
+    this.expiredMembers = 0,
+    this.totalEarningsAllTime = 0.0,
+    this.totalEarningsThisMonth = 0.0,
+    this.totalEarningsToday = 0.0,
+    this.totalRenewalsThisMonth = 0,
+    this.monthlyEarningsTrend = const [],
+    this.weeklyEarningsTrend = const [],
+    this.paymentMethodsBreakdown = const [],
+    this.planDistribution = const [],
+    this.recentPayments = const [],
   });
 
   final int todayCheckins;
   final int currentlyInside;
   final int totalMembers;
   final int activeMembers;
+  final int expiringSoonMembers;
+  final int expiredMembers;
+  final double totalEarningsAllTime;
+  final double totalEarningsThisMonth;
+  final double totalEarningsToday;
+  final int totalRenewalsThisMonth;
+  final List<MonthlyEarningPoint> monthlyEarningsTrend;
+  final List<WeeklyEarningPoint> weeklyEarningsTrend;
+  final List<PaymentMethodStat> paymentMethodsBreakdown;
+  final List<PlanDistributionStat> planDistribution;
+  final List<RecentPaymentRecord> recentPayments;
 
   factory FacilityDashboardStats.fromJson(Map<String, dynamic> json) {
+    final rawMonthly = json['monthly_earnings_trend'] as List? ?? [];
+    final rawWeekly = json['weekly_earnings_trend'] as List? ?? [];
+    final rawMethods = json['payment_methods_breakdown'] as List? ?? [];
+    final rawPlans = json['plan_distribution'] as List? ?? [];
+    final rawPayments = json['recent_payments'] as List? ?? [];
+
     return FacilityDashboardStats(
       todayCheckins: (json['today_checkins'] as num?)?.toInt() ?? 0,
       currentlyInside: (json['currently_inside'] as num?)?.toInt() ?? 0,
       totalMembers: (json['total_members'] as num?)?.toInt() ?? 0,
       activeMembers: (json['active_members'] as num?)?.toInt() ?? 0,
+      expiringSoonMembers: (json['expiring_soon_members'] as num?)?.toInt() ?? 0,
+      expiredMembers: (json['expired_members'] as num?)?.toInt() ?? 0,
+      totalEarningsAllTime: (json['total_earnings_all_time'] as num?)?.toDouble() ?? 0.0,
+      totalEarningsThisMonth: (json['total_earnings_this_month'] as num?)?.toDouble() ?? 0.0,
+      totalEarningsToday: (json['total_earnings_today'] as num?)?.toDouble() ?? 0.0,
+      totalRenewalsThisMonth: (json['total_renewals_this_month'] as num?)?.toInt() ?? 0,
+      monthlyEarningsTrend: rawMonthly.map((j) => MonthlyEarningPoint.fromJson(j as Map<String, dynamic>)).toList(),
+      weeklyEarningsTrend: rawWeekly.map((j) => WeeklyEarningPoint.fromJson(j as Map<String, dynamic>)).toList(),
+      paymentMethodsBreakdown: rawMethods.map((j) => PaymentMethodStat.fromJson(j as Map<String, dynamic>)).toList(),
+      planDistribution: rawPlans.map((j) => PlanDistributionStat.fromJson(j as Map<String, dynamic>)).toList(),
+      recentPayments: rawPayments.map((j) => RecentPaymentRecord.fromJson(j as Map<String, dynamic>)).toList(),
     );
   }
 }

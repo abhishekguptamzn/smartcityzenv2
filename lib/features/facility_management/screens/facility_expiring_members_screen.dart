@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
-import 'facility_members_screen.dart';
+import '../widgets/renew_member_modal.dart';
 
 final expiringMembersProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, int)>((ref, args) async {
   final (kind, facilityId, days) = args;
