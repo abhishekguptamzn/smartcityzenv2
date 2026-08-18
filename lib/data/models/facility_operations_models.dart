@@ -481,3 +481,50 @@ class FacilityCommunicationItem {
     );
   }
 }
+
+class FacilityMediaModel {
+  const FacilityMediaModel({
+    required this.id,
+    required this.imageableType,
+    required this.imageableId,
+    required this.collection,
+    required this.url,
+    this.caption,
+    this.sortOrder = 0,
+    this.isPrimary = false,
+    this.originalFilename,
+    this.mimeType,
+    this.size,
+    this.createdAt,
+  });
+
+  final String id;
+  final String imageableType;
+  final String imageableId;
+  final String collection;
+  final String url;
+  final String? caption;
+  final int sortOrder;
+  final bool isPrimary;
+  final String? originalFilename;
+  final String? mimeType;
+  final int? size;
+  final String? createdAt;
+
+  factory FacilityMediaModel.fromJson(Map<String, dynamic> json) {
+    return FacilityMediaModel(
+      id: json['id']?.toString() ?? '',
+      imageableType: json['imageable_type']?.toString() ?? '',
+      imageableId: json['imageable_id']?.toString() ?? '',
+      collection: json['collection']?.toString() ?? 'gallery',
+      url: json['url']?.toString() ?? '',
+      caption: json['caption']?.toString(),
+      sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+      isPrimary: json['is_primary'] == true,
+      originalFilename: json['original_filename']?.toString(),
+      mimeType: json['mime_type']?.toString(),
+      size: (json['size'] as num?)?.toInt(),
+      createdAt: json['created_at']?.toString(),
+    );
+  }
+}

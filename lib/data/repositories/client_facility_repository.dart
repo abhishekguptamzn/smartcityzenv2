@@ -503,6 +503,56 @@ class ClientFacilityRepository {
     } catch (_) {}
     return null;
   }
+
+  // Media / Gallery Management
+  Future<List<FacilityMediaModel>> getFacilityMedia(FacilityKind kind, String facilityId) async {
+    try {
+      final res = await _api.getFacilityMedia(kind.pathSegment, facilityId);
+      dynamic raw = res.data;
+      if (raw is Map) {
+        raw = raw['data'] ?? raw;
+      }
+      final list = raw is List ? raw : (raw is Map && raw['data'] is List ? raw['data'] as List : []);
+      return list
+          .whereType<Map>()
+          .map((item) => FacilityMediaModel.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<FacilityMediaModel?> uploadFacilityMedia(
+    FacilityKind kind,
+    String facilityId, {
+    required List<int> bytes,
+    required String filename,
+    String? caption,
+  }) async {
+    final res = await _api.uploadFacilityMedia(
+      kind.pathSegment,
+      facilityId,
+      bytes: bytes,
+      filename: filename,
+      caption: caption,
+    );
+    dynamic raw = res.data;
+    if (raw is Map) {
+      raw = raw['data'] ?? raw;
+    }
+    if (raw is Map) {
+      return FacilityMediaModel.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return null;
+  }
+
+  Future<void> setPrimaryMedia(String mediaId) async {
+    await _api.setPrimaryMedia(mediaId);
+  }
+
+  Future<void> deleteFacilityMedia(String mediaId) async {
+    await _api.deleteMedia(mediaId);
+  }
 }
 
 @Riverpod(keepAlive: true)

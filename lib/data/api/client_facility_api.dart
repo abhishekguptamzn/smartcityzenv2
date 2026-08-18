@@ -246,6 +246,34 @@ class ClientFacilityApi {
 
   Future<Response<dynamic>> getFacilityAmenities(String type, String facilityId) =>
       _dio.get('/$type/$facilityId/amenities');
+
+  // Media / Gallery
+  Future<Response<dynamic>> getFacilityMedia(String type, String facilityId) =>
+      _dio.get('/$type/$facilityId/media');
+
+  Future<Response<dynamic>> uploadFacilityMedia(
+    String type,
+    String facilityId, {
+    required List<int> bytes,
+    required String filename,
+    String? caption,
+  }) {
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(bytes, filename: filename),
+      if (caption != null && caption.isNotEmpty) 'caption': caption,
+    });
+    return _dio.post(
+      '/$type/$facilityId/media',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+  }
+
+  Future<Response<dynamic>> setPrimaryMedia(String mediaId) =>
+      _dio.post('/media/$mediaId/primary');
+
+  Future<Response<dynamic>> deleteMedia(String mediaId) =>
+      _dio.delete('/media/$mediaId');
 }
 
 @Riverpod(keepAlive: true)
