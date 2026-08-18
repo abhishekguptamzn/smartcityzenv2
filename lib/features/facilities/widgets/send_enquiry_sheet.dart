@@ -62,9 +62,6 @@ class SendEnquirySheet extends ConsumerStatefulWidget {
 class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _messageController = TextEditingController();
 
   String _enquiryType = 'Membership & Admission';
@@ -83,21 +80,7 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
   ];
 
   @override
-  void initState() {
-    super.initState();
-    final user = ref.read(authControllerProvider).value;
-    if (user != null) {
-      _nameController.text = user.name;
-      _emailController.text = user.email;
-      if (user.phone != null) _phoneController.text = user.phone!;
-    }
-  }
-
-  @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -108,6 +91,11 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
     HapticFeedback.mediumImpact();
     setState(() => _isSubmitting = true);
 
+    final user = ref.read(authControllerProvider).value;
+    final name = (user?.name != null && user!.name.trim().isNotEmpty) ? user.name.trim() : 'Citizen Member';
+    final email = user?.email.trim() ?? '';
+    final phone = user?.phone?.trim() ?? '';
+
     String refCode = 'ENQ-${DateTime.now().year}-${1000 + Random().nextInt(8999)}';
 
     if (widget.facilityId != null && widget.facilityId!.isNotEmpty) {
@@ -117,9 +105,9 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
           kind,
           widget.facilityId!,
           {
-            'name': _nameController.text.trim(),
-            'email': _emailController.text.trim(),
-            'phone': _phoneController.text.trim(),
+            'name': name,
+            'email': email,
+            'phone': phone,
             'subject': _enquiryType,
             'message': _messageController.text.trim(),
           },
@@ -325,111 +313,81 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
             ),
             const SizedBox(height: 14),
 
-            // Name Field
-            const Text(
-              'Your Full Name *',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF374151),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'e.g. Abhishek Gupta',
-                prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                filled: true,
-                fillColor: const Color(0xFFF9FAFB),
-              ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
-            ),
-            const SizedBox(height: 14),
-
-            // Email & Phone Row
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // Logged-In Citizen Profile Summary
+            Builder(
+              builder: (ctx) {
+                final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                final user = ref.watch(authControllerProvider).value;
+                final name = user?.name ?? 'Citizen Member';
+                final email = user?.email ?? '';
+                final phone = user?.phone;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
                     children: [
-                      const Text(
-                        'Email Address *',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF374151),
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0D9488),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.person_rounded, color: Colors.white, size: 16),
                       ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: 'name@example.com',
-                          prefixIcon: const Icon(Icons.email_outlined, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF9FAFB),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Verified Citizen',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0D9488),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              [if (email.isNotEmpty) email, if (phone != null && phone.isNotEmpty) phone].join(' • '),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        validator: (v) => (v == null || !v.contains('@')) ? 'Valid email required' : null,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Contact Phone',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF374151),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(10),
-                        ],
-                        decoration: InputDecoration(
-                          hintText: '10-digit phone',
-                          prefixIcon: const Icon(Icons.phone_outlined, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF9FAFB),
-                        ),
-                        validator: (v) {
-                          if (v != null && v.trim().isNotEmpty && !RegExp(r'^\d{10}$').hasMatch(v.trim())) {
-                            return 'Must be 10 digits';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              },
             ),
             const SizedBox(height: 14),
 

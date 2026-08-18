@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../data/api/token_storage.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -117,7 +118,13 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
     final config = ref.read(appConfigControllerProvider);
     final baseUrl = config.apiBaseUrl;
     final pathSegment = widget.kind == FacilityKind.gym ? 'gyms' : 'libraries';
-    final rawUrl = directUrl ?? '$baseUrl/client/$pathSegment/${widget.facilityId}/payments/${widget.paymentId}/invoice';
+    final tokenStorage = ref.read(tokenStorageProvider);
+    final token = await tokenStorage.readToken();
+
+    String rawUrl = directUrl ?? '$baseUrl/client/$pathSegment/${widget.facilityId}/payments/${widget.paymentId}/invoice';
+    if (token != null && token.isNotEmpty && !rawUrl.contains('token=')) {
+      rawUrl += '${rawUrl.contains('?') ? '&' : '?'}token=$token';
+    }
 
     final uri = Uri.parse(rawUrl);
     if (await canLaunchUrl(uri)) {
