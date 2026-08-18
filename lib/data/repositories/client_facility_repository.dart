@@ -456,6 +456,22 @@ class ClientFacilityRepository {
     return data is Map ? data.cast<String, dynamic>() : {};
   }
 
+  Future<Map<String, dynamic>> refundPayment(
+    FacilityKind kind,
+    String facilityId,
+    String paymentId, {
+    required String reason,
+    double? amount,
+  }) async {
+    final payload = <String, dynamic>{
+      'refund_reason': reason,
+      if (amount != null) 'refund_amount': amount,
+    };
+    final res = await _api.refundPayment(kind.pathSegment, facilityId, paymentId, payload);
+    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
   Future<List<AmenityModel>> getGlobalAmenities({String? search}) async {
     try {
       final res = await _api.getGlobalAmenities(search: search);

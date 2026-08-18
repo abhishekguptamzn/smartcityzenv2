@@ -108,6 +108,9 @@ class RecentPaymentRecord {
     required this.status,
     required this.date,
     this.paidAt,
+    this.refundReason,
+    this.refundedAmount,
+    this.refundedAt,
   });
 
   final String id;
@@ -120,6 +123,9 @@ class RecentPaymentRecord {
   final String status;
   final String date;
   final String? paidAt;
+  final String? refundReason;
+  final double? refundedAmount;
+  final String? refundedAt;
 
   factory RecentPaymentRecord.fromJson(Map<String, dynamic> json) {
     return RecentPaymentRecord(
@@ -133,6 +139,9 @@ class RecentPaymentRecord {
       status: json['status']?.toString() ?? 'paid',
       date: json['date']?.toString() ?? '',
       paidAt: json['paid_at']?.toString(),
+      refundReason: json['refund_reason']?.toString(),
+      refundedAmount: (json['refunded_amount'] as num?)?.toDouble(),
+      refundedAt: json['refunded_at']?.toString(),
     );
   }
 }
@@ -148,6 +157,7 @@ class FacilityDashboardStats {
     this.totalEarningsAllTime = 0.0,
     this.totalEarningsThisMonth = 0.0,
     this.totalEarningsToday = 0.0,
+    this.totalRefundsAllTime = 0.0,
     this.totalRenewalsThisMonth = 0,
     this.monthlyEarningsTrend = const [],
     this.weeklyEarningsTrend = const [],
@@ -165,6 +175,7 @@ class FacilityDashboardStats {
   final double totalEarningsAllTime;
   final double totalEarningsThisMonth;
   final double totalEarningsToday;
+  final double totalRefundsAllTime;
   final int totalRenewalsThisMonth;
   final List<MonthlyEarningPoint> monthlyEarningsTrend;
   final List<WeeklyEarningPoint> weeklyEarningsTrend;
@@ -189,6 +200,7 @@ class FacilityDashboardStats {
       totalEarningsAllTime: (json['total_earnings_all_time'] as num?)?.toDouble() ?? 0.0,
       totalEarningsThisMonth: (json['total_earnings_this_month'] as num?)?.toDouble() ?? 0.0,
       totalEarningsToday: (json['total_earnings_today'] as num?)?.toDouble() ?? 0.0,
+      totalRefundsAllTime: (json['total_refunds_all_time'] as num?)?.toDouble() ?? 0.0,
       totalRenewalsThisMonth: (json['total_renewals_this_month'] as num?)?.toInt() ?? 0,
       monthlyEarningsTrend: rawMonthly.map((j) => MonthlyEarningPoint.fromJson(j as Map<String, dynamic>)).toList(),
       weeklyEarningsTrend: rawWeekly.map((j) => WeeklyEarningPoint.fromJson(j as Map<String, dynamic>)).toList(),

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
+import 'payment_detail_modal.dart';
 
 enum ChartPeriod { monthly, weekly }
 
@@ -157,7 +158,7 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Today's Collection", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                        const Text("Today's Net", style: TextStyle(color: Colors.white70, fontSize: 11)),
                         const SizedBox(height: 2),
                         Text(
                           _currencyFormat.format(stats.totalEarningsToday),
@@ -181,6 +182,23 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
                       ],
                     ),
                   ),
+                  if (stats.totalRefundsAllTime > 0) ...[
+                    Container(height: 28, width: 1, color: Colors.white24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Total Refunds", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _currencyFormat.format(stats.totalRefundsAllTime),
+                            style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -408,12 +426,13 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
+          Material(
+            color: theme.cardColor,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+              side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.3)),
             ),
+            clipBehavior: Clip.antiAlias,
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -421,45 +440,102 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
               separatorBuilder: (ctx, i) => const Divider(height: 1, indent: 16, endIndent: 16),
               itemBuilder: (ctx, i) {
                 final p = stats.recentPayments[i];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.receipt_rounded, color: Color(0xFF10B981), size: 20),
-                  ),
-                  title: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          p.memberName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                final isRefunded = p.status.toLowerCase() == 'refunded';
+                return InkWell(
+                  onTap: () {
+                    showPaymentDetailModal(
+                      context: context,
+                      kind: widget.kind,
+                      facilityId: widget.facilityId,
+                      paymentId: p.id,
+                      facility: widget.facility,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isRefunded ? const Color(0xFF7C3AED).withValues(alpha: 0.12) : const Color(0xFF10B981).withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isRefunded ? Icons.currency_exchange_rounded : Icons.receipt_rounded,
+                            color: isRefunded ? const Color(0xFF7C3AED) : const Color(0xFF10B981),
+                            size: 20,
+                          ),
                         ),
-                      ),
-                      Text(
-                        _currencyFormat.format(p.amount),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF059669)),
-                      ),
-                    ],
-                  ),
-                  subtitle: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${p.paymentMethod} • ${p.date}',
-                        style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-                      ),
-                      Text(
-                        p.invoiceNumber,
-                        style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant, fontFamily: 'monospace'),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            p.memberName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (isRefunded) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                            child: const Text('REFUNDED', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    _currencyFormat.format(p.amount),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isRefunded ? const Color(0xFF7C3AED) : const Color(0xFF059669),
+                                      decoration: isRefunded ? TextDecoration.lineThrough : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      isRefunded && p.refundReason != null
+                                          ? 'Reason: ${p.refundReason}'
+                                          : '${p.paymentMethod} • ${p.date}',
+                                      style: TextStyle(fontSize: 11, color: isRefunded ? const Color(0xFF7C3AED) : scheme.onSurfaceVariant),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    p.invoiceNumber,
+                                    style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant, fontFamily: 'monospace'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

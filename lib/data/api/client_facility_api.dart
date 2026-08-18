@@ -225,6 +225,14 @@ class ClientFacilityApi {
   ) =>
       _dio.post('/client/$type/$facilityId/payments/$paymentId/email-invoice');
 
+  Future<Response<dynamic>> refundPayment(
+    String type,
+    String facilityId,
+    String paymentId,
+    Map<String, dynamic> data,
+  ) =>
+      _dio.post('/client/$type/$facilityId/payments/$paymentId/refund', data: data);
+
   Future<Response<dynamic>> renewLibraryMember(String libraryId, String memberId, Map<String, dynamic> data) =>
       _dio.post('/client/libraries/$libraryId/members/$memberId/renew', data: data);
 

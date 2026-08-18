@@ -8,6 +8,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../screens/facility_dashboard_screen.dart';
 
 final singlePaymentDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
   final (kind, facilityId, paymentId) = args;
@@ -130,6 +131,252 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
         ),
       );
     }
+  }
+
+  Future<void> _handleIssueRefund(BuildContext context, Map<String, dynamic> data) async {
+    final originalAmount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+    final invoiceNumber = data['invoice_number'] ?? 'INV-${widget.paymentId}';
+    final user = data['user'] as Map<String, dynamic>?;
+    final userName = user?['name'] ?? 'Citizen Member';
+
+    final amountController = TextEditingController(text: originalAmount.toStringAsFixed(2));
+    final reasonController = TextEditingController();
+    String selectedPreset = '';
+    bool isProcessing = false;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final presets = [
+      'Citizen requested cancellation',
+      'Accidental duplicate charge',
+      'Facility maintenance / closure',
+      'Incorrect fee plan applied',
+      'Medical / relocation reason',
+      'Other / Custom reason',
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.currency_exchange_rounded, color: Color(0xFFEF4444), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Issue Invoice Refund',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Invoice #$invoiceNumber • $userName',
+                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Refund Amount (INR)',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: '₹ ',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  helperText: 'Original invoice total: ₹${originalAmount.toStringAsFixed(2)}',
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Select Reason for Refund',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                initialValue: selectedPreset.isEmpty ? null : selectedPreset,
+                hint: const Text('Choose a common reason...'),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                items: presets.map((p) => DropdownMenuItem(value: p, child: Text(p, style: const TextStyle(fontSize: 13)))).toList(),
+                onChanged: (val) {
+                  setSheetState(() {
+                    selectedPreset = val ?? '';
+                    if (val != 'Other / Custom reason') {
+                      reasonController.text = val ?? '';
+                    } else {
+                      reasonController.clear();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Refund Reason Note (Sent to citizen) *',
+                  hintText: 'e.g. Member requested cancellation',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: isProcessing ? null : () => Navigator.of(sheetCtx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: isProcessing
+                          ? null
+                          : () async {
+                              final reason = reasonController.text.trim();
+                              final amount = double.tryParse(amountController.text.trim());
+
+                              if (reason.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please provide a reason for the refund.')),
+                                );
+                                return;
+                              }
+                              if (amount == null || amount <= 0 || amount > originalAmount) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter a valid refund amount.')),
+                                );
+                                return;
+                              }
+
+                              setSheetState(() => isProcessing = true);
+                              HapticFeedback.mediumImpact();
+
+                              try {
+                                final repo = ref.read(clientFacilityRepositoryProvider);
+                                final res = await repo.refundPayment(
+                                  widget.kind,
+                                  widget.facilityId,
+                                  widget.paymentId,
+                                  reason: reason,
+                                  amount: amount,
+                                );
+
+                                if (ctx.mounted) Navigator.of(sheetCtx).pop();
+
+                                ref.invalidate(singlePaymentDetailProvider((widget.kind, widget.facilityId, widget.paymentId)));
+                                ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                          const SizedBox(width: 10),
+                                          Expanded(child: Text(res['meta']?['message'] ?? 'Invoice refunded successfully!')),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFF059669),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setSheetState(() => isProcessing = false);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to process refund: $e'),
+                                      backgroundColor: const Color(0xFFDC2626),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      child: isProcessing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Confirm Refund',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -357,6 +604,46 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
             ],
           ),
         ),
+        if (status == 'refunded') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.currency_exchange_rounded, size: 16, color: Color(0xFF7C3AED)),
+                    SizedBox(width: 6),
+                    Text(
+                      'REFUNDED INVOICE',
+                      style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5),
+                    ),
+                  ],
+                ),
+                if (data['refund_reason'] != null && data['refund_reason'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Reason: ${data['refund_reason']}',
+                    style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF4C1D95), fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ],
+                if (data['refunded_at_formatted'] != null || data['refunded_at'] != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Refunded on: ${data['refunded_at_formatted'] ?? data['refunded_at']}',
+                    style: TextStyle(color: isDark ? Colors.white54 : Colors.black54, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
 
         // Action Buttons Row (Download PDF & Email Receipt)
@@ -407,6 +694,27 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
             ),
           ],
         ),
+        if (isPaid) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFEF4444),
+                side: BorderSide(color: const Color(0xFFEF4444).withValues(alpha: 0.4), width: 1.2),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.05),
+              ),
+              icon: const Icon(Icons.currency_exchange_rounded, size: 18),
+              label: const Text(
+                'Issue Refund',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+              ),
+              onPressed: () => _handleIssueRefund(context, data),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
 
         // Section 1: Member Profile

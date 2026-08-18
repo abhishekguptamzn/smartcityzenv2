@@ -909,6 +909,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                   final planName = p['plan_name'] ?? p['notes'] ?? 'Membership Pass';
                   final txnRef = p['transaction_reference']?.toString();
 
+                  final isRefunded = (p['status'] ?? '').toString().toLowerCase() == 'refunded';
                   return Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -930,37 +931,70 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                         decoration: BoxDecoration(
                           color: theme.cardColor,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: isRefunded ? const Color(0xFF7C3AED).withValues(alpha: 0.4) : scheme.outlineVariant.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                color: isRefunded ? const Color(0xFF7C3AED).withValues(alpha: 0.12) : const Color(0xFF10B981).withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.receipt_rounded, color: Color(0xFF10B981), size: 20),
+                              child: Icon(
+                                isRefunded ? Icons.currency_exchange_rounded : Icons.receipt_rounded,
+                                color: isRefunded ? const Color(0xFF7C3AED) : const Color(0xFF10B981),
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                  Row(
+                                    children: [
+                                      Expanded(child: Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5))),
+                                      if (isRefunded)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text('REFUNDED', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                                        ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 2),
                                   Text('$invoiceNo • $date', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
                                   const SizedBox(height: 2),
-                                  Text('Paid via $method${txnRef != null && txnRef.isNotEmpty ? " • $txnRef" : ""}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8))),
+                                  Text(
+                                    isRefunded && p['refund_reason'] != null
+                                        ? 'Reason: ${p["refund_reason"]}'
+                                        : 'Paid via $method${txnRef != null && txnRef.isNotEmpty ? " • $txnRef" : ""}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isRefunded ? const Color(0xFF7C3AED) : scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
                                   '₹${amount.toStringAsFixed(0)}',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: isRefunded ? const Color(0xFF7C3AED) : const Color(0xFF059669),
+                                    decoration: isRefunded ? TextDecoration.lineThrough : null,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
