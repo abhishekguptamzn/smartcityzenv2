@@ -127,6 +127,8 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                   onCall: () => _call(facility.contactPhone),
                   onSendEnquiry: () => SendEnquirySheet.show(
                     context,
+                    facilityId: facility.id,
+                    facilityKind: widget.kind,
                     facilityTitle: facility.name,
                     facilitySubtitle: facility.address,
                     categoryName: isLibrary ? 'Public Library' : 'Gym & Fitness Center',
@@ -216,6 +218,8 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                   isPrimary: false,
                   onTap: () => SendEnquirySheet.show(
                     context,
+                    facilityId: facility.id,
+                    facilityKind: widget.kind,
                     facilityTitle: facility.name,
                     facilitySubtitle: facility.address,
                     categoryName: isLibrary ? 'Public Library' : 'Gym & Fitness Center',
