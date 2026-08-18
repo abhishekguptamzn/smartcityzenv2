@@ -275,9 +275,9 @@ class _EditFacilityDetailsScreenState
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 88,
       );
       if (picked == null) return;
 
@@ -299,7 +299,13 @@ class _EditFacilityDetailsScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Photo uploaded to facility gallery successfully!'),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Photo uploaded to gallery successfully!'),
+            ],
+          ),
           backgroundColor: Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
         ),
@@ -318,70 +324,6 @@ class _EditFacilityDetailsScreenState
     }
   }
 
-  void _showAddPhotoOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Add Facility Photo',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFEFF6FF),
-                  child: Icon(Icons.camera_alt_rounded,
-                      color: Color(0xFF2563EB)),
-                ),
-                title: const Text('Take Photo with Camera',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickAndUploadPhoto(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFECFDF5),
-                  child: Icon(Icons.photo_library_rounded,
-                      color: Color(0xFF059669)),
-                ),
-                title: const Text('Choose from Gallery',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickAndUploadPhoto(ImageSource.gallery);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _handleSetPrimary(FacilityMediaModel photo) async {
     try {
       setState(() => _uploadingPhoto = true);
@@ -394,7 +336,13 @@ class _EditFacilityDetailsScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Primary cover photo updated!'),
+          content: Row(
+            children: [
+              Icon(Icons.star_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Primary cover photo updated!'),
+            ],
+          ),
           backgroundColor: Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
         ),
@@ -417,8 +365,8 @@ class _EditFacilityDetailsScreenState
       context: context,
       title: 'Delete Photo',
       message:
-          'Are you sure you want to permanently remove this photo from the facility gallery?',
-      confirmLabel: 'Delete',
+          'Are you sure you want to permanently remove this photo from your facility gallery?',
+      confirmLabel: 'Delete Photo',
       type: ConfirmDialogType.danger,
       isDestructive: true,
     );
@@ -450,6 +398,68 @@ class _EditFacilityDetailsScreenState
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }
+  }
+
+  void _showImageLightbox(String imageUrl, String? caption) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.broken_image_rounded,
+                        color: Colors.white, size: 60),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+            if (caption != null && caption.isNotEmpty)
+              Positioned(
+                bottom: 12,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    caption,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -899,7 +909,8 @@ class _EditFacilityDetailsScreenState
                       onPressed: _handleOpenAmenitySelector,
                       icon: const Icon(Icons.add_rounded, size: 16),
                       label: const Text('Add / Manage',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              fontSize: 11.5, fontWeight: FontWeight.bold)),
                       style: FilledButton.styleFrom(
                         visualDensity: VisualDensity.compact,
                         backgroundColor: const Color(0xFFEFF6FF),
@@ -948,8 +959,7 @@ class _EditFacilityDetailsScreenState
                           ),
                           Text(
                             'Tap here to add Wi-Fi, AC, Parking, Lockers...',
-                            style:
-                                TextStyle(fontSize: 11, color: Colors.grey),
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -1006,7 +1016,9 @@ class _EditFacilityDetailsScreenState
                     )
                   : const Icon(Icons.save_rounded, size: 20),
               label: Text(
-                _submitting ? 'Saving Changes...' : 'Save $facilityTitle Details',
+                _submitting
+                    ? 'Saving Changes...'
+                    : 'Save $facilityTitle Details',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -1028,7 +1040,7 @@ class _EditFacilityDetailsScreenState
     );
   }
 
-  // TAB 1: PHOTOS & GALLERY
+  // TAB 1: PHOTOS & GALLERY (REDESIGNED ULTRA MODERN UI)
   Widget _buildPhotosTab(
     List<FacilityMediaModel> photos,
     bool isLoading,
@@ -1051,180 +1063,301 @@ class _EditFacilityDetailsScreenState
       child: ListView(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 36),
         children: [
-          // Gallery Summary Card
+          // Upload Quick Action Bar
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: cardBg,
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [const Color(0xFFF0FDF4), const Color(0xFFEFF6FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cardBorder, width: 1.2),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFBAE6FD),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                  blurRadius: 14,
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: 12,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.photo_library_rounded,
-                      color: Color(0xFF0D9488), size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$facilityTitle Gallery',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '${photos.length} photo(s) published for citizens',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0D9488),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add_photo_alternate_rounded,
+                              color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Upload $facilityTitle Photos',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            Text(
+                              '${photos.length} photo(s) in public gallery',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (_uploadingPhoto)
+                      const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Color(0xFF0D9488),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-                FilledButton.icon(
-                  onPressed: _uploadingPhoto ? null : _showAddPhotoOptions,
-                  icon: _uploadingPhoto
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.add_a_photo_rounded, size: 16),
-                  label: const Text('Add Photo',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    visualDensity: VisualDensity.compact,
-                  ),
+                const SizedBox(height: 14),
+
+                // 2 Large Upload Buttons (Camera & Gallery)
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _uploadingPhoto
+                            ? null
+                            : () => _pickAndUploadPhoto(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt_rounded, size: 17),
+                        label: const Text('Take Photo',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: _uploadingPhoto
+                            ? null
+                            : () => _pickAndUploadPhoto(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_rounded, size: 17),
+                        label: const Text('Add from Gallery',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Primary Cover Banner
+          // Primary Cover Photo Section
           if (primaryPhoto != null) ...[
-            Text(
-              'Primary Cover Photo',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+            Row(
+              children: [
+                const Icon(Icons.star_rounded,
+                    size: 18, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 6),
+                Text(
+                  'Primary Cover Showcase',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Container(
-              height: 180,
+              height: 200,
               width: double.infinity,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.5),
-                    width: 2),
-                boxShadow: const [
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
                   BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 3)),
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
                 ],
               ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      ImageUrlResolver.resolve(primaryPhoto.url) ?? primaryPhoto.url,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                            child: Icon(Icons.broken_image_rounded, size: 40)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        final resUrl =
+                            ImageUrlResolver.resolve(primaryPhoto.url) ??
+                                primaryPhoto.url;
+                        _showImageLightbox(resUrl, primaryPhoto.caption);
+                      },
+                      child: Image.network(
+                        ImageUrlResolver.resolve(primaryPhoto.url) ??
+                            primaryPhoto.url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: isDark
+                              ? const Color(0xFF1E293B)
+                              : Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                size: 40, color: Colors.grey),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star_rounded,
-                              size: 14, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text('MAIN COVER',
+
+                    // Top Badge: Primary Cover
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFF59E0B),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star_rounded,
+                                size: 14, color: Color(0xFFF59E0B)),
+                            SizedBox(width: 5),
+                            Text(
+                              'MAIN COVER PHOTO',
                               style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Bottom Overlay Action: Change Cover & Lightbox
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: Row(
+                        children: [
+                          FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor:
+                                  Colors.black.withValues(alpha: 0.7),
+                              foregroundColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () =>
+                                _pickAndUploadPhoto(ImageSource.gallery),
+                            icon: const Icon(Icons.edit_rounded, size: 14),
+                            label: const Text('Change Cover',
+                                style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.black54,
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      onPressed: _showAddPhotoOptions,
-                      icon: const Icon(Icons.edit_rounded, size: 14),
-                      label: const Text('Change Cover',
-                          style: TextStyle(fontSize: 11)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // Gallery Grid Section Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.grid_view_rounded,
+                      size: 18, color: Color(0xFF334155)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'All Gallery Photos',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // All Gallery Photos Grid Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'All Gallery Images',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
               if (photos.isNotEmpty)
-                Text('${photos.length} item(s)',
-                    style: TextStyle(
-                        fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${photos.length} Total',
+                    style: const TextStyle(
+                        fontSize: 11.5, fontWeight: FontWeight.bold),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           if (isLoading)
             const Center(
@@ -1235,7 +1368,7 @@ class _EditFacilityDetailsScreenState
             )
           else if (photos.isEmpty)
             Container(
-              padding: const EdgeInsets.all(36),
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
               decoration: BoxDecoration(
                 color: cardBg,
                 borderRadius: BorderRadius.circular(20),
@@ -1245,13 +1378,13 @@ class _EditFacilityDetailsScreenState
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.add_photo_alternate_outlined,
-                          size: 48, color: Color(0xFF0D9488)),
+                          size: 44, color: Color(0xFF0D9488)),
                     ),
                     const SizedBox(height: 14),
                     Text(
@@ -1261,20 +1394,26 @@ class _EditFacilityDetailsScreenState
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Upload photos of your ${facilityTitle.toLowerCase()} to attract more members and showcase amenities.',
+                      'Showcase study areas, gym equipment, ambiance, and amenities to attract more citizens.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                        fontSize: 12.5,
+                        color: isDark
+                            ? Colors.white60
+                            : const Color(0xFF64748B),
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     FilledButton.icon(
-                      onPressed: _showAddPhotoOptions,
+                      onPressed: () => _pickAndUploadPhoto(ImageSource.gallery),
                       icon: const Icon(Icons.upload_rounded, size: 16),
                       label: const Text('Upload First Photo'),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF0D9488),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                     ),
                   ],
@@ -1290,7 +1429,7 @@ class _EditFacilityDetailsScreenState
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.95,
+                childAspectRatio: 0.88,
               ),
               itemBuilder: (context, index) {
                 final photo = photos[index];
@@ -1301,7 +1440,7 @@ class _EditFacilityDetailsScreenState
                 return Container(
                   decoration: BoxDecoration(
                     color: cardBg,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isCover
                           ? const Color(0xFF0D9488)
@@ -1312,65 +1451,93 @@ class _EditFacilityDetailsScreenState
                       BoxShadow(
                         color: Colors.black
                             .withValues(alpha: isDark ? 0.2 : 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Photo Image with Cover Badge
+                      // Photo Image
                       Expanded(
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(15)),
-                              child: Image.network(
-                                resolvedUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.broken_image_rounded,
-                                      color: Colors.grey),
-                                ),
-                              ),
-                            ),
-                            if (isCover)
-                              Positioned(
-                                top: 6,
-                                left: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0D9488),
-                                    borderRadius: BorderRadius.circular(6),
+                        child: GestureDetector(
+                          onTap: () => _showImageLightbox(
+                              resolvedUrl, photo.caption),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(17)),
+                                child: Image.network(
+                                  resolvedUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(
+                                        Icons.broken_image_rounded,
+                                        color: Colors.grey),
                                   ),
-                                  child: const Text('Cover',
-                                      style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white)),
                                 ),
                               ),
-                          ],
+                              // Cover Tag
+                              if (isCover)
+                                Positioned(
+                                  top: 8,
+                                  left: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0D9488),
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 4),
+                                      ],
+                                    ),
+                                    child: const Text('Cover',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
+                                  ),
+                                ),
+                              // Lightbox Zoom Hint
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.fullscreen_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 
                       // Actions Row: Set Primary & Delete
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 4),
+                            horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
                           color: isDark
                               ? const Color(0xFF1E293B)
                               : const Color(0xFFF8FAFC),
                           borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(15)),
+                              bottom: Radius.circular(17)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1380,32 +1547,37 @@ class _EditFacilityDetailsScreenState
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6),
+                                      horizontal: 6, vertical: 2),
                                 ),
                                 onPressed: () => _handleSetPrimary(photo),
                                 icon: const Icon(Icons.star_border_rounded,
-                                    size: 14, color: Color(0xFFD97706)),
-                                label: const Text('Make Cover',
+                                    size: 15, color: Color(0xFFD97706)),
+                                label: const Text('Set Cover',
                                     style: TextStyle(
-                                        fontSize: 10.5,
+                                        fontSize: 11,
                                         color: Color(0xFFD97706),
                                         fontWeight: FontWeight.bold)),
                               )
                             else
-                              const Padding(
-                                padding: EdgeInsets.only(left: 6),
-                                child: Text('Primary Cover',
-                                    style: TextStyle(
-                                        fontSize: 10.5,
-                                        color: Color(0xFF0D9488),
-                                        fontWeight: FontWeight.bold)),
+                              const Row(
+                                children: [
+                                  Icon(Icons.star_rounded,
+                                      size: 15, color: Color(0xFF0D9488)),
+                                  SizedBox(width: 4),
+                                  Text('Cover Photo',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF0D9488),
+                                          fontWeight: FontWeight.bold)),
+                                ],
                               ),
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               icon: const Icon(Icons.delete_outline_rounded,
-                                  size: 18, color: Color(0xFFDC2626)),
+                                  size: 20, color: Color(0xFFDC2626)),
+                              tooltip: 'Delete Photo',
                               onPressed: () => _handleDeletePhoto(photo),
                             ),
                           ],

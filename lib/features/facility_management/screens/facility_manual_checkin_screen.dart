@@ -5,9 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../data/models/facility_model.dart';
-import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
-import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
@@ -61,9 +59,11 @@ class _FacilityManualCheckinScreenState
   String _searchQuery = '';
   CheckinFilter _activeFilter = CheckinFilter.all;
   final Set<String> _loadingMemberIds = {};
+  final Set<String> _selectedMemberIds = {};
   final Set<String> _recentlyCheckedInIds = {};
   final Set<String> _recentlyCheckedOutIds = {};
   bool _quickActionLoading = false;
+  bool _bulkActionLoading = false;
 
   @override
   void dispose() {
@@ -73,15 +73,44 @@ class _FacilityManualCheckinScreenState
   }
 
   void _refreshAll() {
-    ref.invalidate(
-        facilityCheckinMembersProvider((widget.kind, widget.facilityId, _searchQuery)));
+    ref.invalidate(facilityCheckinMembersProvider(
+        (widget.kind, widget.facilityId, _searchQuery)));
     ref.invalidate(
         facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
-    ref.invalidate(
-        facilityStatsProvider((widget.kind, widget.facilityId)));
+    ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
   }
 
-  Future<void> _handleCheckin(Map<String, dynamic> member, {bool allowOverride = false}) async {
+  void _toggleMemberSelection(String memberId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedMemberIds.contains(memberId)) {
+        _selectedMemberIds.remove(memberId);
+      } else {
+        _selectedMemberIds.add(memberId);
+      }
+    });
+  }
+
+  void _selectAllMembers(List<Map<String, dynamic>> members) {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _selectedMemberIds.clear();
+      for (final m in members) {
+        final id = m['id']?.toString();
+        if (id != null && id.isNotEmpty) {
+          _selectedMemberIds.add(id);
+        }
+      }
+    });
+  }
+
+  void _clearSelection() {
+    HapticFeedback.lightImpact();
+    setState(() => _selectedMemberIds.clear());
+  }
+
+  Future<void> _handleCheckin(Map<String, dynamic> member,
+      {bool allowOverride = false}) async {
     final memberId = member['id']?.toString() ?? '';
     if (memberId.isEmpty) return;
 
@@ -266,57 +295,183 @@ class _FacilityManualCheckinScreenState
     }
   }
 
-  Future<void> _handleQuickCodeAction({required bool isCheckIn}) async {
-    final code = _quickCodeController.text.trim();
-    if (code.isEmpty) {
+  Future<void> _handleBulkCheckin(List<Map<String, dynamic>> allMembers) async {
+    final selectedList = allMembers.where((m) {
+      final id = m['id']?.toString() ?? '';
+      return _selectedMemberIds.contains(id);
+    }).toList();
+
+    if (selectedList.isEmpty) return;
+
+    final confirm = await showAppConfirmDialog(
+      context: context,
+      title: 'Bulk Check-In',
+      message:
+          'Are you sure you want to log desk check-in for all ${selectedList.length} selected member(s)?',
+      confirmLabel: 'Check In ${selectedList.length} Members',
+      details: [
+        ConfirmDetailRow(
+            label: 'Selected Members', value: '${selectedList.length}'),
+        ConfirmDetailRow(
+            label: 'Action', value: 'Log Desk Check-In', isHighlighted: true),
+      ],
+    );
+    if (!confirm) return;
+
+    setState(() => _bulkActionLoading = true);
+    int successCount = 0;
+    int failedCount = 0;
+
+    final repo = ref.read(clientFacilityRepositoryProvider);
+    for (final member in selectedList) {
+      final memberId = member['id']?.toString() ?? '';
+      if (memberId.isEmpty) continue;
+      try {
+        await repo.checkIn(
+          widget.kind,
+          widget.facilityId,
+          memberId: memberId,
+          allowOverride: true,
+        );
+        successCount++;
+      } catch (_) {
+        failedCount++;
+      }
+    }
+
+    _selectedMemberIds.clear();
+    _refreshAll();
+    if (mounted) {
+      setState(() => _bulkActionLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Bulk Check-In completed: $successCount succeeded${failedCount > 0 ? ", $failedCount failed" : ""}'),
+          backgroundColor:
+              failedCount == 0 ? const Color(0xFF059669) : const Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleBulkCheckout(
+    List<Map<String, dynamic>> allMembers,
+    Map<String, Map<String, dynamic>> activeMap,
+  ) async {
+    final selectedList = allMembers.where((m) {
+      final id = m['id']?.toString() ?? '';
+      return _selectedMemberIds.contains(id);
+    }).toList();
+
+    if (selectedList.isEmpty) return;
+
+    final confirm = await showAppConfirmDialog(
+      context: context,
+      title: 'Bulk Check-Out',
+      message:
+          'Are you sure you want to check out all ${selectedList.length} selected member(s)?',
+      confirmLabel: 'Check Out ${selectedList.length} Members',
+      type: ConfirmDialogType.warning,
+      details: [
+        ConfirmDetailRow(
+            label: 'Selected Members', value: '${selectedList.length}'),
+        ConfirmDetailRow(
+            label: 'Action', value: 'Log Check-Out', isHighlighted: true),
+      ],
+    );
+    if (!confirm) return;
+
+    setState(() => _bulkActionLoading = true);
+    int successCount = 0;
+    int failedCount = 0;
+
+    final repo = ref.read(clientFacilityRepositoryProvider);
+    for (final member in selectedList) {
+      final memberId = member['id']?.toString() ?? '';
+      if (memberId.isEmpty) continue;
+      final liveSession = activeMap[memberId];
+      try {
+        await repo.checkOut(
+          widget.kind,
+          widget.facilityId,
+          memberId: memberId,
+          sessionId: liveSession?['session_id']?.toString(),
+        );
+        successCount++;
+      } catch (_) {
+        failedCount++;
+      }
+    }
+
+    _selectedMemberIds.clear();
+    _refreshAll();
+    if (mounted) {
+      setState(() => _bulkActionLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Bulk Check-Out completed: $successCount checked out${failedCount > 0 ? ", $failedCount failed" : ""}'),
+          backgroundColor: const Color(0xFF0284C7),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleQuickDeskAction(bool isCheckIn) async {
+    final query = _quickCodeController.text.trim();
+    if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a Member ID, Citizen Code, Mobile or Email.'),
-          backgroundColor: Color(0xFFD97706),
+          content: Text(
+              'Please enter a Member ID, Citizen Code, Mobile number, or Email.'),
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
     setState(() => _quickActionLoading = true);
+    final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
-      HapticFeedback.lightImpact();
+      HapticFeedback.mediumImpact();
       if (isCheckIn) {
-        final res = await ref.read(clientFacilityRepositoryProvider).checkIn(
-              widget.kind,
-              widget.facilityId,
-              code: code,
-              allowOverride: true,
-            );
-        final userName = res['user_name'] ?? 'Citizen';
+        final res = await repo.checkIn(
+          widget.kind,
+          widget.facilityId,
+          memberId: query,
+          allowOverride: true,
+        );
         final already = res['already_checked_in'] == true;
         _quickCodeController.clear();
         _refreshAll();
-
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(already ? '$userName is already checked in.' : '✅ $userName checked in successfully!'),
-            backgroundColor: already ? const Color(0xFFD97706) : const Color(0xFF059669),
+            content: Text(already
+                ? 'Member $query is already checked in.'
+                : '✅ Check-in recorded for $query!'),
+            backgroundColor:
+                already ? const Color(0xFFD97706) : const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
-        final res = await ref.read(clientFacilityRepositoryProvider).checkOut(
-              widget.kind,
-              widget.facilityId,
-              memberId: code,
-              userId: code,
-            );
-        final duration = res['duration_minutes'] ?? res['duration'] ?? 0;
+        await repo.checkOut(
+          widget.kind,
+          widget.facilityId,
+          memberId: query,
+        );
         _quickCodeController.clear();
         _refreshAll();
-
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Checked out successfully! (Session: $duration mins)'),
+            content: Text('✅ Check-out recorded for $query!'),
             backgroundColor: const Color(0xFF0284C7),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -324,8 +479,9 @@ class _FacilityManualCheckinScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed: $e'),
+          content: Text('Action failed for "$query": $e'),
           backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -337,57 +493,47 @@ class _FacilityManualCheckinScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black,
       builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        height: MediaQuery.of(ctx).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Scan Citizen QR for Desk Attendance',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  const Text(
+                    'Scan Citizen QR',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
                 ],
               ),
             ),
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: MobileScanner(
-                  onDetect: (capture) {
-                    final barcode = capture.barcodes.firstOrNull;
-                    if (barcode != null && barcode.rawValue != null) {
-                      final rawValue = barcode.rawValue!;
+              child: MobileScanner(
+                onDetect: (capture) {
+                  final barcodes = capture.barcodes;
+                  if (barcodes.isNotEmpty) {
+                    final raw = barcodes.first.rawValue;
+                    if (raw != null && raw.isNotEmpty) {
                       Navigator.pop(ctx);
-                      _quickCodeController.text = rawValue;
-                      _showScannedQrActionDialog(rawValue);
+                      _quickCodeController.text = raw;
+                      _showQuickActionSheet(raw);
                     }
-                  },
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Align citizen ID barcode or QR code within the viewfinder.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                  }
+                },
               ),
             ),
           ],
@@ -396,42 +542,55 @@ class _FacilityManualCheckinScreenState
     );
   }
 
-  void _showScannedQrActionDialog(String scannedCode) {
-    showDialog(
+  void _showQuickActionSheet(String code) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Scanned Citizen QR', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Scanned Code: $scannedCode', style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-            const SizedBox(height: 12),
-            const Text('Choose action to record at desk:'),
-          ],
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Scanned Code: $code',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _handleQuickDeskAction(true);
+                      },
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text('Check In'),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _handleQuickDeskAction(false);
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Check Out'),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handleQuickCodeAction(isCheckIn: false);
-            },
-            icon: const Icon(Icons.logout_rounded, size: 16),
-            label: const Text('Check Out'),
-          ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handleQuickCodeAction(isCheckIn: true);
-            },
-            icon: const Icon(Icons.login_rounded, size: 16),
-            label: const Text('Check In'),
-          ),
-        ],
       ),
     );
   }
@@ -444,9 +603,9 @@ class _FacilityManualCheckinScreenState
       builder: (ctx) => RenewMemberModal(
         kind: widget.kind,
         facilityId: widget.facilityId,
-        facility: widget.facility,
         member: member,
-        onSuccess: () => _refreshAll(),
+        facility: widget.facility,
+        onSuccess: _refreshAll,
       ),
     );
   }
@@ -454,45 +613,53 @@ class _FacilityManualCheckinScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final scheme = theme.colorScheme;
-    final isGym = widget.kind == FacilityKind.gym;
-    final primaryColor =
-        isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7);
+    final primaryColor = widget.kind == FacilityKind.gym
+        ? const Color(0xFF2563EB)
+        : const Color(0xFF0D9488);
 
     final membersAsync = ref.watch(facilityCheckinMembersProvider(
         (widget.kind, widget.facilityId, _searchQuery)));
-    final statsAsync =
-        ref.watch(facilityStatsProvider((widget.kind, widget.facilityId)));
-    final liveOccupancyAsync =
-        ref.watch(facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
+    final occupancyAsync = ref.watch(
+        facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
 
-    final liveMembers = (liveOccupancyAsync.value?['members_inside']
-            as List<LiveSessionMember>?) ??
-        [];
-    final Map<String, LiveSessionMember> insideByMemberId = {
-      for (var m in liveMembers) m.memberId: m
-    };
+    final activeOccupancy = occupancyAsync.value;
+    final currentInsideCount =
+        (activeOccupancy?['current_inside'] as num?)?.toInt() ?? 0;
+    final activeList = (activeOccupancy?['active_members'] as List?) ?? [];
+    final activeMap = <String, Map<String, dynamic>>{};
+    for (final item in activeList) {
+      if (item is Map) {
+        final mId =
+            item['member_id']?.toString() ?? item['id']?.toString();
+        if (mId != null && mId.isNotEmpty) {
+          activeMap[mId] = Map<String, dynamic>.from(item);
+        }
+      }
+    }
+
+    final allMembers = membersAsync.value ?? [];
 
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Manual Desk Check-in & Out',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Text(
+              '${widget.kind == FacilityKind.gym ? "Gym" : "Library"} Manual Check-In',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             Text(
-              widget.facility?.name ??
-                  (isGym ? 'Gym Facility' : 'Library Hub'),
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              widget.facility?.name ?? 'Desk Attendance Station',
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Show QR Code',
             icon: const Icon(Icons.qr_code_2_rounded),
+            tooltip: 'Facility QR',
             onPressed: () {
               showFacilityQrModal(
                 context: context,
@@ -503,723 +670,729 @@ class _FacilityManualCheckinScreenState
             },
           ),
           IconButton(
-            tooltip: 'Refresh List',
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => _refreshAll(),
+            tooltip: 'Refresh',
+            onPressed: _refreshAll,
           ),
         ],
       ),
-      body: AmbientBackground(
-        child: Column(
-          children: [
-            // Top Live Stats Mini Banner
-            statsAsync.when(
-              data: (stats) => Container(
-                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: primaryColor.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+      bottomNavigationBar: _selectedMemberIds.isNotEmpty
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, -3),
+                  ),
+                ],
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _MiniStatItem(
-                      label: "Today's Visits",
-                      value: '${stats.todayCheckins}',
-                      color: primaryColor,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${_selectedMemberIds.length} Selected',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: () => _selectAllMembers(allMembers),
+                              child: const Text('Select All',
+                                  style: TextStyle(fontSize: 12)),
+                            ),
+                            TextButton(
+                              onPressed: _clearSelection,
+                              child: const Text('Clear',
+                                  style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: _clearSelection,
+                        ),
+                      ],
                     ),
-                    Container(
-                        height: 24,
-                        width: 1,
-                        color: primaryColor.withValues(alpha: 0.2)),
-                    _MiniStatItem(
-                      label: 'Inside Now',
-                      value: '${stats.currentlyInside}',
-                      color: const Color(0xFF10B981),
-                    ),
-                    Container(
-                        height: 24,
-                        width: 1,
-                        color: primaryColor.withValues(alpha: 0.2)),
-                    _MiniStatItem(
-                      label: 'Active Members',
-                      value: '${stats.activeMembers}',
-                      color: const Color(0xFF6366F1),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _bulkActionLoading
+                                ? null
+                                : () => _handleBulkCheckin(allMembers),
+                            icon: _bulkActionLoading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.login_rounded, size: 16),
+                            label: Text(
+                                'Check In (${_selectedMemberIds.length})',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _bulkActionLoading
+                                ? null
+                                : () => _handleBulkCheckout(
+                                    allMembers, activeMap),
+                            icon: const Icon(Icons.logout_rounded, size: 16),
+                            label: Text(
+                                'Check Out (${_selectedMemberIds.length})',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-
-            // Top Quick Desk Action Card (Direct Code Input / Camera Scan / One-tap Check-in/out)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.flash_on_rounded, size: 16, color: primaryColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Quick Desk Check-in / Check-out',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _quickCodeController,
-                          decoration: InputDecoration(
-                            hintText: 'Enter Member ID, Mobile, Code...',
-                            hintStyle: const TextStyle(fontSize: 12),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filledTonal(
-                        tooltip: 'Scan Citizen QR',
-                        style: IconButton.styleFrom(
-                          backgroundColor: primaryColor.withValues(alpha: 0.12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: _openQrScanner,
-                        icon: Icon(Icons.qr_code_scanner_rounded, color: primaryColor, size: 20),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _quickActionLoading ? null : () => _handleQuickCodeAction(isCheckIn: true),
-                          icon: const Icon(Icons.login_rounded, size: 15),
-                          label: const Text('Check In', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0D9488),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _quickActionLoading ? null : () => _handleQuickCodeAction(isCheckIn: false),
-                          icon: const Icon(Icons.logout_rounded, size: 15),
-                          label: const Text('Check Out', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFDC2626),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Search Bar for Member List
+            )
+          : null,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Quick Desk Action Card
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-              child: TextField(
-                controller: _searchController,
-                autofocus: false,
-                decoration: InputDecoration(
-                  hintText: 'Search members list below...',
-                  prefixIcon:
-                      Icon(Icons.search_rounded, color: primaryColor),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  filled: true,
-                  fillColor: theme.cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                        color: scheme.outlineVariant.withValues(alpha: 0.3)),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFE2E8F0),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                        color: scheme.outlineVariant.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        BorderSide(color: primaryColor, width: 1.5),
-                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                onChanged: (val) {
-                  setState(() => _searchQuery = val.trim());
-                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.desk_rounded,
+                            size: 16, color: primaryColor),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'QUICK DESK ACTION',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _quickCodeController,
+                            decoration: InputDecoration(
+                              hintText: 'Member ID / Phone / Code...',
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? const Color(0xFF334155)
+                                      : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          onPressed: _openQrScanner,
+                          icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                          tooltip: 'Scan QR with Camera',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _quickActionLoading
+                                ? null
+                                : () => _handleQuickDeskAction(true),
+                            icon: const Icon(Icons.login_rounded, size: 15),
+                            label: const Text('Check In',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _quickActionLoading
+                                ? null
+                                : () => _handleQuickDeskAction(false),
+                            icon: const Icon(Icons.logout_rounded, size: 15),
+                            label: const Text('Check Out',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            // Filter Chips Row
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            // Search Bar & Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
-                  _FilterChip(
-                    label: 'All Members',
-                    icon: Icons.people_outline_rounded,
-                    isSelected: _activeFilter == CheckinFilter.all,
-                    onTap: () =>
-                        setState(() => _activeFilter = CheckinFilter.all),
-                    color: primaryColor,
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Inside Now (${liveMembers.length})',
-                    icon: Icons.meeting_room_rounded,
-                    isSelected: _activeFilter == CheckinFilter.insideNow,
-                    onTap: () => setState(
-                        () => _activeFilter = CheckinFilter.insideNow),
-                    color: const Color(0xFF10B981),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Expiring Soon',
-                    icon: Icons.hourglass_top_rounded,
-                    isSelected: _activeFilter == CheckinFilter.expiringSoon,
-                    onTap: () => setState(
-                        () => _activeFilter = CheckinFilter.expiringSoon),
-                    color: const Color(0xFFF59E0B),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Outside / Not In',
-                    icon: Icons.person_outline_rounded,
-                    isSelected: _activeFilter == CheckinFilter.outside,
-                    onTap: () => setState(
-                        () => _activeFilter = CheckinFilter.outside),
-                    color: const Color(0xFF64748B),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Filter member list by name/phone...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+
+            // Filter Tabs (All / Inside Now / Outside)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('All Members'),
+                    selected: _activeFilter == CheckinFilter.all,
+                    onSelected: (val) {
+                      if (val) setState(() => _activeFilter = CheckinFilter.all);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    avatar: const Icon(Icons.circle,
+                        color: Color(0xFF10B981), size: 10),
+                    label: Text('Inside Now ($currentInsideCount)'),
+                    selected: _activeFilter == CheckinFilter.insideNow,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() => _activeFilter = CheckinFilter.insideNow);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Outside'),
+                    selected: _activeFilter == CheckinFilter.outside,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() => _activeFilter = CheckinFilter.outside);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Expiring Soon'),
+                    selected: _activeFilter == CheckinFilter.expiringSoon,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(
+                            () => _activeFilter = CheckinFilter.expiringSoon);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
 
             // Members List
             Expanded(
               child: membersAsync.when(
-                data: (allMembers) {
-                  final now = DateTime.now();
-
-                  final filteredMembers = allMembers.where((m) {
-                    final mId = m['id']?.toString() ?? '';
-                    final isInside = (insideByMemberId.containsKey(mId) ||
-                            _recentlyCheckedInIds.contains(mId)) &&
-                        !_recentlyCheckedOutIds.contains(mId);
-
-                    if (_activeFilter == CheckinFilter.insideNow) {
-                      return isInside;
-                    }
-                    if (_activeFilter == CheckinFilter.outside) {
-                      return !isInside;
-                    }
-                    if (_activeFilter == CheckinFilter.expiringSoon) {
+                data: (members) {
+                  var filtered = members;
+                  if (_activeFilter == CheckinFilter.insideNow) {
+                    filtered = members.where((m) {
+                      final id = m['id']?.toString() ?? '';
+                      return activeMap.containsKey(id) ||
+                          _recentlyCheckedInIds.contains(id);
+                    }).toList();
+                  } else if (_activeFilter == CheckinFilter.outside) {
+                    filtered = members.where((m) {
+                      final id = m['id']?.toString() ?? '';
+                      return !activeMap.containsKey(id) &&
+                          !_recentlyCheckedInIds.contains(id);
+                    }).toList();
+                  } else if (_activeFilter == CheckinFilter.expiringSoon) {
+                    final now = DateTime.now();
+                    final thirtyDays = now.add(const Duration(days: 30));
+                    filtered = members.where((m) {
                       final endStr = m['end_date']?.toString();
                       if (endStr == null || endStr.isEmpty) return false;
-                      try {
-                        final end = DateTime.parse(endStr);
-                        final diff = end.difference(now).inDays;
-                        return diff >= 0 && diff <= 7;
-                      } catch (_) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  }).toList();
+                      final endDate = DateTime.tryParse(endStr);
+                      if (endDate == null) return false;
+                      return endDate.isAfter(now) &&
+                          endDate.isBefore(thirtyDays);
+                    }).toList();
+                  }
 
-                  if (filteredMembers.isEmpty) {
+                  if (filtered.isEmpty) {
                     return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.person_search_rounded,
-                                  size: 48, color: scheme.primary),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchQuery.isEmpty
-                                  ? (_activeFilter == CheckinFilter.insideNow
-                                      ? 'No members currently inside facility.'
-                                      : 'No members registered yet.')
-                                  : 'No members matching "$_searchQuery"',
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Use Quick Desk Check-in above or search to record attendance.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.person_search_rounded,
+                              size: 48, color: scheme.onSurfaceVariant),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No members found matching filter.',
+                            style: TextStyle(
+                                color: scheme.onSurfaceVariant, fontSize: 13),
+                          ),
+                        ],
                       ),
                     );
                   }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    itemCount: filteredMembers.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                    itemCount: filtered.length,
                     itemBuilder: (context, index) {
-                      final member = filteredMembers[index];
-                      final user =
-                          (member['user'] as Map<String, dynamic>?) ?? {};
-                      final memberId = member['id']?.toString() ?? 'ID';
-                      final userName = user['name']?.toString() ??
-                          member['name']?.toString() ??
+                      final member = filtered[index];
+                      final memberId = member['id']?.toString() ?? '';
+                      final userName = member['user']?['name'] ??
+                          member['name'] ??
                           'Citizen Member';
-                      final userPhone = user['phone']?.toString() ??
-                          member['phone']?.toString() ??
+                      final userPhone = member['user']?['phone'] ??
+                          member['phone'] ??
                           '';
-                      final planName = member['membership_type']?.toString() ??
-                          member['plan_name']?.toString() ??
-                          'Standard';
-                      final rawEndDate = member['end_date']?.toString();
-                      final status =
-                          (member['status']?.toString() ?? 'active')
-                              .toLowerCase();
+                      final planName = member['plan']?['name'] ??
+                          member['plan_name'] ??
+                          'Standard Plan';
+                      final endStr = member['end_date']?.toString();
+                      DateTime? endDate;
+                      if (endStr != null && endStr.isNotEmpty) {
+                        endDate = DateTime.tryParse(endStr);
+                      }
+                      final now = DateTime.now();
+                      final isExpired =
+                          endDate != null && endDate.isBefore(now);
+                      final isExpiringSoon = endDate != null &&
+                          !isExpired &&
+                          endDate.isBefore(now.add(const Duration(days: 7)));
 
-                      final liveSession = insideByMemberId[memberId];
-                      final isInside = (liveSession != null ||
+                      final liveSession = activeMap[memberId];
+                      final isCheckedIn = (liveSession != null ||
                               _recentlyCheckedInIds.contains(memberId)) &&
                           !_recentlyCheckedOutIds.contains(memberId);
-                      final isLoading = _loadingMemberIds.contains(memberId);
 
-                      // Calculate validity
-                      bool isExpired = false;
-                      bool isExpiringSoon = false;
-                      String validityLabel = 'Valid';
-                      if (rawEndDate != null && rawEndDate.isNotEmpty) {
-                        try {
-                          final endDate = DateTime.parse(rawEndDate);
-                          final diff = endDate.difference(now).inDays;
-                          final formatted =
-                              DateFormat('dd MMM yyyy').format(endDate);
-                          if (diff < 0) {
-                            isExpired = true;
-                            validityLabel = 'Expired on $formatted';
-                          } else if (diff <= 7) {
-                            isExpiringSoon = true;
-                            validityLabel =
-                                'Expiring in $diff day(s) ($formatted)';
-                          } else {
-                            validityLabel = 'Valid till $formatted';
-                          }
-                        } catch (_) {
-                          validityLabel = 'Valid till $rawEndDate';
-                        }
-                      }
+                      final isSelected =
+                          _selectedMemberIds.contains(memberId);
+                      final isLoading =
+                          _loadingMemberIds.contains(memberId);
 
                       return Container(
-                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(18),
+                          color: isSelected
+                              ? primaryColor.withValues(alpha: 0.07)
+                              : (isDark
+                                  ? const Color(0xFF1E293B)
+                                  : Colors.white),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isInside
-                                ? const Color(0xFF10B981).withValues(alpha: 0.6)
-                                : isExpired
-                                    ? const Color(0xFFEF4444)
-                                        .withValues(alpha: 0.3)
-                                    : scheme.outlineVariant
-                                        .withValues(alpha: 0.3),
-                            width: isInside ? 1.5 : 1.0,
+                            color: isSelected
+                                ? primaryColor
+                                : (isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0)),
+                            width: isSelected ? 1.8 : 1.0,
                           ),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Color(0x08000000),
+                              color: Colors.black
+                                  .withValues(alpha: isDark ? 0.2 : 0.03),
                               blurRadius: 8,
-                              offset: Offset(0, 2),
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
                         child: Column(
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Member Avatar with initials
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: isInside
-                                      ? const Color(0xFF10B981)
-                                          .withValues(alpha: 0.15)
-                                      : primaryColor.withValues(alpha: 0.12),
-                                  child: Text(
-                                    userName.isNotEmpty
-                                        ? userName[0].toUpperCase()
-                                        : 'M',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16,
-                                      color: isInside
-                                          ? const Color(0xFF059669)
-                                          : primaryColor,
+                            // Member Profile Header & Checkbox
+                            InkWell(
+                              onTap: () => _toggleMemberSelection(memberId),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(15)),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    12, 12, 12, 8),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.center,
+                                  children: [
+                                    // Selection Checkbox
+                                    Checkbox(
+                                      value: isSelected,
+                                      activeColor: primaryColor,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(5)),
+                                      onChanged: (_) =>
+                                          _toggleMemberSelection(memberId),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
+                                    const SizedBox(width: 4),
 
-                                // Member Info
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              userName,
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (isInside)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF10B981)
-                                                    .withValues(alpha: 0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
-                                                children: [
-                                                  const Icon(
-                                                      Icons
-                                                          .check_circle_rounded,
-                                                      size: 12,
-                                                      color: Color(0xFF059669)),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    liveSession != null
-                                                        ? 'INSIDE (${liveSession.checkInTime})'
-                                                        : 'INSIDE NOW',
-                                                    style: const TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color:
-                                                            Color(0xFF059669)),
-                                                  ),
-                                                ],
-                                              ),
-                                            )
-                                          else
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: scheme
-                                                    .surfaceContainerHighest,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                'OUTSIDE',
-                                                style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: scheme
-                                                        .onSurfaceVariant),
-                                              ),
-                                            ),
-                                        ],
+                                    // Avatar
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: isCheckedIn
+                                          ? const Color(0xFFECFDF5)
+                                          : const Color(0xFFEFF6FF),
+                                      child: Icon(
+                                        isCheckedIn
+                                            ? Icons.person_pin_circle_rounded
+                                            : Icons.person_outline_rounded,
+                                        color: isCheckedIn
+                                            ? const Color(0xFF059669)
+                                            : primaryColor,
+                                        size: 22,
                                       ),
-                                      const SizedBox(height: 3),
-                                      Row(
+                                    ),
+                                    const SizedBox(width: 12),
+
+                                    // Name, Plan, Validity
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Container(
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: scheme
-                                                  .surfaceContainerHighest,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              '#$memberId',
-                                              style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontFamily: 'monospace',
-                                                  color:
-                                                      scheme.onSurfaceVariant),
-                                            ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  userName,
+                                                  style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 14.5,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              // Live Status Badge
+                                              if (isCheckedIn)
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                        0xFFECFDF5),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.circle,
+                                                          size: 8,
+                                                          color: Color(
+                                                              0xFF10B981)),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'INSIDE',
+                                                        style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Color(
+                                                              0xFF059669),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                )
+                                              else
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: scheme
+                                                        .surfaceContainerHighest,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                  child: Text(
+                                                    'OUTSIDE',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: scheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 6),
+                                          const SizedBox(height: 2),
                                           Text(
-                                            planName.toUpperCase(),
+                                            '#$memberId • $planName ${userPhone.isNotEmpty ? "• $userPhone" : ""}',
                                             style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color:
-                                                    scheme.onSurfaceVariant),
+                                              fontSize: 11.5,
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          if (userPhone.isNotEmpty) ...[
-                                            Text(' • ',
-                                                style: TextStyle(
-                                                    color: scheme
-                                                        .onSurfaceVariant)),
-                                            Text(userPhone,
-                                                style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: scheme
-                                                        .onSurfaceVariant)),
+                                          if (endDate != null) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              isExpired
+                                                  ? 'Expired ${DateFormat("d MMM yyyy").format(endDate)}'
+                                                  : 'Valid till ${DateFormat("d MMM yyyy").format(endDate)}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: isExpired ||
+                                                        isExpiringSoon
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                color: isExpired
+                                                    ? const Color(0xFFEF4444)
+                                                    : isExpiringSoon
+                                                        ? const Color(
+                                                            0xFFD97706)
+                                                        : scheme
+                                                            .onSurfaceVariant,
+                                              ),
+                                            ),
                                           ],
                                         ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            isExpired
-                                                ? Icons.error_outline_rounded
-                                                : isExpiringSoon
-                                                    ? Icons.warning_amber_rounded
-                                                    : Icons.verified_rounded,
-                                            size: 13,
-                                            color: isExpired
-                                                ? const Color(0xFFEF4444)
-                                                : isExpiringSoon
-                                                    ? const Color(0xFFF59E0B)
-                                                    : const Color(0xFF10B981),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            validityLabel,
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: isExpired ||
-                                                      isExpiringSoon
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                              color: isExpired
-                                                  ? const Color(0xFFEF4444)
-                                                  : isExpiringSoon
-                                                      ? const Color(0xFFD97706)
-                                                      : scheme
-                                                          .onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(height: 1),
-                            const SizedBox(height: 10),
-
-                            // Actions Row (View Profile + Renew Pass + Check-in / Check-out Buttons)
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                TextButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            FacilityMemberDetailScreen(
-                                          kind: widget.kind,
-                                          facilityId: widget.facilityId,
-                                          memberId: memberId,
-                                          facility: widget.facility,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                      Icons.person_outline_rounded,
-                                      size: 16),
-                                  label: const Text('View',
-                                      style: TextStyle(fontSize: 12)),
-                                  style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    if (isExpired ||
-                                        isExpiringSoon ||
-                                        status != 'active') ...[
-                                      OutlinedButton.icon(
-                                        onPressed: () =>
-                                            _openRenewModal(member),
-                                        icon: const Icon(
-                                            Icons.autorenew_rounded,
-                                            size: 15,
-                                            color: Color(0xFF0D9488)),
-                                        label: const Text(
-                                          'Renew',
-                                          style: TextStyle(
-                                              color: Color(0xFF0D9488),
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(
-                                              color: Color(0xFF0D9488)),
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8)),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 6),
-                                          visualDensity:
-                                              VisualDensity.compact,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                    ],
-
-                                    // Check In Button
-                                    FilledButton.icon(
-                                      onPressed: isLoading
-                                          ? null
-                                          : () => _handleCheckin(member),
-                                      icon: isLoading
-                                          ? const SizedBox(
-                                              width: 12,
-                                              height: 12,
-                                              child:
-                                                  CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Colors.white),
-                                            )
-                                          : const Icon(
-                                              Icons.login_rounded,
-                                              size: 15,
-                                            ),
-                                      label: const Text(
-                                        'CHECK IN',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11),
-                                      ),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: primaryColor,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 6),
-                                        visualDensity:
-                                            VisualDensity.compact,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-
-                                    // Check Out Button
-                                    FilledButton.icon(
-                                      onPressed: isLoading
-                                          ? null
-                                          : () => _handleCheckout(member,
-                                              liveSession?.sessionId),
-                                      icon: const Icon(
-                                        Icons.logout_rounded,
-                                        size: 15,
-                                      ),
-                                      label: const Text(
-                                        'CHECK OUT',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11),
-                                      ),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFDC2626),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 6),
-                                        visualDensity:
-                                            VisualDensity.compact,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
+                            ),
+
+                            const Divider(height: 1),
+
+                            // Unmistakable Action Buttons Below Each Member
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  // View Details Icon Button
+                                  IconButton(
+                                    icon: const Icon(
+                                        Icons.person_outline_rounded,
+                                        size: 18),
+                                    tooltip: 'View Profile',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              FacilityMemberDetailScreen(
+                                            kind: widget.kind,
+                                            facilityId: widget.facilityId,
+                                            memberId: memberId,
+                                            facility: widget.facility,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+
+                                  if (isExpired || isExpiringSoon) ...[
+                                    OutlinedButton.icon(
+                                      onPressed: () => _openRenewModal(member),
+                                      icon: const Icon(Icons.autorenew_rounded,
+                                          size: 14, color: Color(0xFF0D9488)),
+                                      label: const Text('Renew',
+                                          style: TextStyle(
+                                              color: Color(0xFF0D9488),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold)),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(
+                                            color: Color(0xFF0D9488)),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+
+                                  const Spacer(),
+
+                                  // Check In Button
+                                  FilledButton.icon(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => _handleCheckin(member),
+                                    icon: isLoading
+                                        ? const SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white),
+                                          )
+                                        : const Icon(Icons.login_rounded,
+                                            size: 15),
+                                    label: const Text('CHECK IN',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11)),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: isCheckedIn
+                                          ? const Color(0xFF6B7280)
+                                          : const Color(0xFF059669),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // Check Out Button
+                                  FilledButton.icon(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => _handleCheckout(
+                                            member,
+                                            liveSession?['session_id']
+                                                ?.toString()),
+                                    icon: const Icon(Icons.logout_rounded,
+                                        size: 15),
+                                    label: const Text('CHECK OUT',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11)),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: isCheckedIn
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFF9CA3AF),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -1242,101 +1415,6 @@ class _FacilityManualCheckinScreenState
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniStatItem extends StatelessWidget {
-  const _MiniStatItem({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-              fontWeight: FontWeight.w900, fontSize: 16, color: color),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          label,
-          style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ),
-      ],
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-    required this.color,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color:
-              isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? color
-                : Theme.of(context)
-                    .colorScheme
-                    .outlineVariant
-                    .withValues(alpha: 0.4),
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 14,
-                color: isSelected
-                    ? color
-                    : Theme.of(context).colorScheme.onSurfaceVariant),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? color
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
