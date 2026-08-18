@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -71,7 +72,19 @@ class _MembershipDetailsScreenState
     final hasFacilityId = widget.facilityId != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.membershipDetails)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/services');
+            }
+          },
+        ),
+        title: Text(l10n.membershipDetails),
+      ),
       body: AmbientBackground(
         child: !hasFacilityId
             ? _DegradedView(l10n: l10n)

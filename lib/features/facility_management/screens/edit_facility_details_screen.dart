@@ -6,6 +6,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/providers/facilities_providers.dart';
 import '../../../core/utils/image_url_resolver.dart';
 import '../../../data/models/amenity_model.dart';
 import '../../../data/models/facility_model.dart';
@@ -185,6 +186,13 @@ class _EditFacilityDetailsScreenState
     }
   }
 
+  void _invalidateAllFacilityData() {
+    ref.invalidate(facilityMediaProvider((widget.kind, widget.facilityId)));
+    ref.invalidate(myOwnedFacilitiesProvider);
+    ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+    ref.invalidate(facilityDetailProvider(widget.kind, widget.facilityId));
+  }
+
   Future<void> _submitDetails() async {
     final form = _formKey.currentState;
     if (form == null || !form.saveAndValidate()) return;
@@ -236,7 +244,7 @@ class _EditFacilityDetailsScreenState
         await repo.updateLibraryDetails(widget.facilityId, payload);
       }
 
-      ref.invalidate(myOwnedFacilitiesProvider);
+      _invalidateAllFacilityData();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -255,7 +263,11 @@ class _EditFacilityDetailsScreenState
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/client/facilities');
+      }
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -292,9 +304,7 @@ class _EditFacilityDetailsScreenState
         filename: picked.name.isNotEmpty ? picked.name : 'facility_photo.jpg',
       );
 
-      ref.invalidate(
-          facilityMediaProvider((widget.kind, widget.facilityId)));
-      ref.invalidate(myOwnedFacilitiesProvider);
+      _invalidateAllFacilityData();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -329,9 +339,7 @@ class _EditFacilityDetailsScreenState
       setState(() => _uploadingPhoto = true);
       final repo = ref.read(clientFacilityRepositoryProvider);
       await repo.setPrimaryMedia(photo.id);
-      ref.invalidate(
-          facilityMediaProvider((widget.kind, widget.facilityId)));
-      ref.invalidate(myOwnedFacilitiesProvider);
+      _invalidateAllFacilityData();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -376,9 +384,7 @@ class _EditFacilityDetailsScreenState
       setState(() => _uploadingPhoto = true);
       final repo = ref.read(clientFacilityRepositoryProvider);
       await repo.deleteFacilityMedia(photo.id);
-      ref.invalidate(
-          facilityMediaProvider((widget.kind, widget.facilityId)));
-      ref.invalidate(myOwnedFacilitiesProvider);
+      _invalidateAllFacilityData();
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -486,21 +492,30 @@ class _EditFacilityDetailsScreenState
         backgroundColor: cardBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0.5,
+        toolbarHeight: 62,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               'Edit $facilityTitle',
               style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
                 letterSpacing: -0.3,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
               f?.name ?? '$facilityTitle Profile',
               style: TextStyle(
@@ -519,32 +534,63 @@ class _EditFacilityDetailsScreenState
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
+          preferredSize: const Size.fromHeight(54),
           child: Container(
             color: cardBg,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: const Color(0xFF2563EB),
-              indicatorWeight: 3,
-              labelColor: const Color(0xFF2563EB),
-              unselectedLabelColor:
-                  isDark ? Colors.white60 : const Color(0xFF64748B),
-              labelStyle:
-                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-              unselectedLabelStyle:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-              tabs: [
-                const Tab(
-                  iconMargin: EdgeInsets.only(bottom: 2),
-                  icon: Icon(Icons.edit_note_rounded, size: 20),
-                  text: 'Details & Amenities',
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              height: 42,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: brandBlue,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: brandBlue.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                Tab(
-                  iconMargin: const EdgeInsets.only(bottom: 2),
-                  icon: const Icon(Icons.photo_library_rounded, size: 19),
-                  text: 'Photos (${photos.length})',
-                ),
-              ],
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor:
+                    isDark ? Colors.white60 : const Color(0xFF64748B),
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
+                tabs: [
+                  const Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_note_rounded, size: 17),
+                        SizedBox(width: 6),
+                        Text('Details & Amenities'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.photo_library_rounded, size: 16),
+                        const SizedBox(width: 6),
+                        Text('Photos (${photos.length})'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

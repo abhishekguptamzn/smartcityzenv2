@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -33,6 +34,16 @@ class FacilityPlanDistributionScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
+        ),
         title: const Text('Fee Plan Distribution'),
         actions: [
           IconButton(

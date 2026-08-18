@@ -353,7 +353,13 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
           _ScanStatus.success => _GenericSuccessView(
             info: _decodedInfo!,
             onScanAnother: _retry,
-            onDone: () => context.pop(),
+            onDone: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
           _ScanStatus.error => _ErrorView(
             message: _errorMessage ?? l10n.errorGeneric,
@@ -396,7 +402,13 @@ class _ScannerBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
               const SizedBox(width: 4),

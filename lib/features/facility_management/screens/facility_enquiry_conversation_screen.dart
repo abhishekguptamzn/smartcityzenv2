@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import 'facility_dashboard_screen.dart';
 
 final enquiryDetailsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -58,6 +60,8 @@ class _FacilityEnquiryConversationScreenState extends ConsumerState<FacilityEnqu
       if (!mounted) return;
 
       ref.invalidate(enquiryDetailsProvider((widget.kind, widget.facilityId, widget.enquiryId)));
+      ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -85,6 +89,8 @@ class _FacilityEnquiryConversationScreenState extends ConsumerState<FacilityEnqu
         newStatus,
       );
       ref.invalidate(enquiryDetailsProvider((widget.kind, widget.facilityId, widget.enquiryId)));
+      ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Status changed to ${newStatus.toUpperCase()}'), behavior: SnackBarBehavior.floating),
@@ -106,6 +112,16 @@ class _FacilityEnquiryConversationScreenState extends ConsumerState<FacilityEnqu
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/manage/enquiries/${widget.kind.pathSegment}/${widget.facilityId}');
+            }
+          },
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

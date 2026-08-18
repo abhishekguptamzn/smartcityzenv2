@@ -42,7 +42,18 @@ void main() {
       );
     });
 
-    test('retains external remote https URLs', () {
+    test('rewrites localhost to https domain without carrying over 8000 port', () {
+      final resolved = ImageUrlResolver.resolve(
+        'http://localhost:8000/storage/media/gallery/2026/08/sample.jpg',
+        baseApiUrl: 'https://admin.smartct.online/api/v1',
+      );
+      expect(
+        resolved,
+        equals('https://admin.smartct.online/storage/media/gallery/2026/08/sample.jpg'),
+      );
+    });
+
+    test('retains external remote https URLs not belonging to storage', () {
       const externalUrl = 'https://images.unsplash.com/photo-123456';
       final resolved = ImageUrlResolver.resolve(
         externalUrl,

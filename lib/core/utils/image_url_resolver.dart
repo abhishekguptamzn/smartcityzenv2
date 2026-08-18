@@ -31,10 +31,23 @@ class ImageUrlResolver {
     final Uri baseUri =
         Uri.tryParse(activeBase) ?? Uri.parse('https://admin.smartct.online/api/v1');
 
-    final String targetHost = baseUri.host.isNotEmpty ? baseUri.host : 'localhost';
-    final int? targetPort = baseUri.hasPort ? baseUri.port : null;
+    String targetHost = baseUri.host.isNotEmpty ? baseUri.host : 'localhost';
     final String targetScheme =
-        baseUri.scheme.isNotEmpty ? baseUri.scheme : 'http';
+        baseUri.scheme.isNotEmpty ? baseUri.scheme : 'https';
+    int? targetPort = baseUri.hasPort ? baseUri.port : null;
+
+    // Handle android emulator reaching local backend
+    if (!kIsWeb) {
+      try {
+        if (Platform.isAndroid &&
+            (targetHost == 'localhost' ||
+                targetHost == '127.0.0.1' ||
+                targetHost == '0.0.0.0')) {
+          targetHost = '10.0.2.2';
+        }
+      } catch (_) {}
+    }
+
     final String portPart = targetPort != null ? ':$targetPort' : '';
     final String rootOrigin = '$targetScheme://$targetHost$portPart';
 
@@ -46,46 +59,32 @@ class ImageUrlResolver {
       return '$rootOrigin/$trimmed';
     }
 
-    // 2. Full HTTP URLs
+    // 2. Full HTTP/HTTPS URLs
     try {
       final uri = Uri.parse(trimmed);
 
-      // If the URL host is localhost, loopback, or emulator alias,
-      // rewrite scheme, host, and port to match the active API target.
+      // If this is a Laravel backend storage URL (contains /storage/ or localhost/127.0.0.1/10.0.2.2)
       final isLocalOrEmulatorHost =
           uri.host == 'localhost' ||
           uri.host == '127.0.0.1' ||
           uri.host == '10.0.2.2' ||
           uri.host == '10.0.3.2' ||
-          uri.host == '0.0.0.0';
+          uri.host == '0.0.0.0' ||
+          uri.host.isEmpty;
 
-      if (isLocalOrEmulatorHost) {
-        // If we are on Android emulator and targetHost is localhost/127.0.0.1, convert to 10.0.2.2
-        String effectiveHost = targetHost;
-        if (!kIsWeb) {
-          try {
-            if (Platform.isAndroid &&
-                (effectiveHost == 'localhost' ||
-                    effectiveHost == '127.0.0.1' ||
-                    effectiveHost == '0.0.0.0')) {
-              effectiveHost = '10.0.2.2';
-            }
-          } catch (_) {}
-        }
-
-        return uri.replace(
-          scheme: targetScheme,
-          host: effectiveHost,
-          port: targetPort ?? (uri.hasPort ? uri.port : null),
-        ).toString();
+      if (isLocalOrEmulatorHost || trimmed.contains('/storage/')) {
+        // Rewrite to match the active API origin completely (scheme, host, and target port)
+        final path = uri.path.startsWith('/') ? uri.path : '/${uri.path}';
+        final query = uri.hasQuery ? '?${uri.query}' : '';
+        return '$rootOrigin$path$query';
       }
 
-      // If on Web and host was hardcoded to 10.0.2.2, point back to localhost/targetHost
+      // If on Web and host was hardcoded to 10.0.2.2, point back to targetHost
       if (kIsWeb && uri.host == '10.0.2.2') {
         return uri.replace(
           scheme: targetScheme,
           host: targetHost == '10.0.2.2' ? 'localhost' : targetHost,
-          port: targetPort ?? (uri.hasPort ? uri.port : null),
+          port: targetPort,
         ).toString();
       }
 

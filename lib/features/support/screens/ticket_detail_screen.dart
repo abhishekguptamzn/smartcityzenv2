@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/tickets_providers.dart';
 import '../../../data/repositories/tickets_repository.dart';
@@ -62,6 +63,19 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
     }
   }
 
+  Widget _buildBackButton(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back_rounded),
+      onPressed: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/support');
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ticketAsync = ref.watch(ticketDetailProvider(widget.ticketId));
@@ -69,11 +83,17 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
 
     return ticketAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Loading Ticket…')),
+        appBar: AppBar(
+          leading: _buildBackButton(context),
+          title: const Text('Loading Ticket…'),
+        ),
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
       ),
       error: (err, _) => Scaffold(
-        appBar: AppBar(title: const Text('Support Ticket')),
+        appBar: AppBar(
+          leading: _buildBackButton(context),
+          title: const Text('Support Ticket'),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -120,7 +140,7 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
               fg: const Color(0xFF047857),
             ),
           _ => (
-              label: 'Closed',
+              label: ticket.status.toUpperCase(),
               bg: const Color(0xFFF1F5F9),
               fg: const Color(0xFF475569),
             ),
@@ -128,6 +148,7 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            leading: _buildBackButton(context),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

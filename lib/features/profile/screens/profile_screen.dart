@@ -19,7 +19,19 @@ class ProfileScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.myProfile)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/settings');
+            }
+          },
+        ),
+        title: Text(l10n.myProfile),
+      ),
       body: AmbientBackground(
         child: userAsync.when(
           loading: () => const LoadingIndicator(),

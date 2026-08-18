@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
@@ -9,7 +10,8 @@ import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/payment_detail_modal.dart';
 import '../widgets/renew_member_modal.dart';
-import 'facility_console_screen.dart';
+import 'facility_dashboard_screen.dart';
+import 'facility_members_screen.dart';
 
 final memberDetailsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
   final (kind, facilityId, memberId) = args;
@@ -299,6 +301,8 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
               widget.memberId,
             );
         ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+        ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+        ref.invalidate(myOwnedFacilitiesProvider);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name was removed and notified via email.')),
@@ -324,6 +328,16 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/manage/members/${widget.kind.pathSegment}/${widget.facilityId}');
+            }
+          },
+        ),
         title: const Text('Member Details & History'),
         actions: [
           IconButton(

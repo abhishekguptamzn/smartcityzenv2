@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/renew_member_modal.dart';
+import 'facility_dashboard_screen.dart';
 import 'facility_member_detail_screen.dart';
 
 final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, (FacilityKind, String)>((ref, tuple) async {
@@ -117,6 +119,8 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
               try {
                 await ref.read(clientFacilityRepositoryProvider).deleteMember(widget.kind, widget.facilityId, memberId);
                 ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+                ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+                ref.invalidate(myOwnedFacilitiesProvider);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Member $userName removed successfully.')),
@@ -188,6 +192,16 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
+        ),
         title: Text('${widget.facility?.name ?? (isGym ? "Gym" : "Library")} Members'),
         actions: [
           IconButton(
@@ -369,6 +383,8 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                               ),
                             );
                             ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+                            ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+                            ref.invalidate(myOwnedFacilitiesProvider);
                           },
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 12),

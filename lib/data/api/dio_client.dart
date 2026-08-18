@@ -32,6 +32,8 @@ class _AuthHeaderInterceptor extends Interceptor {
       options.headers['Authorization'] = 'Bearer $token';
     }
     options.headers['Accept'] = 'application/json';
+    options.headers['Accept-Encoding'] = 'gzip, deflate, br';
+    options.headers['Connection'] = 'keep-alive';
     options.headers['Accept-Language'] = _localeCode();
     options.headers['X-Request-Id'] = _uuid.v4();
     handler.next(options);

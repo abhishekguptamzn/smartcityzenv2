@@ -224,6 +224,18 @@ GoRouter goRouter(Ref ref) {
             path: '/city/history',
             builder: (context, state) => const CityHistoryScreen(),
           ),
+          // Facility Management Dashboard (for Client Users / Facility Owners - retains global bottom nav)
+          GoRoute(
+            path: '/client/facilities',
+            builder: (context, state) => const FacilityDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/client/facility/:kind/:id',
+            builder: (context, state) => FacilityDashboardScreen(
+              initialKind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              initialFacilityId: state.pathParameters['id']!,
+            ),
+          ),
         ],
       ),
       GoRoute(
@@ -268,18 +280,7 @@ GoRouter goRouter(Ref ref) {
         },
         builder: (context, state) => const OnboardHomeScreen(),
       ),
-      // Facility Management Routes (for Client Users / Facility Owners)
-      GoRoute(
-        path: '/client/facilities',
-        builder: (context, state) => const FacilityDashboardScreen(),
-      ),
-      GoRoute(
-        path: '/client/facility/:kind/:id',
-        builder: (context, state) => FacilityDashboardScreen(
-          initialKind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          initialFacilityId: state.pathParameters['id']!,
-        ),
-      ),
+      // Facility Management Sub-Routes
       GoRoute(
         path: '/client/manage/edit/:kind/:id',
         builder: (context, state) => EditFacilityDetailsScreen(

@@ -11,6 +11,8 @@ import '../../../data/models/fee_plan_model.dart';
 import '../../../data/models/onboard_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../data/repositories/onboard_repository.dart';
+import '../screens/facility_dashboard_screen.dart';
+import '../screens/facility_members_screen.dart';
 
 enum AddMemberMode { scan, manual }
 
@@ -276,6 +278,10 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       } else {
         await repo.addLibraryMember(widget.facilityId, payload);
       }
+
+      ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
 
       if (!mounted) return;
       widget.onSuccess();

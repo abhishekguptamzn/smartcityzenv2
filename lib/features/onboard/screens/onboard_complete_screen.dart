@@ -158,6 +158,16 @@ class _OnboardCompleteScreenState extends ConsumerState<OnboardCompleteScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/login');
+            }
+          },
+        ),
         title: const Text('Complete Your Profile'),
         centerTitle: true,
       ),

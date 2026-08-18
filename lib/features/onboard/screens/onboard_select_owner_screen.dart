@@ -94,6 +94,16 @@ class _OnboardSelectOwnerScreenState
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/onboard/select-type?type=${widget.type.name}');
+            }
+          },
+        ),
         title: Text('$facilityLabel Onboard — Owner'),
         centerTitle: true,
       ),

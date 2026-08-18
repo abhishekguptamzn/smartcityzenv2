@@ -48,6 +48,16 @@ class _FacilityEnquiriesScreenState extends ConsumerState<FacilityEnquiriesScree
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
+        ),
         title: const Text('Enquiries'),
         actions: [
           IconButton(

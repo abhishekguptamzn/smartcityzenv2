@@ -7,7 +7,8 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
-import '../screens/facility_console_screen.dart';
+import '../screens/facility_dashboard_screen.dart';
+import '../screens/facility_members_screen.dart';
 
 class RenewMemberModal extends ConsumerStatefulWidget {
   const RenewMemberModal({
@@ -160,6 +161,8 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
 
       // Invalidate stats cache so dashboard auto-updates
       ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
 
       if (mounted) {
         Navigator.of(context).pop();

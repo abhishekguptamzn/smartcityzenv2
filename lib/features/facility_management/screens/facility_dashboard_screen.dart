@@ -43,7 +43,6 @@ class _FacilityDashboardScreenState
     extends ConsumerState<FacilityDashboardScreen> {
   String? _selectedFacilityId;
   FacilityKind? _selectedKind;
-  int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -107,27 +106,33 @@ class _FacilityDashboardScreenState
               leading: const Icon(Icons.edit_rounded, color: Color(0xFF0284C7)),
               title: const Text('Edit Facility Details'),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                context.push('/client/manage/edit/${kind.pathSegment}/${facility.id}', extra: facility);
+                await context.push('/client/manage/edit/${kind.pathSegment}/${facility.id}', extra: facility);
+                ref.invalidate(myOwnedFacilitiesProvider);
+                ref.invalidate(facilityStatsProvider((kind, facility.id)));
               },
             ),
             ListTile(
               leading: const Icon(Icons.payments_rounded, color: Color(0xFF10B981)),
               title: const Text('Manage Fee Plans'),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                context.push('/client/manage/plans/${kind.pathSegment}/${facility.id}', extra: facility);
+                await context.push('/client/manage/plans/${kind.pathSegment}/${facility.id}', extra: facility);
+                ref.invalidate(myOwnedFacilitiesProvider);
+                ref.invalidate(facilityStatsProvider((kind, facility.id)));
               },
             ),
             ListTile(
               leading: const Icon(Icons.bar_chart_rounded, color: Color(0xFF8B5CF6)),
               title: const Text('Attendance & Revenue Reports'),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
+              onTap: () async {
                 Navigator.of(ctx).pop();
-                context.push('/client/manage/reports/${kind.pathSegment}/${facility.id}', extra: facility);
+                await context.push('/client/manage/reports/${kind.pathSegment}/${facility.id}', extra: facility);
+                ref.invalidate(myOwnedFacilitiesProvider);
+                ref.invalidate(facilityStatsProvider((kind, facility.id)));
               },
             ),
           ],
@@ -149,12 +154,16 @@ class _FacilityDashboardScreenState
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
         title: const Text(
           'Facility Management',
           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
@@ -601,81 +610,6 @@ class _FacilityDashboardScreenState
           ),
         ),
       ),
-
-      // Bottom Navigation Bar matching Screenshot
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-              width: 1,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildBottomNavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Dashboard',
-                  isSelected: _currentNavIndex == 0,
-                  isDark: isDark,
-                  onTap: () => setState(() => _currentNavIndex = 0),
-                ),
-                _buildBottomNavItem(
-                  icon: Icons.people_outline_rounded,
-                  label: 'Members',
-                  isSelected: _currentNavIndex == 1,
-                  isDark: isDark,
-                  onTap: () {
-                    if (_selectedKind != null && _selectedFacilityId != null) {
-                      context.push('/client/manage/members/${_selectedKind!.pathSegment}/$_selectedFacilityId');
-                    }
-                  },
-                ),
-                _buildBottomNavItem(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'Check-in',
-                  isSelected: _currentNavIndex == 2,
-                  isDark: isDark,
-                  onTap: () {
-                    if (_selectedKind != null && _selectedFacilityId != null) {
-                      context.push('/client/manage/checkin/${_selectedKind!.pathSegment}/$_selectedFacilityId');
-                    }
-                  },
-                ),
-                _buildBottomNavItem(
-                  icon: Icons.more_horiz_rounded,
-                  label: 'More',
-                  isSelected: _currentNavIndex == 3,
-                  isDark: isDark,
-                  onTap: () {
-                    final facilities = facilitiesAsync.value;
-                    final gyms = facilities?['gyms'] as List<FacilityModel>? ?? [];
-                    final libs = facilities?['libraries'] as List<FacilityModel>? ?? [];
-                    final all = [...gyms.map((g) => (FacilityKind.gym, g)), ...libs.map((l) => (FacilityKind.library, l))];
-                    if (all.isNotEmpty) {
-                      final current = all.firstWhere((p) => p.$2.id == _selectedFacilityId, orElse: () => all.first);
-                      _showShortcutsSheet(context, current.$1, current.$2);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -866,54 +800,6 @@ class _FacilityDashboardScreenState
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: isSelected
-                  ? BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(12),
-                    )
-                  : null,
-              child: Icon(
-                icon,
-                size: 22,
-                color: isSelected
-                    ? const Color(0xFF2563EB)
-                    : (isDark ? Colors.white60 : const Color(0xFF94A3B8)),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                color: isSelected
-                    ? const Color(0xFF2563EB)
-                    : (isDark ? Colors.white60 : const Color(0xFF94A3B8)),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

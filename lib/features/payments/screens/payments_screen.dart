@@ -53,7 +53,19 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.myPayments)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
+        title: Text(l10n.myPayments),
+      ),
       body: AmbientBackground(
         child: Column(
           children: [

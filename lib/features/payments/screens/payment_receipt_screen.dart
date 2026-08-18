@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/providers/payments_providers.dart';
@@ -20,7 +21,19 @@ class PaymentReceiptScreen extends ConsumerWidget {
 
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.paymentReceipt)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/payments');
+            }
+          },
+        ),
+        title: Text(l10n.paymentReceipt),
+      ),
       body: AmbientBackground(
         child: paymentAsync.when(
           loading: () => const LoadingIndicator(),

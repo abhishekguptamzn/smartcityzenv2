@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import 'facility_dashboard_screen.dart';
 
 final facilityPlansFamilyProvider = FutureProvider.autoDispose.family<List<FeePlanModel>, (FacilityKind, String)>((ref, tuple) async {
   final (kind, facilityId) = tuple;
@@ -52,6 +54,16 @@ class ManageFeePlansScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
+        ),
         title: Text('${facility?.name ?? (isGym ? "Gym" : "Library")} Plans'),
         actions: [
           IconButton(
@@ -224,6 +236,8 @@ class ManageFeePlansScreen extends ConsumerWidget {
                                     await repo.deleteLibraryPlan(facilityId, p.id);
                                   }
                                   ref.invalidate(facilityPlansFamilyProvider((kind, facilityId)));
+                                  ref.invalidate(facilityStatsProvider((kind, facilityId)));
+                                  ref.invalidate(myOwnedFacilitiesProvider);
                                 }
                               },
                               icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFDC2626)),
@@ -338,6 +352,10 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
           await repo.createLibraryPlan(widget.facilityId, payload);
         }
       }
+
+      ref.invalidate(facilityPlansFamilyProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
 
       if (!mounted) return;
       Navigator.of(context).pop();

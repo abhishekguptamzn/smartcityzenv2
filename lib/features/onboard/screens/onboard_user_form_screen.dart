@@ -70,6 +70,16 @@ class _OnboardUserFormScreenState extends ConsumerState<OnboardUserFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/onboard');
+            }
+          },
+        ),
         title: const Text('User Onboard — Basic Details'),
         centerTitle: true,
       ),

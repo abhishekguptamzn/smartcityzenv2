@@ -104,7 +104,7 @@ class _ServicesExplorerScreenState
       });
       return;
     }
-    if (Navigator.of(context).canPop()) {
+    if (context.canPop()) {
       context.pop();
     } else {
       context.go('/home');

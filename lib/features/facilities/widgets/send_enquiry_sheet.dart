@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../facility_management/screens/facility_dashboard_screen.dart';
 
 class SendEnquirySheet extends ConsumerStatefulWidget {
   const SendEnquirySheet({
@@ -125,6 +126,10 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
         );
         if (res['enquiry_number'] != null) {
           refCode = res['enquiry_number'].toString();
+        }
+        if (widget.facilityKind != null && widget.facilityId != null) {
+          ref.invalidate(facilityStatsProvider((widget.facilityKind!, widget.facilityId!)));
+          ref.invalidate(myOwnedFacilitiesProvider);
         }
       } catch (_) {
         // Fallback gracefully to local ref code

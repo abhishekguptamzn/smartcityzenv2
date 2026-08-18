@@ -1,16 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../data/models/facility_model.dart';
+import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
 import 'facility_member_detail_screen.dart';
+import 'facility_members_screen.dart';
 
 final facilityCheckinMembersProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, (FacilityKind, String, String)>(
@@ -57,6 +62,7 @@ class _FacilityManualCheckinScreenState
   final _searchController = TextEditingController();
   final _quickCodeController = TextEditingController();
   String _searchQuery = '';
+  Timer? _debounceTimer;
   CheckinFilter _activeFilter = CheckinFilter.all;
   final Set<String> _loadingMemberIds = {};
   final Set<String> _selectedMemberIds = {};
@@ -67,6 +73,7 @@ class _FacilityManualCheckinScreenState
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _quickCodeController.dispose();
     super.dispose();
@@ -77,7 +84,9 @@ class _FacilityManualCheckinScreenState
         (widget.kind, widget.facilityId, _searchQuery)));
     ref.invalidate(
         facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
+    ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
     ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+    ref.invalidate(myOwnedFacilitiesProvider);
   }
 
   void _toggleMemberSelection(String memberId) {
@@ -295,7 +304,10 @@ class _FacilityManualCheckinScreenState
     }
   }
 
-  Future<void> _handleBulkCheckin(List<Map<String, dynamic>> allMembers) async {
+  Future<void> _handleBulkCheckin(
+    List<Map<String, dynamic>> allMembers,
+    Map<String, Map<String, dynamic>> activeMap,
+  ) async {
     final selectedList = allMembers.where((m) {
       final id = m['id']?.toString() ?? '';
       return _selectedMemberIds.contains(id);
@@ -303,15 +315,31 @@ class _FacilityManualCheckinScreenState
 
     if (selectedList.isEmpty) return;
 
+    final outsideSelected = selectedList.where((m) {
+      final id = m['id']?.toString() ?? '';
+      return !activeMap.containsKey(id);
+    }).toList();
+
+    if (outsideSelected.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All selected member(s) are already checked in.'),
+          backgroundColor: Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirm = await showAppConfirmDialog(
       context: context,
       title: 'Bulk Check-In',
       message:
-          'Are you sure you want to log desk check-in for all ${selectedList.length} selected member(s)?',
-      confirmLabel: 'Check In ${selectedList.length} Members',
+          'Are you sure you want to log desk check-in for ${outsideSelected.length} member(s)?',
+      confirmLabel: 'Check In ${outsideSelected.length} Members',
       details: [
         ConfirmDetailRow(
-            label: 'Selected Members', value: '${selectedList.length}'),
+            label: 'Members to Check In', value: '${outsideSelected.length}'),
         ConfirmDetailRow(
             label: 'Action', value: 'Log Desk Check-In', isHighlighted: true),
       ],
@@ -323,7 +351,7 @@ class _FacilityManualCheckinScreenState
     int failedCount = 0;
 
     final repo = ref.read(clientFacilityRepositoryProvider);
-    for (final member in selectedList) {
+    for (final member in outsideSelected) {
       final memberId = member['id']?.toString() ?? '';
       if (memberId.isEmpty) continue;
       try {
@@ -366,16 +394,32 @@ class _FacilityManualCheckinScreenState
 
     if (selectedList.isEmpty) return;
 
+    final insideSelected = selectedList.where((m) {
+      final id = m['id']?.toString() ?? '';
+      return activeMap.containsKey(id);
+    }).toList();
+
+    if (insideSelected.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('None of the selected member(s) are currently inside.'),
+          backgroundColor: Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirm = await showAppConfirmDialog(
       context: context,
       title: 'Bulk Check-Out',
       message:
-          'Are you sure you want to check out all ${selectedList.length} selected member(s)?',
-      confirmLabel: 'Check Out ${selectedList.length} Members',
+          'Are you sure you want to check out ${insideSelected.length} member(s)?',
+      confirmLabel: 'Check Out ${insideSelected.length} Members',
       type: ConfirmDialogType.warning,
       details: [
         ConfirmDetailRow(
-            label: 'Selected Members', value: '${selectedList.length}'),
+            label: 'Members to Check Out', value: '${insideSelected.length}'),
         ConfirmDetailRow(
             label: 'Action', value: 'Log Check-Out', isHighlighted: true),
       ],
@@ -387,7 +431,7 @@ class _FacilityManualCheckinScreenState
     int failedCount = 0;
 
     final repo = ref.read(clientFacilityRepositoryProvider);
-    for (final member in selectedList) {
+    for (final member in insideSelected) {
       final memberId = member['id']?.toString() ?? '';
       if (memberId.isEmpty) continue;
       final liveSession = activeMap[memberId];
@@ -626,15 +670,42 @@ class _FacilityManualCheckinScreenState
 
     final activeOccupancy = occupancyAsync.value;
     final currentInsideCount =
-        (activeOccupancy?['current_inside'] as num?)?.toInt() ?? 0;
-    final activeList = (activeOccupancy?['active_members'] as List?) ?? [];
+        (activeOccupancy?['currently_inside_count'] as num?)?.toInt() ??
+        (activeOccupancy?['current_inside'] as num?)?.toInt() ??
+        0;
+
+    final rawInsideList = activeOccupancy?['members_inside'] ??
+        activeOccupancy?['active_members'];
     final activeMap = <String, Map<String, dynamic>>{};
-    for (final item in activeList) {
-      if (item is Map) {
-        final mId =
-            item['member_id']?.toString() ?? item['id']?.toString();
-        if (mId != null && mId.isNotEmpty) {
-          activeMap[mId] = Map<String, dynamic>.from(item);
+
+    if (rawInsideList is List) {
+      for (final item in rawInsideList) {
+        if (item is LiveSessionMember) {
+          final data = <String, dynamic>{
+            'session_id': item.sessionId,
+            'member_id': item.memberId,
+            'user_id': item.userId,
+            'user_name': item.userName,
+            'check_in_time': item.checkInTime,
+            'elapsed_minutes': item.elapsedMinutes,
+          };
+          if (item.memberId.isNotEmpty) {
+            activeMap[item.memberId] = data;
+          }
+          if (item.userId != null && item.userId!.isNotEmpty) {
+            activeMap[item.userId!] = data;
+          }
+        } else if (item is Map) {
+          final mapItem = Map<String, dynamic>.from(item);
+          final mId =
+              mapItem['member_id']?.toString() ?? mapItem['id']?.toString();
+          if (mId != null && mId.isNotEmpty) {
+            activeMap[mId] = mapItem;
+          }
+          final uId = mapItem['user_id']?.toString();
+          if (uId != null && uId.isNotEmpty && mId != null) {
+            activeMap[uId] = mapItem;
+          }
         }
       }
     }
@@ -643,6 +714,16 @@ class _FacilityManualCheckinScreenState
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/client/facilities');
+            }
+          },
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -736,55 +817,78 @@ class _FacilityManualCheckinScreenState
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _bulkActionLoading
-                                ? null
-                                : () => _handleBulkCheckin(allMembers),
-                            icon: _bulkActionLoading
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.login_rounded, size: 16),
-                            label: Text(
-                                'Check In (${_selectedMemberIds.length})',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                    Builder(builder: (context) {
+                      final selectedInsideCount = _selectedMemberIds
+                          .where((id) => activeMap.containsKey(id))
+                          .length;
+                      final selectedOutsideCount =
+                          _selectedMemberIds.length - selectedInsideCount;
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: (_bulkActionLoading ||
+                                      selectedOutsideCount == 0)
+                                  ? null
+                                  : () => _handleBulkCheckin(
+                                      allMembers, activeMap),
+                              icon: _bulkActionLoading
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white),
+                                    )
+                                  : const Icon(Icons.login_rounded, size: 16),
+                              label: Text(
+                                  'Check In ($selectedOutsideCount)',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                disabledBackgroundColor: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFCBD5E1),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 12),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _bulkActionLoading
-                                ? null
-                                : () => _handleBulkCheckout(
-                                    allMembers, activeMap),
-                            icon: const Icon(Icons.logout_rounded, size: 16),
-                            label: Text(
-                                'Check Out (${_selectedMemberIds.length})',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFDC2626),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: (_bulkActionLoading ||
+                                      selectedInsideCount == 0)
+                                  ? null
+                                  : () => _handleBulkCheckout(
+                                      allMembers, activeMap),
+                              icon:
+                                  const Icon(Icons.logout_rounded, size: 16),
+                              label: Text(
+                                  'Check Out ($selectedInsideCount)',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFDC2626),
+                                disabledBackgroundColor: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFCBD5E1),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 12),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -919,10 +1023,11 @@ class _FacilityManualCheckinScreenState
                       decoration: InputDecoration(
                         hintText: 'Filter member list by name/phone...',
                         prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                        suffixIcon: _searchQuery.isNotEmpty
+                        suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear_rounded, size: 16),
                                 onPressed: () {
+                                  _debounceTimer?.cancel();
                                   _searchController.clear();
                                   setState(() => _searchQuery = '');
                                 },
@@ -940,7 +1045,14 @@ class _FacilityManualCheckinScreenState
                           ),
                         ),
                       ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
+                      onChanged: (val) {
+                        _debounceTimer?.cancel();
+                        _debounceTimer = Timer(const Duration(milliseconds: 250), () {
+                          if (mounted) {
+                            setState(() => _searchQuery = val.trim());
+                          }
+                        });
+                      },
                     ),
                   ),
                 ],
@@ -1006,14 +1118,25 @@ class _FacilityManualCheckinScreenState
                   if (_activeFilter == CheckinFilter.insideNow) {
                     filtered = members.where((m) {
                       final id = m['id']?.toString() ?? '';
-                      return activeMap.containsKey(id) ||
-                          _recentlyCheckedInIds.contains(id);
+                      final uId = m['user_id']?.toString() ??
+                          m['user']?['id']?.toString();
+                      final live = activeMap[id] ??
+                          (uId != null ? activeMap[uId] : null);
+                      return (live != null ||
+                              _recentlyCheckedInIds.contains(id)) &&
+                          !_recentlyCheckedOutIds.contains(id);
                     }).toList();
                   } else if (_activeFilter == CheckinFilter.outside) {
                     filtered = members.where((m) {
                       final id = m['id']?.toString() ?? '';
-                      return !activeMap.containsKey(id) &&
-                          !_recentlyCheckedInIds.contains(id);
+                      final uId = m['user_id']?.toString() ??
+                          m['user']?['id']?.toString();
+                      final live = activeMap[id] ??
+                          (uId != null ? activeMap[uId] : null);
+                      final isInside = (live != null ||
+                              _recentlyCheckedInIds.contains(id)) &&
+                          !_recentlyCheckedOutIds.contains(id);
+                      return !isInside;
                     }).toList();
                   } else if (_activeFilter == CheckinFilter.expiringSoon) {
                     final now = DateTime.now();
@@ -1052,6 +1175,8 @@ class _FacilityManualCheckinScreenState
                     itemBuilder: (context, index) {
                       final member = filtered[index];
                       final memberId = member['id']?.toString() ?? '';
+                      final userId = member['user_id']?.toString() ??
+                          member['user']?['id']?.toString();
                       final userName = member['user']?['name'] ??
                           member['name'] ??
                           'Citizen Member';
@@ -1073,7 +1198,8 @@ class _FacilityManualCheckinScreenState
                           !isExpired &&
                           endDate.isBefore(now.add(const Duration(days: 7)));
 
-                      final liveSession = activeMap[memberId];
+                      final liveSession = activeMap[memberId] ??
+                          (userId != null ? activeMap[userId] : null);
                       final isCheckedIn = (liveSession != null ||
                               _recentlyCheckedInIds.contains(memberId)) &&
                           !_recentlyCheckedOutIds.contains(memberId);
@@ -1189,18 +1315,22 @@ class _FacilityManualCheckinScreenState
                                                         BorderRadius.circular(
                                                             8),
                                                   ),
-                                                  child: const Row(
+                                                  child: Row(
                                                     mainAxisSize:
                                                         MainAxisSize.min,
                                                     children: [
-                                                      Icon(Icons.circle,
+                                                      const Icon(Icons.circle,
                                                           size: 8,
                                                           color: Color(
                                                               0xFF10B981)),
-                                                      SizedBox(width: 4),
+                                                      const SizedBox(width: 4),
                                                       Text(
-                                                        'INSIDE',
-                                                        style: TextStyle(
+                                                        liveSession?['check_in_time'] !=
+                                                                null
+                                                            ? 'INSIDE (${liveSession!['check_in_time']})'
+                                                            : 'INSIDE',
+                                                        style:
+                                                            const TextStyle(
                                                           fontSize: 10.5,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -1218,8 +1348,11 @@ class _FacilityManualCheckinScreenState
                                                       horizontal: 8,
                                                       vertical: 3),
                                                   decoration: BoxDecoration(
-                                                    color: scheme
-                                                        .surfaceContainerHighest,
+                                                    color: isDark
+                                                        ? const Color(
+                                                            0xFF334155)
+                                                        : const Color(
+                                                            0xFFF1F5F9),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             8),
@@ -1227,11 +1360,13 @@ class _FacilityManualCheckinScreenState
                                                   child: Text(
                                                     'OUTSIDE',
                                                     style: TextStyle(
-                                                      fontSize: 10,
+                                                      fontSize: 10.5,
                                                       fontWeight:
                                                           FontWeight.w600,
-                                                      color: scheme
-                                                          .onSurfaceVariant,
+                                                      color: isDark
+                                                          ? Colors.white60
+                                                          : const Color(
+                                                              0xFF64748B),
                                                     ),
                                                   ),
                                                 ),
@@ -1332,9 +1467,9 @@ class _FacilityManualCheckinScreenState
 
                                   const Spacer(),
 
-                                  // Check In Button
+                                  // Check In Button (Active only when outside)
                                   FilledButton.icon(
-                                    onPressed: isLoading
+                                    onPressed: (isLoading || isCheckedIn)
                                         ? null
                                         : () => _handleCheckin(member),
                                     icon: isLoading
@@ -1345,16 +1480,33 @@ class _FacilityManualCheckinScreenState
                                                 strokeWidth: 2,
                                                 color: Colors.white),
                                           )
-                                        : const Icon(Icons.login_rounded,
+                                        : Icon(
+                                            isCheckedIn
+                                                ? Icons.check_circle_rounded
+                                                : Icons.login_rounded,
                                             size: 15),
-                                    label: const Text('CHECK IN',
-                                        style: TextStyle(
+                                    label: Text(
+                                        isCheckedIn ? 'INSIDE' : 'CHECK IN',
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 11)),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: isCheckedIn
-                                          ? const Color(0xFF6B7280)
+                                          ? (isDark
+                                              ? const Color(0xFF334155)
+                                              : const Color(0xFFE2E8F0))
                                           : const Color(0xFF059669),
+                                      foregroundColor: isCheckedIn
+                                          ? (isDark
+                                              ? Colors.white38
+                                              : const Color(0xFF94A3B8))
+                                          : Colors.white,
+                                      disabledBackgroundColor: isDark
+                                          ? const Color(0xFF1E293B)
+                                          : const Color(0xFFE2E8F0),
+                                      disabledForegroundColor: isDark
+                                          ? Colors.white38
+                                          : const Color(0xFF94A3B8),
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(8)),
@@ -1365,9 +1517,9 @@ class _FacilityManualCheckinScreenState
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Check Out Button
+                                  // Check Out Button (Active only when inside)
                                   FilledButton.icon(
-                                    onPressed: isLoading
+                                    onPressed: (isLoading || !isCheckedIn)
                                         ? null
                                         : () => _handleCheckout(
                                             member,
@@ -1375,14 +1527,28 @@ class _FacilityManualCheckinScreenState
                                                 ?.toString()),
                                     icon: const Icon(Icons.logout_rounded,
                                         size: 15),
-                                    label: const Text('CHECK OUT',
-                                        style: TextStyle(
+                                    label: Text(
+                                        isCheckedIn ? 'CHECK OUT' : 'OUTSIDE',
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 11)),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: isCheckedIn
                                           ? const Color(0xFFDC2626)
-                                          : const Color(0xFF9CA3AF),
+                                          : (isDark
+                                              ? const Color(0xFF334155)
+                                              : const Color(0xFFE2E8F0)),
+                                      foregroundColor: isCheckedIn
+                                          ? Colors.white
+                                          : (isDark
+                                              ? Colors.white38
+                                              : const Color(0xFF94A3B8)),
+                                      disabledBackgroundColor: isDark
+                                          ? const Color(0xFF1E293B)
+                                          : const Color(0xFFE2E8F0),
+                                      disabledForegroundColor: isDark
+                                          ? Colors.white38
+                                          : const Color(0xFF94A3B8),
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(8)),
