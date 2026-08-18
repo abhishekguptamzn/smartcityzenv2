@@ -39,8 +39,9 @@ class EditFacilityDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _EditFacilityDetailsScreenState
-    extends ConsumerState<EditFacilityDetailsScreen> {
-  int _selectedTab = 0; // 0 = Details, 1 = Photos & Gallery
+    extends ConsumerState<EditFacilityDetailsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   // Details Tab Form State
   final _formKey = GlobalKey<FormBuilderState>();
@@ -56,6 +57,7 @@ class _EditFacilityDetailsScreenState
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _descController.text = widget.facility?.description ?? '';
     _openingTime = _parseTimeString(widget.facility?.openingTime) ??
         const TimeOfDay(hour: 6, minute: 0);
@@ -68,6 +70,7 @@ class _EditFacilityDetailsScreenState
 
   @override
   void dispose() {
+    _tabController.dispose();
     _descController.dispose();
     super.dispose();
   }
@@ -118,29 +121,52 @@ class _EditFacilityDetailsScreenState
 
   IconData _resolveAmenityIcon(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('wifi') || lower.contains('wi-fi') || lower.contains('internet')) {
+    if (lower.contains('wifi') ||
+        lower.contains('wi-fi') ||
+        lower.contains('internet')) {
       return Icons.wifi_rounded;
-    } else if (lower.contains('ac') || lower.contains('air') || lower.contains('cool')) {
+    } else if (lower.contains('ac') ||
+        lower.contains('air') ||
+        lower.contains('cool')) {
       return Icons.ac_unit_rounded;
-    } else if (lower.contains('reading') || lower.contains('book') || lower.contains('study') || lower.contains('quiet') || lower.contains('desk')) {
+    } else if (lower.contains('reading') ||
+        lower.contains('book') ||
+        lower.contains('study') ||
+        lower.contains('quiet') ||
+        lower.contains('desk')) {
       return Icons.chair_alt_rounded;
-    } else if (lower.contains('newspaper') || lower.contains('journal') || lower.contains('magazin')) {
+    } else if (lower.contains('newspaper') ||
+        lower.contains('journal') ||
+        lower.contains('magazin')) {
       return Icons.menu_book_rounded;
-    } else if (lower.contains('water') || lower.contains('dispenser') || lower.contains('drink')) {
+    } else if (lower.contains('water') ||
+        lower.contains('dispenser') ||
+        lower.contains('drink')) {
       return Icons.local_drink_rounded;
-    } else if (lower.contains('power') || lower.contains('plug') || lower.contains('charging')) {
+    } else if (lower.contains('power') ||
+        lower.contains('plug') ||
+        lower.contains('charging')) {
       return Icons.power_rounded;
     } else if (lower.contains('parking') || lower.contains('valet')) {
       return Icons.local_parking_rounded;
     } else if (lower.contains('locker') || lower.contains('storage')) {
       return Icons.lock_outline_rounded;
-    } else if (lower.contains('gym') || lower.contains('dumbbell') || lower.contains('weight') || lower.contains('treadmill')) {
+    } else if (lower.contains('gym') ||
+        lower.contains('dumbbell') ||
+        lower.contains('weight') ||
+        lower.contains('treadmill')) {
       return Icons.fitness_center_rounded;
-    } else if (lower.contains('shower') || lower.contains('bath') || lower.contains('washroom')) {
+    } else if (lower.contains('shower') ||
+        lower.contains('bath') ||
+        lower.contains('washroom')) {
       return Icons.shower_rounded;
-    } else if (lower.contains('cafe') || lower.contains('coffee') || lower.contains('tea')) {
+    } else if (lower.contains('cafe') ||
+        lower.contains('coffee') ||
+        lower.contains('tea')) {
       return Icons.coffee_rounded;
-    } else if (lower.contains('cctv') || lower.contains('security') || lower.contains('guard')) {
+    } else if (lower.contains('cctv') ||
+        lower.contains('security') ||
+        lower.contains('guard')) {
       return Icons.videocam_outlined;
     }
     return Icons.star_rounded;
@@ -446,218 +472,101 @@ class _EditFacilityDetailsScreenState
 
     return Scaffold(
       backgroundColor: lightBg,
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top App Bar & Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  InkWell(
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: cardBorder, width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: isDark ? 0.2 : 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.arrow_back_rounded, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Edit $facilityTitle',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.4,
-                            fontSize: 20,
-                            color:
-                                isDark ? Colors.white : const Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "Update details, amenities and photos",
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: isDark
-                                ? Colors.white60
-                                : const Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildHeaderEmblem(isGym, isDark),
-                ],
+            Text(
+              'Edit $facilityTitle',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                letterSpacing: -0.3,
               ),
             ),
-
-            // Top Segmented Tab Switcher (Details vs Photos)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFE2E8F0).withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(14),
+            Text(
+              f?.name ?? '$facilityTitle Profile',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedTab = 0);
-                      },
-                      borderRadius: BorderRadius.circular(11),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _selectedTab == 0
-                              ? (isDark ? const Color(0xFF334155) : Colors.white)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(11),
-                          boxShadow: _selectedTab == 0
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.edit_note_rounded,
-                              size: 18,
-                              color: _selectedTab == 0
-                                  ? brandBlue
-                                  : (isDark ? Colors.white60 : const Color(0xFF64748B)),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Facility Details',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: _selectedTab == 0
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                color: _selectedTab == 0
-                                    ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                    : (isDark ? Colors.white60 : const Color(0xFF64748B)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedTab = 1);
-                      },
-                      borderRadius: BorderRadius.circular(11),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _selectedTab == 1
-                              ? (isDark ? const Color(0xFF334155) : Colors.white)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(11),
-                          boxShadow: _selectedTab == 1
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.photo_library_rounded,
-                              size: 18,
-                              color: _selectedTab == 1
-                                  ? const Color(0xFF0D9488)
-                                  : (isDark ? Colors.white60 : const Color(0xFF64748B)),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Photos (${photos.length})',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: _selectedTab == 1
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                color: _selectedTab == 1
-                                    ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                    : (isDark ? Colors.white60 : const Color(0xFF64748B)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Tab Content Body
-            Expanded(
-              child: _selectedTab == 0
-                  ? _buildDetailsTab(
-                      f,
-                      isGym,
-                      isDark,
-                      cardBg,
-                      cardBorder,
-                      brandBlue,
-                      facilityTitle,
-                      theme,
-                    )
-                  : _buildPhotosTab(
-                      photos,
-                      mediaAsync.isLoading,
-                      isGym,
-                      isDark,
-                      cardBg,
-                      cardBorder,
-                      brandBlue,
-                      facilityTitle,
-                      theme,
-                    ),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: _buildHeaderEmblem(isGym, isDark),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: cardBg,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: const Color(0xFF2563EB),
+              indicatorWeight: 3,
+              labelColor: const Color(0xFF2563EB),
+              unselectedLabelColor:
+                  isDark ? Colors.white60 : const Color(0xFF64748B),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+              tabs: [
+                const Tab(
+                  iconMargin: EdgeInsets.only(bottom: 2),
+                  icon: Icon(Icons.edit_note_rounded, size: 20),
+                  text: 'Details & Amenities',
+                ),
+                Tab(
+                  iconMargin: const EdgeInsets.only(bottom: 2),
+                  icon: const Icon(Icons.photo_library_rounded, size: 19),
+                  text: 'Photos (${photos.length})',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: Details & Amenities
+          _buildDetailsTab(
+            f,
+            isGym,
+            isDark,
+            cardBg,
+            cardBorder,
+            brandBlue,
+            facilityTitle,
+            theme,
+          ),
+
+          // Tab 2: Photos & Gallery
+          _buildPhotosTab(
+            photos,
+            mediaAsync.isLoading,
+            isGym,
+            isDark,
+            cardBg,
+            cardBorder,
+            brandBlue,
+            facilityTitle,
+            theme,
+          ),
+        ],
       ),
     );
   }
@@ -676,7 +585,7 @@ class _EditFacilityDetailsScreenState
     return FormBuilder(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 36),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 36),
         children: [
           // Identity Hero Card
           _buildIdentityHeroCard(f, isGym, isDark, cardBg, cardBorder, brandBlue),
@@ -1140,7 +1049,7 @@ class _EditFacilityDetailsScreenState
             facilityMediaProvider((widget.kind, widget.facilityId)));
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 36),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 36),
         children: [
           // Gallery Summary Card
           Container(
@@ -1515,11 +1424,11 @@ class _EditFacilityDetailsScreenState
   // Header Emblem
   Widget _buildHeaderEmblem(bool isGym, bool isDark) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: const Color(0xFF2563EB).withValues(alpha: 0.2),
           width: 1.2,
@@ -1529,7 +1438,7 @@ class _EditFacilityDetailsScreenState
         child: Icon(
           isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded,
           color: const Color(0xFF2563EB),
-          size: 22,
+          size: 20,
         ),
       ),
     );
