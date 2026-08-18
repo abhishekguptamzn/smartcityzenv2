@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
@@ -56,15 +57,18 @@ class FacilityManualCheckinScreen extends ConsumerStatefulWidget {
 class _FacilityManualCheckinScreenState
     extends ConsumerState<FacilityManualCheckinScreen> {
   final _searchController = TextEditingController();
+  final _quickCodeController = TextEditingController();
   String _searchQuery = '';
   CheckinFilter _activeFilter = CheckinFilter.all;
   final Set<String> _loadingMemberIds = {};
   final Set<String> _recentlyCheckedInIds = {};
   final Set<String> _recentlyCheckedOutIds = {};
+  bool _quickActionLoading = false;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _quickCodeController.dispose();
     super.dispose();
   }
 
@@ -77,7 +81,7 @@ class _FacilityManualCheckinScreenState
         facilityStatsProvider((widget.kind, widget.facilityId)));
   }
 
-  Future<void> _handleCheckin(Map<String, dynamic> member) async {
+  Future<void> _handleCheckin(Map<String, dynamic> member, {bool allowOverride = false}) async {
     final memberId = member['id']?.toString() ?? '';
     if (memberId.isEmpty) return;
 
@@ -90,13 +94,13 @@ class _FacilityManualCheckinScreenState
     final now = DateTime.now();
     final isExpired = endDate != null && endDate.isBefore(now);
 
-    if (isExpired) {
+    if (isExpired && !allowOverride) {
       final formattedEnd = DateFormat('d MMM yyyy').format(endDate);
       final proceed = await showAppConfirmDialog(
         context: context,
         title: 'Membership Expired',
         message:
-            '$userName\'s membership pass expired on $formattedEnd. Log desk check-in anyway or renew pass?',
+            '$userName\'s membership pass expired on $formattedEnd. Log desk check-in anyway as manager override?',
         confirmLabel: 'Allow Check-in',
         cancelLabel: 'Cancel',
         type: ConfirmDialogType.warning,
@@ -107,6 +111,7 @@ class _FacilityManualCheckinScreenState
         ],
       );
       if (!proceed) return;
+      allowOverride = true;
     }
 
     setState(() => _loadingMemberIds.add(memberId));
@@ -117,6 +122,7 @@ class _FacilityManualCheckinScreenState
             widget.kind,
             widget.facilityId,
             memberId: memberId,
+            allowOverride: allowOverride,
           );
 
       final already = res['already_checked_in'] == true;
@@ -260,6 +266,176 @@ class _FacilityManualCheckinScreenState
     }
   }
 
+  Future<void> _handleQuickCodeAction({required bool isCheckIn}) async {
+    final code = _quickCodeController.text.trim();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a Member ID, Citizen Code, Mobile or Email.'),
+          backgroundColor: Color(0xFFD97706),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _quickActionLoading = true);
+
+    try {
+      HapticFeedback.lightImpact();
+      if (isCheckIn) {
+        final res = await ref.read(clientFacilityRepositoryProvider).checkIn(
+              widget.kind,
+              widget.facilityId,
+              code: code,
+              allowOverride: true,
+            );
+        final userName = res['user_name'] ?? 'Citizen';
+        final already = res['already_checked_in'] == true;
+        _quickCodeController.clear();
+        _refreshAll();
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(already ? '$userName is already checked in.' : '✅ $userName checked in successfully!'),
+            backgroundColor: already ? const Color(0xFFD97706) : const Color(0xFF059669),
+          ),
+        );
+      } else {
+        final res = await ref.read(clientFacilityRepositoryProvider).checkOut(
+              widget.kind,
+              widget.facilityId,
+              memberId: code,
+              userId: code,
+            );
+        final duration = res['duration_minutes'] ?? res['duration'] ?? 0;
+        _quickCodeController.clear();
+        _refreshAll();
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Checked out successfully! (Session: $duration mins)'),
+            backgroundColor: const Color(0xFF0284C7),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _quickActionLoading = false);
+    }
+  }
+
+  void _openQrScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Scan Citizen QR for Desk Attendance',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final barcode = capture.barcodes.firstOrNull;
+                    if (barcode != null && barcode.rawValue != null) {
+                      final rawValue = barcode.rawValue!;
+                      Navigator.pop(ctx);
+                      _quickCodeController.text = rawValue;
+                      _showScannedQrActionDialog(rawValue);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Align citizen ID barcode or QR code within the viewfinder.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showScannedQrActionDialog(String scannedCode) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Scanned Citizen QR', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Scanned Code: $scannedCode', style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
+            const SizedBox(height: 12),
+            const Text('Choose action to record at desk:'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleQuickCodeAction(isCheckIn: false);
+            },
+            icon: const Icon(Icons.logout_rounded, size: 16),
+            label: const Text('Check Out'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleQuickCodeAction(isCheckIn: true);
+            },
+            icon: const Icon(Icons.login_rounded, size: 16),
+            label: const Text('Check In'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openRenewModal(Map<String, dynamic> member) {
     showModalBottomSheet(
       context: context,
@@ -381,14 +557,110 @@ class _FacilityManualCheckinScreenState
               error: (_, _) => const SizedBox.shrink(),
             ),
 
-            // Search Bar
+            // Top Quick Desk Action Card (Direct Code Input / Camera Scan / One-tap Check-in/out)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.flash_on_rounded, size: 16, color: primaryColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Quick Desk Check-in / Check-out',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _quickCodeController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter Member ID, Mobile, Code...',
+                            hintStyle: const TextStyle(fontSize: 12),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        tooltip: 'Scan Citizen QR',
+                        style: IconButton.styleFrom(
+                          backgroundColor: primaryColor.withValues(alpha: 0.12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _openQrScanner,
+                        icon: Icon(Icons.qr_code_scanner_rounded, color: primaryColor, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _quickActionLoading ? null : () => _handleQuickCodeAction(isCheckIn: true),
+                          icon: const Icon(Icons.login_rounded, size: 15),
+                          label: const Text('Check In', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _quickActionLoading ? null : () => _handleQuickCodeAction(isCheckIn: false),
+                          icon: const Icon(Icons.logout_rounded, size: 15),
+                          label: const Text('Check Out', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC2626),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Search Bar for Member List
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
               child: TextField(
                 controller: _searchController,
                 autofocus: false,
                 decoration: InputDecoration(
-                  hintText: 'Search member by name, mobile, ID...',
+                  hintText: 'Search members list below...',
                   prefixIcon:
                       Icon(Icons.search_rounded, color: primaryColor),
                   suffixIcon: _searchQuery.isNotEmpty
@@ -401,21 +673,21 @@ class _FacilityManualCheckinScreenState
                         )
                       : null,
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                      horizontal: 16, vertical: 12),
                   filled: true,
                   fillColor: theme.cardColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
                         color: scheme.outlineVariant.withValues(alpha: 0.3)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
                         color: scheme.outlineVariant.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide:
                         BorderSide(color: primaryColor, width: 1.5),
                   ),
@@ -430,7 +702,7 @@ class _FacilityManualCheckinScreenState
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               child: Row(
                 children: [
                   _FilterChip(
@@ -526,7 +798,7 @@ class _FacilityManualCheckinScreenState
                               _searchQuery.isEmpty
                                   ? (_activeFilter == CheckinFilter.insideNow
                                       ? 'No members currently inside facility.'
-                                      : 'No members found.')
+                                      : 'No members registered yet.')
                                   : 'No members matching "$_searchQuery"',
                               style: theme.textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
@@ -534,7 +806,7 @@ class _FacilityManualCheckinScreenState
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Search by name, registered mobile, or member ID to log attendance.',
+                              'Use Quick Desk Check-in above or search to record attendance.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: 12,
@@ -816,7 +1088,7 @@ class _FacilityManualCheckinScreenState
                             const Divider(height: 1),
                             const SizedBox(height: 10),
 
-                            // Actions Row
+                            // Actions Row (View Profile + Renew Pass + Check-in / Check-out Buttons)
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
@@ -838,31 +1110,31 @@ class _FacilityManualCheckinScreenState
                                   icon: const Icon(
                                       Icons.person_outline_rounded,
                                       size: 16),
-                                  label: const Text('View Profile',
+                                  label: const Text('View',
                                       style: TextStyle(fontSize: 12)),
                                   style: TextButton.styleFrom(
                                     visualDensity: VisualDensity.compact,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
+                                        horizontal: 8),
                                   ),
                                 ),
                                 Row(
                                   children: [
                                     if (isExpired ||
                                         isExpiringSoon ||
-                                        status != 'active')
+                                        status != 'active') ...[
                                       OutlinedButton.icon(
                                         onPressed: () =>
                                             _openRenewModal(member),
                                         icon: const Icon(
                                             Icons.autorenew_rounded,
-                                            size: 16,
+                                            size: 15,
                                             color: Color(0xFF0D9488)),
                                         label: const Text(
-                                          'Renew Pass',
+                                          'Renew',
                                           style: TextStyle(
                                               color: Color(0xFF0D9488),
-                                              fontSize: 12,
+                                              fontSize: 11.5,
                                               fontWeight: FontWeight.bold),
                                         ),
                                         style: OutlinedButton.styleFrom(
@@ -870,91 +1142,81 @@ class _FacilityManualCheckinScreenState
                                               color: Color(0xFF0D9488)),
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(10)),
+                                                  BorderRadius.circular(8)),
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 8),
+                                              horizontal: 8, vertical: 6),
                                           visualDensity:
                                               VisualDensity.compact,
                                         ),
                                       ),
-                                    if (isExpired ||
-                                        isExpiringSoon ||
-                                        status != 'active')
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 6),
+                                    ],
 
-                                    // Check-out or Check-in Button
-                                    if (isInside)
-                                      FilledButton.icon(
-                                        onPressed: isLoading
-                                            ? null
-                                            : () => _handleCheckout(member,
-                                                liveSession?.sessionId),
-                                        icon: isLoading
-                                            ? const SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white),
-                                              )
-                                            : const Icon(
-                                                Icons.logout_rounded,
-                                                size: 16,
-                                              ),
-                                        label: const Text(
-                                          'LOG CHECK-OUT',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12),
-                                        ),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor:
-                                              const Color(0xFFDC2626),
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10)),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 8),
-                                          visualDensity:
-                                              VisualDensity.compact,
-                                        ),
-                                      )
-                                    else
-                                      FilledButton.icon(
-                                        onPressed: isLoading
-                                            ? null
-                                            : () => _handleCheckin(member),
-                                        icon: isLoading
-                                            ? const SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white),
-                                              )
-                                            : const Icon(
-                                                Icons.login_rounded,
-                                                size: 16,
-                                              ),
-                                        label: const Text(
-                                          'LOG CHECK-IN',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12),
-                                        ),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: primaryColor,
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10)),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 8),
-                                          visualDensity:
-                                              VisualDensity.compact,
-                                        ),
+                                    // Check In Button
+                                    FilledButton.icon(
+                                      onPressed: isLoading
+                                          ? null
+                                          : () => _handleCheckin(member),
+                                      icon: isLoading
+                                          ? const SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white),
+                                            )
+                                          : const Icon(
+                                              Icons.login_rounded,
+                                              size: 15,
+                                            ),
+                                      label: const Text(
+                                        'CHECK IN',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11),
                                       ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        visualDensity:
+                                            VisualDensity.compact,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+
+                                    // Check Out Button
+                                    FilledButton.icon(
+                                      onPressed: isLoading
+                                          ? null
+                                          : () => _handleCheckout(member,
+                                              liveSession?.sessionId),
+                                      icon: const Icon(
+                                        Icons.logout_rounded,
+                                        size: 15,
+                                      ),
+                                      label: const Text(
+                                        'CHECK OUT',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFDC2626),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        visualDensity:
+                                            VisualDensity.compact,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],

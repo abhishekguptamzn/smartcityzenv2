@@ -190,7 +190,6 @@ Dio dio(Ref ref) {
       baseUrl: config.apiBaseUrl,
       connectTimeout: Duration(milliseconds: config.connectTimeoutMs),
       receiveTimeout: Duration(milliseconds: config.receiveTimeoutMs),
-      contentType: 'application/json',
     ),
   );
 

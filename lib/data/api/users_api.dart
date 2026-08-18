@@ -77,7 +77,13 @@ class UsersApi {
         filename: filename,
       ),
     });
-    return _dio.post('/users/$id/photo', data: formData);
+    return _dio.post(
+      '/users/$id/photo',
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+      ),
+    );
   }
 
   Future<Response<dynamic>> deletePhoto(String id) {
