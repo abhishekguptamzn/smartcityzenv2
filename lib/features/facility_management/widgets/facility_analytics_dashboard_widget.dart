@@ -525,9 +525,36 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  Text(
-                                    p.invoiceNumber,
-                                    style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant, fontFamily: 'monospace'),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        p.invoiceNumber,
+                                        style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant, fontFamily: 'monospace'),
+                                      ),
+                                      if (!isRefunded) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.currency_exchange_rounded, size: 10, color: Color(0xFFEF4444)),
+                                              SizedBox(width: 2),
+                                              Text(
+                                                'Refund',
+                                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),

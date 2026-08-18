@@ -997,14 +997,53 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text('View', style: TextStyle(fontSize: 11, color: scheme.primary, fontWeight: FontWeight.bold)),
-                                    const SizedBox(width: 2),
-                                    Icon(Icons.chevron_right_rounded, size: 14, color: scheme.primary),
-                                  ],
-                                ),
+                                if (!isRefunded)
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () {
+                                      HapticFeedback.mediumImpact();
+                                      showPaymentDetailModal(
+                                        context: context,
+                                        kind: widget.kind,
+                                        facilityId: widget.facilityId,
+                                        paymentId: (p['id'] ?? '').toString(),
+                                        initialData: p,
+                                        facility: widget.facility,
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.currency_exchange_rounded, size: 12, color: Color(0xFFEF4444)),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'Refund',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFEF4444),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text('View', style: TextStyle(fontSize: 11, color: scheme.primary, fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 2),
+                                      Icon(Icons.chevron_right_rounded, size: 14, color: scheme.primary),
+                                    ],
+                                  ),
                               ],
                             ),
                           ],
