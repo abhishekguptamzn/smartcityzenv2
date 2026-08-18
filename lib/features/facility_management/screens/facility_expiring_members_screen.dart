@@ -129,12 +129,14 @@ class _FacilityExpiringMembersScreenState extends ConsumerState<FacilityExpiring
                     itemCount: members.length,
                     itemBuilder: (ctx, idx) {
                       final m = members[idx];
-                      final user = m['user'] as Map<String, dynamic>? ?? {};
-                      final plan = m['fee_plan'] as Map<String, dynamic>? ?? {};
+                      final name = m['user_name']?.toString() ?? (m['user'] is Map ? m['user']['name']?.toString() : null) ?? 'Citizen Member';
+                      final planName = m['plan_name']?.toString() ?? m['membership_type']?.toString() ?? (m['fee_plan'] is Map ? m['fee_plan']['name']?.toString() : null) ?? 'Standard Plan';
+                      final phone = m['user_phone']?.toString() ?? (m['user'] is Map ? m['user']['phone']?.toString() : null);
+                      final email = m['user_email']?.toString() ?? (m['user'] is Map ? m['user']['email']?.toString() : null);
                       final daysRemaining = (m['days_remaining'] as num?)?.toInt() ?? 0;
                       final isOverdue = daysRemaining < 0;
                       final isUrgent = daysRemaining <= 7;
-                      final endDate = m['end_date']?.toString() ?? 'N/A';
+                      final endDate = m['end_date_formatted']?.toString() ?? m['end_date']?.toString() ?? 'N/A';
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -164,9 +166,7 @@ class _FacilityExpiringMembersScreenState extends ConsumerState<FacilityExpiring
                                   radius: 18,
                                   backgroundColor: scheme.primary.withValues(alpha: 0.12),
                                   child: Text(
-                                    (user['name']?.toString().isNotEmpty == true)
-                                        ? user['name'].toString()[0].toUpperCase()
-                                        : 'M',
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'M',
                                     style: TextStyle(color: scheme.primary, fontWeight: FontWeight.bold),
                                   ),
                                 ),
@@ -176,11 +176,11 @@ class _FacilityExpiringMembersScreenState extends ConsumerState<FacilityExpiring
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        user['name']?.toString() ?? 'Citizen Member',
+                                        name,
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
                                       ),
                                       Text(
-                                        'Plan: ${plan['name'] ?? m['membership_type'] ?? 'Standard'}',
+                                        'Plan: $planName',
                                         style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                                       ),
                                     ],
@@ -214,9 +214,9 @@ class _FacilityExpiringMembersScreenState extends ConsumerState<FacilityExpiring
                                   style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
                                 ),
                                 const Spacer(),
-                                if (user['phone'] != null || user['email'] != null)
+                                if (phone != null || email != null)
                                   Text(
-                                    '${user['phone'] ?? user['email']}',
+                                    '${phone ?? email}',
                                     style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
                                   ),
                               ],

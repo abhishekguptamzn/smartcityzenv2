@@ -555,7 +555,8 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
 
   Widget _buildMemberHealthProgressBar(FacilityDashboardStats stats) {
     final total = stats.totalMembers > 0 ? stats.totalMembers : 1;
-    final activePct = stats.activeMembers / total;
+    final stableActive = (stats.activeMembers - stats.expiringSoonMembers).clamp(0, stats.totalMembers);
+    final activePct = stableActive / total;
     final expiringPct = stats.expiringSoonMembers / total;
     final expiredPct = stats.expiredMembers / total;
 
@@ -567,17 +568,17 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
           children: [
             if (activePct > 0)
               Expanded(
-                flex: (activePct * 100).toInt(),
+                flex: (activePct * 1000).toInt().clamp(1, 1000),
                 child: Container(color: const Color(0xFF10B981)),
               ),
             if (expiringPct > 0)
               Expanded(
-                flex: (expiringPct * 100).toInt(),
+                flex: (expiringPct * 1000).toInt().clamp(1, 1000),
                 child: Container(color: const Color(0xFFF59E0B)),
               ),
             if (expiredPct > 0)
               Expanded(
-                flex: (expiredPct * 100).toInt(),
+                flex: (expiredPct * 1000).toInt().clamp(1, 1000),
                 child: Container(color: const Color(0xFFEF4444)),
               ),
             if (activePct == 0 && expiringPct == 0 && expiredPct == 0)

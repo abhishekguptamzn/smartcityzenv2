@@ -151,7 +151,7 @@ class FacilityPlanDistributionScreen extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  p['name']?.toString() ?? 'Plan',
+                                  p['plan_name']?.toString() ?? p['name']?.toString() ?? 'Plan',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                 ),
                                 Container(
