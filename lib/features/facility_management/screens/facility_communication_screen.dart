@@ -241,14 +241,12 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
           final theme = Theme.of(context);
           final scheme = theme.colorScheme;
 
-          void loadMembersIfNeeded() async {
+            void loadMembersIfNeeded() async {
             if (availableMembers.isNotEmpty || loadingMembers) return;
             setSheetState(() => loadingMembers = true);
             try {
               final repo = ref.read(clientFacilityRepositoryProvider);
-              final members = widget.kind == FacilityKind.gym
-                  ? await repo.getGymMembers(widget.facilityId)
-                  : await repo.getLibraryMembers(widget.facilityId);
+              final members = await repo.getFacilityMembers(widget.kind, widget.facilityId);
               setSheetState(() {
                 availableMembers = members;
                 loadingMembers = false;

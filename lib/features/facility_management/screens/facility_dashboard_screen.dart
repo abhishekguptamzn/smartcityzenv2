@@ -176,7 +176,12 @@ class _FacilityDashboardScreenState
               final facilities = facilitiesAsync.value;
               final gyms = facilities?['gyms'] as List<FacilityModel>? ?? [];
               final libs = facilities?['libraries'] as List<FacilityModel>? ?? [];
-              final all = [...gyms.map((g) => (FacilityKind.gym, g)), ...libs.map((l) => (FacilityKind.library, l))];
+              final acts = facilities?['activities'] as List<FacilityModel>? ?? [];
+              final all = [
+                ...gyms.map((g) => (FacilityKind.gym, g)),
+                ...libs.map((l) => (FacilityKind.library, l)),
+                ...acts.map((a) => (FacilityKind.activity, a)),
+              ];
               if (all.isNotEmpty) {
                 final current = all.firstWhere(
                   (p) => p.$2.id == _selectedFacilityId,
