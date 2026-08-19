@@ -15,11 +15,7 @@ import 'facility_member_detail_screen.dart';
 final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, (FacilityKind, String)>((ref, tuple) async {
   final (kind, facilityId) = tuple;
   final repo = ref.watch(clientFacilityRepositoryProvider);
-  if (kind == FacilityKind.gym) {
-    return repo.getGymMembers(facilityId);
-  } else {
-    return repo.getLibraryMembers(facilityId);
-  }
+  return repo.getFacilityMembers(kind, facilityId);
 });
 
 enum MemberFilterStatus { all, active, expiring, expired }

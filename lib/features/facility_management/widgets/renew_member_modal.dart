@@ -68,9 +68,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
   Future<void> _fetchPlans() async {
     try {
       final repo = ref.read(clientFacilityRepositoryProvider);
-      final plans = widget.kind == FacilityKind.gym
-          ? await repo.getGymPlans(widget.facilityId)
-          : await repo.getLibraryPlans(widget.facilityId);
+      final plans = await repo.getFacilityPlans(widget.kind, widget.facilityId);
 
       if (mounted) {
         setState(() {

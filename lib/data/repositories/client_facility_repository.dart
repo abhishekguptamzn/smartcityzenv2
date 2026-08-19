@@ -18,10 +18,12 @@ class ClientFacilityRepository {
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     final gymsRaw = data['gyms'] as List? ?? [];
     final libsRaw = data['libraries'] as List? ?? [];
+    final actsRaw = data['activities'] as List? ?? [];
 
     return {
-      'gyms': gymsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>)).toList(),
-      'libraries': libsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>)).toList(),
+      'gyms': gymsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.gym)).toList(),
+      'libraries': libsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.library)).toList(),
+      'activities': actsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.activity)).toList(),
       'total_facilities': data['total_facilities'] ?? 0,
       'is_client_user': data['is_client_user'] ?? false,
     };
@@ -358,6 +360,89 @@ class ClientFacilityRepository {
     final res = await _api.addLibraryMember(libraryId, payload);
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
+  }
+
+  // Activities / Facility Centers (Unified)
+  Future<FacilityModel> updateFacilityDetails(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
+    if (kind == FacilityKind.gym) {
+      return updateGymDetails(facilityId, payload);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.updateActivity(facilityId, payload);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      return FacilityModel.fromJson(data as Map<String, dynamic>).copyWith(kind: FacilityKind.activity);
+    } else {
+      return updateLibraryDetails(facilityId, payload);
+    }
+  }
+
+  Future<List<FeePlanModel>> getFacilityPlans(FacilityKind kind, String facilityId) async {
+    if (kind == FacilityKind.gym) {
+      return getGymPlans(facilityId);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.getActivityPlans(facilityId);
+      final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
+      return rawList.map((j) => FeePlanModel.fromJson(j as Map<String, dynamic>)).toList();
+    } else {
+      return getLibraryPlans(facilityId);
+    }
+  }
+
+  Future<FeePlanModel> createFacilityPlan(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
+    if (kind == FacilityKind.gym) {
+      return createGymPlan(facilityId, payload);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.createActivityPlan(facilityId, payload);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      return FeePlanModel.fromJson(data as Map<String, dynamic>);
+    } else {
+      return createLibraryPlan(facilityId, payload);
+    }
+  }
+
+  Future<FeePlanModel> updateFacilityPlan(FacilityKind kind, String facilityId, String planId, Map<String, dynamic> payload) async {
+    if (kind == FacilityKind.gym) {
+      return updateGymPlan(facilityId, planId, payload);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.updateActivityPlan(facilityId, planId, payload);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      return FeePlanModel.fromJson(data as Map<String, dynamic>);
+    } else {
+      return updateLibraryPlan(facilityId, planId, payload);
+    }
+  }
+
+  Future<void> deleteFacilityPlan(FacilityKind kind, String facilityId, String planId) async {
+    if (kind == FacilityKind.gym) {
+      await deleteGymPlan(facilityId, planId);
+    } else if (kind == FacilityKind.activity) {
+      await _api.deleteActivityPlan(facilityId, planId);
+    } else {
+      await deleteLibraryPlan(facilityId, planId);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getFacilityMembers(FacilityKind kind, String facilityId, {String? search, String? status, int page = 1}) async {
+    if (kind == FacilityKind.gym) {
+      return getGymMembers(facilityId, search: search, status: status, page: page);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.getActivityMembers(facilityId, search: search, status: status, page: page);
+      final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
+      return rawList.cast<Map<String, dynamic>>();
+    } else {
+      return getLibraryMembers(facilityId, search: search, status: status, page: page);
+    }
+  }
+
+  Future<Map<String, dynamic>> addFacilityMember(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
+    if (kind == FacilityKind.gym) {
+      return addGymMember(facilityId, payload);
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.addActivityMember(facilityId, payload);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      return data is Map ? data.cast<String, dynamic>() : {};
+    } else {
+      return addLibraryMember(facilityId, payload);
+    }
   }
 
   // Active Citizen Session Status

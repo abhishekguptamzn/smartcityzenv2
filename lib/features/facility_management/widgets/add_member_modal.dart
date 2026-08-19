@@ -94,9 +94,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
   Future<void> _fetchPlans() async {
     try {
       final repo = ref.read(clientFacilityRepositoryProvider);
-      final plans = widget.kind == FacilityKind.gym
-          ? await repo.getGymPlans(widget.facilityId)
-          : await repo.getLibraryPlans(widget.facilityId);
+      final plans = await repo.getFacilityPlans(widget.kind, widget.facilityId);
       if (mounted) {
         setState(() {
           _plans = plans.where((p) => p.isActive).toList();
@@ -273,11 +271,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
         'end_date': DateFormat('yyyy-MM-dd').format(calculatedEndDate),
       };
 
-      if (widget.kind == FacilityKind.gym) {
-        await repo.addGymMember(widget.facilityId, payload);
-      } else {
-        await repo.addLibraryMember(widget.facilityId, payload);
-      }
+      await repo.addFacilityMember(widget.kind, widget.facilityId, payload);
 
       ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
       ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));

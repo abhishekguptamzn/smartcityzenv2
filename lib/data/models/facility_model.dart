@@ -11,19 +11,47 @@ part 'facility_model.g.dart';
 /// on different endpoints, so the repository stamps this after deserializing.
 enum FacilityKind {
   library,
-  gym;
+  gym,
+  activity;
 
-  String get pathSegment => this == FacilityKind.library ? 'libraries' : 'gyms';
+  String get pathSegment {
+    switch (this) {
+      case FacilityKind.library:
+        return 'libraries';
+      case FacilityKind.gym:
+        return 'gyms';
+      case FacilityKind.activity:
+        return 'activities';
+    }
+  }
 
-  String get displayName => this == FacilityKind.library ? 'Library' : 'Gym';
+  String get displayName {
+    switch (this) {
+      case FacilityKind.library:
+        return 'Library';
+      case FacilityKind.gym:
+        return 'Gym';
+      case FacilityKind.activity:
+        return 'Facility Center';
+    }
+  }
 
-  String get payableMemberType =>
-      this == FacilityKind.library ? 'LibraryMember' : 'GymMember';
+  String get payableMemberType {
+    switch (this) {
+      case FacilityKind.library:
+        return 'LibraryMember';
+      case FacilityKind.gym:
+        return 'GymMember';
+      case FacilityKind.activity:
+        return 'ActivityEnrollment';
+    }
+  }
 
-  static FacilityKind fromPathSegment(String value) =>
-      value == 'libraries' || value == 'library'
-      ? FacilityKind.library
-      : FacilityKind.gym;
+  static FacilityKind fromPathSegment(String value) {
+    if (value == 'libraries' || value == 'library') return FacilityKind.library;
+    if (value == 'activities' || value == 'activity' || value == 'facility_centers') return FacilityKind.activity;
+    return FacilityKind.gym;
+  }
 }
 
 @freezed

@@ -11,11 +11,7 @@ import 'facility_dashboard_screen.dart';
 final facilityPlansFamilyProvider = FutureProvider.autoDispose.family<List<FeePlanModel>, (FacilityKind, String)>((ref, tuple) async {
   final (kind, facilityId) = tuple;
   final repo = ref.watch(clientFacilityRepositoryProvider);
-  if (kind == FacilityKind.gym) {
-    return repo.getGymPlans(facilityId);
-  } else {
-    return repo.getLibraryPlans(facilityId);
-  }
+  return repo.getFacilityPlans(kind, facilityId);
 });
 
 class ManageFeePlansScreen extends ConsumerWidget {
@@ -230,11 +226,7 @@ class ManageFeePlansScreen extends ConsumerWidget {
                                 );
                                 if (confirm == true) {
                                   final repo = ref.read(clientFacilityRepositoryProvider);
-                                  if (kind == FacilityKind.gym) {
-                                    await repo.deleteGymPlan(facilityId, p.id);
-                                  } else {
-                                    await repo.deleteLibraryPlan(facilityId, p.id);
-                                  }
+                                  await repo.deleteFacilityPlan(kind, facilityId, p.id);
                                   ref.invalidate(facilityPlansFamilyProvider((kind, facilityId)));
                                   ref.invalidate(facilityStatsProvider((kind, facilityId)));
                                   ref.invalidate(myOwnedFacilitiesProvider);
@@ -340,17 +332,9 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
       };
 
       if (widget.existingPlan != null) {
-        if (widget.kind == FacilityKind.gym) {
-          await repo.updateGymPlan(widget.facilityId, widget.existingPlan!.id, payload);
-        } else {
-          await repo.updateLibraryPlan(widget.facilityId, widget.existingPlan!.id, payload);
-        }
+        await repo.updateFacilityPlan(widget.kind, widget.facilityId, widget.existingPlan!.id, payload);
       } else {
-        if (widget.kind == FacilityKind.gym) {
-          await repo.createGymPlan(widget.facilityId, payload);
-        } else {
-          await repo.createLibraryPlan(widget.facilityId, payload);
-        }
+        await repo.createFacilityPlan(widget.kind, widget.facilityId, payload);
       }
 
       ref.invalidate(facilityPlansFamilyProvider((widget.kind, widget.facilityId)));

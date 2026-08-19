@@ -396,6 +396,55 @@ class _ServicesExplorerScreenState
                   ),
                   const SizedBox(height: 24),
 
+                  if (item.category == CivicCategory.libraries ||
+                      item.category == CivicCategory.gyms ||
+                      item.category == CivicCategory.yoga ||
+                      item.category == CivicCategory.dance ||
+                      item.category == CivicCategory.coaching ||
+                      item.category == CivicCategory.aquatics) ...[
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565D8),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(modalContext);
+                        if (item.category == CivicCategory.libraries) {
+                          setState(() {
+                            _selectedCategory = CivicCategory.libraries;
+                            _liveFacilityKind = FacilityKind.library;
+                          });
+                        } else if (item.category == CivicCategory.gyms) {
+                          setState(() {
+                            _selectedCategory = CivicCategory.gyms;
+                            _liveFacilityKind = FacilityKind.gym;
+                          });
+                        } else if (item.category == CivicCategory.yoga) {
+                          context.push('/activities?category=fitness-wellness');
+                        } else if (item.category == CivicCategory.dance) {
+                          context.push('/activities?category=arts-culture');
+                        } else if (item.category == CivicCategory.coaching) {
+                          context.push('/activities?category=education-coaching');
+                        } else if (item.category == CivicCategory.aquatics) {
+                          context.push('/activities?category=sports-athletics');
+                        }
+                      },
+                      icon: const Icon(Icons.travel_explore_rounded, size: 18),
+                      label: const Text(
+                        'View Live Centers & Locations',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   Row(
                     children: [
                       Expanded(
@@ -1316,6 +1365,19 @@ class _ServicesExplorerScreenState
         borderRadius: BorderRadius.circular(20),
         onTap: () {
           HapticFeedback.lightImpact();
+          if (cat == CivicCategory.yoga) {
+            context.push('/activities?category=fitness-wellness');
+            return;
+          } else if (cat == CivicCategory.dance) {
+            context.push('/activities?category=arts-culture');
+            return;
+          } else if (cat == CivicCategory.coaching) {
+            context.push('/activities?category=education-coaching');
+            return;
+          } else if (cat == CivicCategory.aquatics) {
+            context.push('/activities?category=sports-athletics');
+            return;
+          }
           setState(() {
             _selectedCategory = cat;
             if (cat == CivicCategory.libraries) {

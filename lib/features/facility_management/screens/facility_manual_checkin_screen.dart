@@ -25,11 +25,7 @@ final facilityCheckinMembersProvider = FutureProvider.autoDispose
   final id = args.$2;
   final search = args.$3;
 
-  if (kind == FacilityKind.gym) {
-    return repo.getGymMembers(id, search: search);
-  } else {
-    return repo.getLibraryMembers(id, search: search);
-  }
+  return repo.getFacilityMembers(kind, id, search: search);
 });
 
 final facilityLiveOccupancyProvider = FutureProvider.autoDispose

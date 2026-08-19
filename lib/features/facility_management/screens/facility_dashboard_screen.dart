@@ -241,9 +241,11 @@ class _FacilityDashboardScreenState
           data: (data) {
             final gyms = data['gyms'] as List<FacilityModel>? ?? [];
             final libraries = data['libraries'] as List<FacilityModel>? ?? [];
+            final activities = data['activities'] as List<FacilityModel>? ?? [];
             final allFacilities = <(FacilityKind, FacilityModel)>[
               ...gyms.map((g) => (FacilityKind.gym, g)),
               ...libraries.map((l) => (FacilityKind.library, l)),
+              ...activities.map((a) => (FacilityKind.activity, a)),
             ];
 
             if (allFacilities.isEmpty) {
@@ -322,18 +324,23 @@ class _FacilityDashboardScreenState
                       child: Row(
                         children: allFacilities.map((pair) {
                           final isSelected = pair.$2.id == _selectedFacilityId;
-                          final pairIsGym = pair.$1 == FacilityKind.gym;
-                          final chipColor = pairIsGym
+                          final pairKind = pair.$1;
+                          final chipColor = pairKind == FacilityKind.gym
                               ? const Color(0xFF0D9488)
-                              : const Color(0xFF0284C7);
+                              : (pairKind == FacilityKind.activity
+                                  ? const Color(0xFF1565D8)
+                                  : const Color(0xFF0284C7));
+                          final chipIcon = pairKind == FacilityKind.gym
+                              ? Icons.fitness_center_rounded
+                              : (pairKind == FacilityKind.activity
+                                  ? Icons.sports_rounded
+                                  : Icons.local_library_rounded);
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 8, bottom: 10),
                             child: ChoiceChip(
                               avatar: Icon(
-                                pairIsGym
-                                    ? Icons.fitness_center_rounded
-                                    : Icons.local_library_rounded,
+                                chipIcon,
                                 size: 16,
                                 color: isSelected ? Colors.white : chipColor,
                               ),

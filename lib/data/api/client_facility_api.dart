@@ -173,6 +173,38 @@ class ClientFacilityApi {
   Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId) =>
       _dio.delete('/client/libraries/$libraryId/members/$memberId');
 
+  // Activities / Facility Centers
+  Future<Response<dynamic>> getActivity(String activityId) =>
+      _dio.get('/activities/$activityId');
+
+  Future<Response<dynamic>> updateActivity(String activityId, Map<String, dynamic> data) =>
+      _dio.put('/activities/$activityId', data: data);
+
+  Future<Response<dynamic>> getActivityPlans(String activityId) =>
+      _dio.get('/activities/$activityId/fee-plans');
+
+  Future<Response<dynamic>> createActivityPlan(String activityId, Map<String, dynamic> data) =>
+      _dio.post('/activities/$activityId/fee-plans', data: data);
+
+  Future<Response<dynamic>> updateActivityPlan(String activityId, String planId, Map<String, dynamic> data) =>
+      _dio.put('/activities/$activityId/fee-plans/$planId', data: data);
+
+  Future<Response<dynamic>> deleteActivityPlan(String activityId, String planId) =>
+      _dio.delete('/activities/$activityId/fee-plans/$planId');
+
+  Future<Response<dynamic>> getActivityMembers(String activityId, {String? search, String? status, int page = 1}) =>
+      _dio.get('/activities/$activityId/enrollments', queryParameters: {
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (status != null && status != 'all') 'status': status,
+        'page': page,
+      });
+
+  Future<Response<dynamic>> addActivityMember(String activityId, Map<String, dynamic> data) =>
+      _dio.post('/activities/$activityId/enrollments', data: data);
+
+  Future<Response<dynamic>> deleteActivityMember(String activityId, String enrollmentId) =>
+      _dio.delete('/activities/$activityId/enrollments/$enrollmentId');
+
   // Active Session Status (Citizen)
   Future<Response<dynamic>> getActiveCheckinSession() =>
       _dio.get('/facilities/active-checkin');

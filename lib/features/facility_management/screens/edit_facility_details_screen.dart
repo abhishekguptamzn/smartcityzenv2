@@ -238,11 +238,7 @@ class _EditFacilityDetailsScreenState
         'amenity_ids': _selectedAmenities.map((a) => a.id).toList(),
       };
 
-      if (widget.kind == FacilityKind.gym) {
-        await repo.updateGymDetails(widget.facilityId, payload);
-      } else {
-        await repo.updateLibraryDetails(widget.facilityId, payload);
-      }
+      await repo.updateFacilityDetails(widget.kind, widget.facilityId, payload);
 
       _invalidateAllFacilityData();
 
@@ -255,7 +251,7 @@ class _EditFacilityDetailsScreenState
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                    '${widget.kind == FacilityKind.gym ? "Gym" : "Library"} details & amenities updated successfully!'),
+                    '${widget.kind.displayName} details & amenities updated successfully!'),
               ),
             ],
           ),
