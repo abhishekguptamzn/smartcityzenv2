@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/activity_model.dart';
 import '../../../shared/widgets/app_network_image.dart';
 
@@ -100,9 +101,11 @@ class ActivityCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          activity.category?.icon ?? '🎯',
-                          style: const TextStyle(fontSize: 12),
+                        IconHelper.buildIcon(
+                          activity.category?.icon,
+                          size: 13,
+                          color: Colors.white,
+                          defaultEmoji: '🎯',
                         ),
                         const SizedBox(width: 5),
                         Text(

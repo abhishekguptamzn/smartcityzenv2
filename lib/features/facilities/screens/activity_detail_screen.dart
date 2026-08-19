@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/activities_providers.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/activity_batch_model.dart';
 import '../../../data/models/activity_instructor_model.dart';
 import '../../../data/models/activity_model.dart';
@@ -154,8 +155,13 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(activity.category?.icon ?? '🎯', style: const TextStyle(fontSize: 12)),
-                                  const SizedBox(width: 4),
+                                  IconHelper.buildIcon(
+                                    activity.category?.icon,
+                                    size: 13,
+                                    color: Colors.white,
+                                    defaultEmoji: '🎯',
+                                  ),
+                                  const SizedBox(width: 5),
                                   Text(
                                     activity.categoryName ?? 'Activity',
                                     style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),

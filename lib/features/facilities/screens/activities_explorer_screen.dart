@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/activities_providers.dart';
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -181,8 +182,15 @@ class _ActivitiesExplorerScreenState extends ConsumerState<ActivitiesExplorerScr
                           label: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(c.icon ?? '🎯', style: const TextStyle(fontSize: 12)),
-                              const SizedBox(width: 4),
+                              IconHelper.buildIcon(
+                                c.icon,
+                                size: 14,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isDark ? Colors.white70 : Colors.black87),
+                                defaultEmoji: '🎯',
+                              ),
+                              const SizedBox(width: 5),
                               Text(c.name),
                             ],
                           ),

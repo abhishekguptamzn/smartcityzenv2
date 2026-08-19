@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/amenity_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/app_network_image.dart';
@@ -642,9 +643,11 @@ class _AmenitiesSection extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              IconHelper.buildIcon(
                 icon,
-                style: const TextStyle(fontSize: 16),
+                size: 16,
+                color: const Color(0xFF1565D8),
+                defaultEmoji: '★',
               ),
               const SizedBox(width: 6),
               Text(
