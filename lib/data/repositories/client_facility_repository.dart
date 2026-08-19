@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/client_facility_api.dart';
@@ -178,13 +179,6 @@ class ClientFacilityRepository {
     String? transactionReference,
     String? notes,
   }) async {
-    if (kind == FacilityKind.activity) {
-      throw ArgumentError(
-        'renewMember() is not supported for activities. '
-        'Activities use enrollments — use the activity enrollment flow instead.',
-      );
-    }
-
     final payload = {
       if (feePlanId != null) 'fee_plan_id': feePlanId,
       if (amount != null) 'amount': amount,
@@ -194,18 +188,28 @@ class ClientFacilityRepository {
       if (notes != null) 'notes': notes,
     };
 
-    final res = kind == FacilityKind.gym
-        ? await _api.renewGymMember(facilityId, memberId, payload)
-        : await _api.renewLibraryMember(facilityId, memberId, payload);
+    final Response<dynamic> res;
+    if (kind == FacilityKind.gym) {
+      res = await _api.renewGymMember(facilityId, memberId, payload);
+    } else if (kind == FacilityKind.activity) {
+      res = await _api.renewActivityMember(facilityId, memberId, payload);
+    } else {
+      res = await _api.renewLibraryMember(facilityId, memberId, payload);
+    }
 
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
   }
 
   Future<List<Map<String, dynamic>>> getMemberRenewals(FacilityKind kind, String facilityId, String memberId) async {
-    final res = kind == FacilityKind.gym
-        ? await _api.getGymMemberRenewals(facilityId, memberId)
-        : await _api.getLibraryMemberRenewals(facilityId, memberId);
+    final Response<dynamic> res;
+    if (kind == FacilityKind.gym) {
+      res = await _api.getGymMemberRenewals(facilityId, memberId);
+    } else if (kind == FacilityKind.activity) {
+      res = await _api.getActivityMemberRenewals(facilityId, memberId);
+    } else {
+      res = await _api.getLibraryMemberRenewals(facilityId, memberId);
+    }
 
     final rawList = res.data is Map ? (res.data['data'] as List? ?? []) : (res.data as List? ?? []);
     return rawList.cast<Map<String, dynamic>>();

@@ -437,26 +437,25 @@ class _FacilityDashboardScreenState
                         crossAxisSpacing: 12,
                         childAspectRatio: isWide ? 1.25 : 1.05,
                         children: [
-                          // 1. Members (Gym/Library only — activities use Enrollments)
-                          if (activeKind != FacilityKind.activity)
-                            _OperationsCard(
-                              icon: Icons.people_alt_rounded,
-                              iconColor: const Color(0xFF059669),
-                              iconBg: const Color(0xFFECFDF5),
-                              title: 'Members',
-                              subtitle: 'View and manage all members',
-                              onTap: () async {
-                                await context.push(
-                                  '/client/manage/members/${activeKind.pathSegment}/${activeFacility.id}',
-                                  extra: activeFacility,
-                                );
-                                ref.invalidate(
-                                  facilityStatsProvider(
-                                    (activeKind, activeFacility.id),
-                                  ),
-                                );
-                              },
-                            ),
+                          // 1. Members
+                          _OperationsCard(
+                            icon: Icons.people_alt_rounded,
+                            iconColor: const Color(0xFF059669),
+                            iconBg: const Color(0xFFECFDF5),
+                            title: 'Members',
+                            subtitle: 'View and manage all members',
+                            onTap: () async {
+                              await context.push(
+                                '/client/manage/members/${activeKind.pathSegment}/${activeFacility.id}',
+                                extra: activeFacility,
+                              );
+                              ref.invalidate(
+                                facilityStatsProvider(
+                                  (activeKind, activeFacility.id),
+                                ),
+                              );
+                            },
+                          ),
 
                           // 2. Fee Plans
                           _OperationsCard(

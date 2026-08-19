@@ -205,6 +205,12 @@ class ClientFacilityApi {
   Future<Response<dynamic>> deleteActivityMember(String activityId, String enrollmentId) =>
       _dio.delete('/activities/$activityId/enrollments/$enrollmentId');
 
+  Future<Response<dynamic>> renewActivityMember(String activityId, String enrollmentId, Map<String, dynamic> data) =>
+      _dio.post('/client/activities/$activityId/members/$enrollmentId/renew', data: data);
+
+  Future<Response<dynamic>> getActivityMemberRenewals(String activityId, String enrollmentId) =>
+      _dio.get('/client/activities/$activityId/members/$enrollmentId/renewals');
+
   // Active Session Status (Citizen)
   Future<Response<dynamic>> getActiveCheckinSession() =>
       _dio.get('/facilities/active-checkin');
