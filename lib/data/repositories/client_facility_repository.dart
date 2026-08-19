@@ -178,6 +178,13 @@ class ClientFacilityRepository {
     String? transactionReference,
     String? notes,
   }) async {
+    if (kind == FacilityKind.activity) {
+      throw ArgumentError(
+        'renewMember() is not supported for activities. '
+        'Activities use enrollments — use the activity enrollment flow instead.',
+      );
+    }
+
     final payload = {
       if (feePlanId != null) 'fee_plan_id': feePlanId,
       if (amount != null) 'amount': amount,
