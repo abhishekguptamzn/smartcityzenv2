@@ -593,4 +593,31 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get themeDarkSubtitle => 'हमेशा डार्क थीम का उपयोग करें';
+
+  @override
+  String get activitiesAndAcademies => 'गतिविधियाँ और अकादमियाँ';
+
+  @override
+  String get allActivities => 'सभी गतिविधियाँ';
+
+  @override
+  String get verifiedAcademies => 'सत्यापित अकादमियाँ';
+
+  @override
+  String get featuredStudios => 'विशेष स्टूडियो';
+
+  @override
+  String get batchesAndSchedule => 'बैच और समय सारिणी';
+
+  @override
+  String get coachesAndTrainers => 'प्रशिक्षक और कोच';
+
+  @override
+  String get enrollAndGetPass => 'दाखिला लें और पास प्राप्त करें';
+
+  @override
+  String get citizenReviews => 'नागरिक समीक्षाएं';
+
+  @override
+  String get writeReview => 'समीक्षा लिखें';
 }

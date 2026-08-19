@@ -224,5 +224,14 @@
   "themeDark": "डार्क",
   "themeSystemSubtitle": "आपके डिवाइस की सेटिंग से मेल खाता है",
   "themeLightSubtitle": "हमेशा लाइट थीम का उपयोग करें",
-  "themeDarkSubtitle": "हमेशा डार्क थीम का उपयोग करें"
+  "themeDarkSubtitle": "हमेशा डार्क थीम का उपयोग करें",
+  "activitiesAndAcademies": "गतिविधियाँ और अकादमियाँ",
+  "allActivities": "सभी गतिविधियाँ",
+  "verifiedAcademies": "सत्यापित अकादमियाँ",
+  "featuredStudios": "विशेष स्टूडियो",
+  "batchesAndSchedule": "बैच और समय सारिणी",
+  "coachesAndTrainers": "प्रशिक्षक और कोच",
+  "enrollAndGetPass": "दाखिला लें और पास प्राप्त करें",
+  "citizenReviews": "नागरिक समीक्षाएं",
+  "writeReview": "समीक्षा लिखें"
 }

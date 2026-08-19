@@ -601,4 +601,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get themeDarkSubtitle => 'Toujours utiliser le thème sombre';
+
+  @override
+  String get activitiesAndAcademies => 'Activités et Académies';
+
+  @override
+  String get allActivities => 'Toutes les Activités';
+
+  @override
+  String get verifiedAcademies => 'Académies Vérifiées';
+
+  @override
+  String get featuredStudios => 'Studios en Vedette';
+
+  @override
+  String get batchesAndSchedule => 'Groupes et Horaires';
+
+  @override
+  String get coachesAndTrainers => 'Entraîneurs et Professeurs';
+
+  @override
+  String get enrollAndGetPass => 'S\'inscrire et Obtenir un Pass';
+
+  @override
+  String get citizenReviews => 'Avis des Citoyens';
+
+  @override
+  String get writeReview => 'Rédiger un Avis';
 }

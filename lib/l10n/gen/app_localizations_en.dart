@@ -589,4 +589,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeDarkSubtitle => 'Always use the dark theme';
+
+  @override
+  String get activitiesAndAcademies => 'Activities & Academies';
+
+  @override
+  String get allActivities => 'All Activities';
+
+  @override
+  String get verifiedAcademies => 'Verified Academies';
+
+  @override
+  String get featuredStudios => 'Featured Studios';
+
+  @override
+  String get batchesAndSchedule => 'Batches & Schedule';
+
+  @override
+  String get coachesAndTrainers => 'Coaches & Trainers';
+
+  @override
+  String get enrollAndGetPass => 'Enroll & Get Pass';
+
+  @override
+  String get citizenReviews => 'Citizen Reviews';
+
+  @override
+  String get writeReview => 'Write Review';
 }

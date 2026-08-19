@@ -224,5 +224,14 @@
   "themeDark": "Sombre",
   "themeSystemSubtitle": "Correspond au réglage de votre appareil",
   "themeLightSubtitle": "Toujours utiliser le thème clair",
-  "themeDarkSubtitle": "Toujours utiliser le thème sombre"
+  "themeDarkSubtitle": "Toujours utiliser le thème sombre",
+  "activitiesAndAcademies": "Activités et Académies",
+  "allActivities": "Toutes les Activités",
+  "verifiedAcademies": "Académies Vérifiées",
+  "featuredStudios": "Studios en Vedette",
+  "batchesAndSchedule": "Groupes et Horaires",
+  "coachesAndTrainers": "Entraîneurs et Professeurs",
+  "enrollAndGetPass": "S'inscrire et Obtenir un Pass",
+  "citizenReviews": "Avis des Citoyens",
+  "writeReview": "Rédiger un Avis"
 }

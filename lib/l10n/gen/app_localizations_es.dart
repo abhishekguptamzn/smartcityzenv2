@@ -600,4 +600,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get themeDarkSubtitle => 'Usar siempre el tema oscuro';
+
+  @override
+  String get activitiesAndAcademies => 'Actividades y Academias';
+
+  @override
+  String get allActivities => 'Todas las Actividades';
+
+  @override
+  String get verifiedAcademies => 'Academias Verificadas';
+
+  @override
+  String get featuredStudios => 'Estudios Destacados';
+
+  @override
+  String get batchesAndSchedule => 'Grupos y Horarios';
+
+  @override
+  String get coachesAndTrainers => 'Entrenadores y Profesores';
+
+  @override
+  String get enrollAndGetPass => 'Inscribirse y Obtener Pase';
+
+  @override
+  String get citizenReviews => 'Reseñas Ciudadanas';
+
+  @override
+  String get writeReview => 'Escribir Reseña';
 }

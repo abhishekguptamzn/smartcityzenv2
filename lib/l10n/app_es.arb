@@ -224,5 +224,14 @@
   "themeDark": "Oscuro",
   "themeSystemSubtitle": "Coincide con la configuración de tu dispositivo",
   "themeLightSubtitle": "Usar siempre el tema claro",
-  "themeDarkSubtitle": "Usar siempre el tema oscuro"
+  "themeDarkSubtitle": "Usar siempre el tema oscuro",
+  "activitiesAndAcademies": "Actividades y Academias",
+  "allActivities": "Todas las Actividades",
+  "verifiedAcademies": "Academias Verificadas",
+  "featuredStudios": "Estudios Destacados",
+  "batchesAndSchedule": "Grupos y Horarios",
+  "coachesAndTrainers": "Entrenadores y Profesores",
+  "enrollAndGetPass": "Inscribirse y Obtener Pase",
+  "citizenReviews": "Reseñas Ciudadanas",
+  "writeReview": "Escribir Reseña"
 }

@@ -224,5 +224,14 @@
   "themeDark": "Dark",
   "themeSystemSubtitle": "Match your device setting",
   "themeLightSubtitle": "Always use the light theme",
-  "themeDarkSubtitle": "Always use the dark theme"
+  "themeDarkSubtitle": "Always use the dark theme",
+  "activitiesAndAcademies": "Activities & Academies",
+  "allActivities": "All Activities",
+  "verifiedAcademies": "Verified Academies",
+  "featuredStudios": "Featured Studios",
+  "batchesAndSchedule": "Batches & Schedule",
+  "coachesAndTrainers": "Coaches & Trainers",
+  "enrollAndGetPass": "Enroll & Get Pass",
+  "citizenReviews": "Citizen Reviews",
+  "writeReview": "Write Review"
 }

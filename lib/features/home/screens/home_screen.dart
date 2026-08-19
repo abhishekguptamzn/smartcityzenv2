@@ -889,16 +889,22 @@ class _ServiceGrid extends StatelessWidget {
         () => context.push('/services'),
       ),
       (
+        Icons.sports_kabaddi_rounded,
+        'Activities',
+        const Color(0xFFF97316),
+        () => context.push('/activities'),
+      ),
+      (
         Icons.self_improvement_rounded,
         l10n.yoga,
         const Color(0xFFF2A93B),
-        () => context.push('/services'),
+        () => context.push('/activities?category=fitness-wellness'),
       ),
       (
         Icons.directions_run_rounded,
         l10n.dance,
         const Color(0xFFEC4899),
-        () => context.push('/services'),
+        () => context.push('/activities?category=arts-dance-music'),
       ),
       (
         Icons.explore_rounded,

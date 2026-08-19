@@ -588,4 +588,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get themeDarkSubtitle => 'استخدام السمة الداكنة دائماً';
+
+  @override
+  String get activitiesAndAcademies => 'الأنشطة والأكاديميات';
+
+  @override
+  String get allActivities => 'جميع الأنشطة';
+
+  @override
+  String get verifiedAcademies => 'الأكاديميات المعتمدة';
+
+  @override
+  String get featuredStudios => 'الاستوديوهات المميزة';
+
+  @override
+  String get batchesAndSchedule => 'المجموعات وجدول المواعيد';
+
+  @override
+  String get coachesAndTrainers => 'المدربون والمعلمون';
+
+  @override
+  String get enrollAndGetPass => 'التسجيل والحصول على التصريح';
+
+  @override
+  String get citizenReviews => 'تقييمات المواطنين';
+
+  @override
+  String get writeReview => 'كتابة تقييم';
 }

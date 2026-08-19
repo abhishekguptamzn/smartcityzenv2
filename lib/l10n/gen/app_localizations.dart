@@ -1225,6 +1225,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Always use the dark theme'**
   String get themeDarkSubtitle;
+
+  /// No description provided for @activitiesAndAcademies.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities & Academies'**
+  String get activitiesAndAcademies;
+
+  /// No description provided for @allActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'All Activities'**
+  String get allActivities;
+
+  /// No description provided for @verifiedAcademies.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified Academies'**
+  String get verifiedAcademies;
+
+  /// No description provided for @featuredStudios.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured Studios'**
+  String get featuredStudios;
+
+  /// No description provided for @batchesAndSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Batches & Schedule'**
+  String get batchesAndSchedule;
+
+  /// No description provided for @coachesAndTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Coaches & Trainers'**
+  String get coachesAndTrainers;
+
+  /// No description provided for @enrollAndGetPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Enroll & Get Pass'**
+  String get enrollAndGetPass;
+
+  /// No description provided for @citizenReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Citizen Reviews'**
+  String get citizenReviews;
+
+  /// No description provided for @writeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Write Review'**
+  String get writeReview;
 }
 
 class _AppLocalizationsDelegate

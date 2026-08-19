@@ -224,5 +224,14 @@
   "themeDark": "داكن",
   "themeSystemSubtitle": "مطابقة إعداد جهازك",
   "themeLightSubtitle": "استخدام السمة الفاتحة دائماً",
-  "themeDarkSubtitle": "استخدام السمة الداكنة دائماً"
+  "themeDarkSubtitle": "استخدام السمة الداكنة دائماً",
+  "activitiesAndAcademies": "الأنشطة والأكاديميات",
+  "allActivities": "جميع الأنشطة",
+  "verifiedAcademies": "الأكاديميات المعتمدة",
+  "featuredStudios": "الاستوديوهات المميزة",
+  "batchesAndSchedule": "المجموعات وجدول المواعيد",
+  "coachesAndTrainers": "المدربون والمعلمون",
+  "enrollAndGetPass": "التسجيل والحصول على التصريح",
+  "citizenReviews": "تقييمات المواطنين",
+  "writeReview": "كتابة تقييم"
 }

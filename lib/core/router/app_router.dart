@@ -20,6 +20,8 @@ import '../../features/city/screens/city_information_screen.dart';
 import '../../features/city/screens/city_news_screen.dart';
 import '../../features/city/screens/city_origin_screen.dart';
 import '../../features/city/screens/city_personalities_screen.dart';
+import '../../features/facilities/screens/activities_explorer_screen.dart';
+import '../../features/facilities/screens/activity_detail_screen.dart';
 import '../../features/facilities/screens/facility_detail_screen.dart';
 import '../../features/facilities/screens/services_explorer_screen.dart';
 import '../../features/facility_management/screens/edit_facility_details_screen.dart';
@@ -242,6 +244,19 @@ GoRouter goRouter(Ref ref) {
         path: '/services/:kind/:id',
         builder: (context, state) => FacilityDetailScreen(
           kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          id: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/activities',
+        builder: (context, state) => ActivitiesExplorerScreen(
+          initialCategorySlug: state.uri.queryParameters['category'],
+          initialSearch: state.uri.queryParameters['search'],
+        ),
+      ),
+      GoRoute(
+        path: '/activities/:id',
+        builder: (context, state) => ActivityDetailScreen(
           id: state.pathParameters['id']!,
         ),
       ),
