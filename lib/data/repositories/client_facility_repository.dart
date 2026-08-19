@@ -160,6 +160,8 @@ class ClientFacilityRepository {
   Future<void> deleteMember(FacilityKind kind, String facilityId, String memberId) async {
     if (kind == FacilityKind.gym) {
       await _api.deleteGymMember(facilityId, memberId);
+    } else if (kind == FacilityKind.activity) {
+      await _api.deleteActivityMember(facilityId, memberId);
     } else {
       await _api.deleteLibraryMember(facilityId, memberId);
     }
