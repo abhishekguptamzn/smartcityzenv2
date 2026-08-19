@@ -263,12 +263,13 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
     final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
-      final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
-      final payload = {
+      final payload = <String, dynamic>{
         'citizen_id': _selectedCitizen?.id ?? code,
-        if (_selectedPlan != null) 'fee_plan_id': _selectedPlan!.id,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
-        'end_date': DateFormat('yyyy-MM-dd').format(calculatedEndDate),
+        if (_selectedPlan != null) ...{
+          'fee_plan_id': _selectedPlan!.id,
+          'end_date': DateFormat('yyyy-MM-dd').format(_calculateInitialEndDate(_startDate, _selectedPlan)),
+        },
       };
 
       await repo.addFacilityMember(widget.kind, widget.facilityId, payload);
@@ -281,11 +282,15 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       widget.onSuccess();
       Navigator.of(context).pop();
 
+      final successMsg = _selectedPlan != null
+          ? 'Member enrolled with active plan! Welcome pass & receipt emailed.'
+          : 'Citizen registered as new member! You can assign a fee plan anytime.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Member enrolled successfully! Welcome pass & receipt emailed.'),
-          backgroundColor: Color(0xFF0D9488),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(successMsg),
+          backgroundColor: const Color(0xFF0D9488),
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (err) {
@@ -596,12 +601,12 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
-          hint: const Text('General Member (No specific fee plan)'),
+          hint: const Text('New Member (No Fee Plan / Inactive Pass)'),
           isExpanded: true,
           items: [
             const DropdownMenuItem<FeePlanModel>(
               value: null,
-              child: Text('General Member (No specific fee plan)'),
+              child: Text('New Member (No Fee Plan / Inactive Pass)'),
             ),
             ..._plans.map((plan) {
               final intervalUnit = plan.intervalCount > 1
@@ -620,8 +625,6 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
   }
 
   Widget _buildStartDatePicker(ThemeData theme, ColorScheme scheme) {
-    final endDate = _calculateInitialEndDate(_startDate, _selectedPlan);
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -634,7 +637,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Start Date', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Joining / Start Date', style: TextStyle(fontWeight: FontWeight.bold)),
               TextButton.icon(
                 icon: const Icon(Icons.calendar_today_rounded, size: 16),
                 label: Text(DateFormat('dd MMM yyyy').format(_startDate)),
@@ -655,11 +658,24 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Calculated Expiry Date', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(
-                DateFormat('dd MMM yyyy').format(endDate),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-              ),
+              const Text('Membership Status', style: TextStyle(fontWeight: FontWeight.bold)),
+              if (_selectedPlan != null)
+                Text(
+                  'Expires ${DateFormat("dd MMM yyyy").format(_calculateInitialEndDate(_startDate, _selectedPlan))}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'NEW (NO ACTIVE PLAN)',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                  ),
+                ),
             ],
           ),
         ],

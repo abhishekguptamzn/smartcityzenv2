@@ -354,7 +354,8 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
             final email = member['email'] ?? '';
             final phone = member['phone'] ?? '';
             final status = member['status']?.toString() ?? 'active';
-            final isActive = status.toLowerCase() == 'active';
+            final isNew = status.toLowerCase() == 'new' || status.toLowerCase() == 'inactive';
+            final isActive = !isNew && status.toLowerCase() == 'active';
             final passType = member['membership_type']?.toString().toUpperCase() ?? 'MONTHLY';
             final daysRemaining = member['days_remaining'];
             final endDateFormatted = member['end_date_formatted'] ?? member['end_date'] ?? 'N/A';
@@ -408,7 +409,10 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: (isActive ? const Color(0xFF10B981) : Colors.redAccent).withValues(alpha: 0.12),
+                                          color: (isNew
+                                                  ? const Color(0xFF0284C7)
+                                                  : (isActive ? const Color(0xFF10B981) : Colors.redAccent))
+                                              .withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(
@@ -416,7 +420,9 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: isActive ? const Color(0xFF059669) : Colors.redAccent,
+                                            color: isNew
+                                                ? const Color(0xFF0284C7)
+                                                : (isActive ? const Color(0xFF059669) : Colors.redAccent),
                                           ),
                                         ),
                                       ),
@@ -430,19 +436,31 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(Icons.card_membership_rounded, size: 14, color: primaryColor),
+                                      Icon(
+                                        isNew ? Icons.person_outline_rounded : Icons.card_membership_rounded,
+                                        size: 14,
+                                        color: isNew ? const Color(0xFF0284C7) : primaryColor,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '$passType Pass • Valid to $endDateFormatted',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: primaryColor),
+                                        isNew
+                                            ? 'New Citizen Member • No Active Plan'
+                                            : '$passType Pass • Valid to $endDateFormatted',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isNew ? const Color(0xFF0284C7) : primaryColor,
+                                        ),
                                       ),
-                                      if (daysRemaining != null) ...[
+                                      if (!isNew && daysRemaining != null) ...[
                                         const SizedBox(width: 4),
                                         Text(
                                           '($daysRemaining d left)',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: (daysRemaining is num && daysRemaining <= 7) ? Colors.redAccent : Colors.grey.shade600,
+                                            color: (daysRemaining is num && daysRemaining <= 7)
+                                                ? Colors.redAccent
+                                                : Colors.grey.shade600,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),

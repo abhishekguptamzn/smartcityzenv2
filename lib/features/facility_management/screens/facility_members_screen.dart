@@ -348,13 +348,17 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                       if (endDate != null && endDate.isNotEmpty) {
                         endDateTime = DateTime.tryParse(endDate);
                       }
-                      final isExpired = status != 'active' || (endDateTime != null && endDateTime.isBefore(now));
+                      final isNew = status == 'new' || status == 'inactive';
+                      final isExpired = !isNew && (status != 'active' || (endDateTime != null && endDateTime.isBefore(now)));
                       final daysRemaining = endDateTime != null ? endDateTime.difference(now).inDays : 999;
-                      final isExpiringSoon = !isExpired && daysRemaining <= 7;
+                      final isExpiringSoon = !isNew && !isExpired && daysRemaining <= 7;
 
                       Color statusColor = const Color(0xFF10B981);
                       String statusText = 'ACTIVE';
-                      if (isExpired) {
+                      if (isNew) {
+                        statusColor = const Color(0xFF0284C7);
+                        statusText = 'NEW';
+                      } else if (isExpired) {
                         statusColor = const Color(0xFFEF4444);
                         statusText = 'EXPIRED';
                       } else if (isExpiringSoon) {
@@ -389,11 +393,13 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                               color: theme.cardColor,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isExpired
-                                    ? Colors.redAccent.withValues(alpha: 0.3)
-                                    : (isExpiringSoon
-                                        ? Colors.amber.withValues(alpha: 0.4)
-                                        : scheme.outlineVariant.withValues(alpha: 0.3)),
+                                color: isNew
+                                    ? const Color(0xFF0284C7).withValues(alpha: 0.3)
+                                    : (isExpired
+                                        ? Colors.redAccent.withValues(alpha: 0.3)
+                                        : (isExpiringSoon
+                                            ? Colors.amber.withValues(alpha: 0.4)
+                                            : scheme.outlineVariant.withValues(alpha: 0.3))),
                               ),
                               boxShadow: const [
                                 BoxShadow(
@@ -434,7 +440,7 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            'Pass: ${m['id'] ?? 'N/A'} • ${plan['name'] ?? m['membership_type'] ?? 'Standard'}',
+                                            'Pass: ${m['id'] ?? 'N/A'} • ${isNew ? "New Member (No Plan)" : (plan['name'] ?? m['membership_type'] ?? 'Standard')}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: scheme.onSurfaceVariant,
@@ -462,28 +468,33 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 10),
-                                if (startDate != null || endDate != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          isExpired ? Icons.event_busy_rounded : Icons.event_available_rounded,
-                                          size: 14,
-                                          color: isExpired ? Colors.redAccent : scheme.primary,
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isNew
+                                            ? Icons.person_outline_rounded
+                                            : (isExpired ? Icons.event_busy_rounded : Icons.event_available_rounded),
+                                        size: 14,
+                                        color: isNew
+                                            ? const Color(0xFF0284C7)
+                                            : (isExpired ? Colors.redAccent : scheme.primary),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isNew
+                                            ? 'Joined ${startDate ?? 'Recently'} • No Active Fee Pass'
+                                            : 'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: scheme.onSurfaceVariant,
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Validity: ${startDate ?? 'Now'} → ${endDate ?? 'Ongoing'}',
-                                          style: TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w500,
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
+                                ),
                                 if (user['email'] != null || user['phone'] != null)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
