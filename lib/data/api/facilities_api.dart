@@ -66,6 +66,9 @@ class FacilitiesApi {
   /// Returns a plain JSON array, not the standard paginated envelope.
   Future<Response<dynamic>> feePlans(FacilityKind kind, String facilityId) =>
       _dio.get('/${kind.pathSegment}/$facilityId/fee-plans');
+
+  /// Returns active & enrolled memberships for current user across gyms, libraries, and activities.
+  Future<Response<dynamic>> myMemberships() => _dio.get('/user/memberships');
 }
 
 @Riverpod(keepAlive: true)

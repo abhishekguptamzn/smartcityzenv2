@@ -241,6 +241,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isGym = kind == FacilityKind.gym;
+    final isActivity = kind == FacilityKind.activity;
     final isActive = member.isActive && !member.isExpired;
     final endDateStr = member.endDate != null
         ? DateFormat.yMMMd().format(member.endDate!)
@@ -251,6 +252,40 @@ class _HeroCard extends StatelessWidget {
       daysLeft = member.endDate!.difference(DateTime.now()).inDays;
     }
 
+    final gradientColors = isGym
+        ? [
+            const Color(0xFF0F2A5E),
+            const Color(0xFF1A4A8A),
+            const Color(0xFF2563EB),
+          ]
+        : (isActivity
+            ? [
+                const Color(0xFF4C1D95),
+                const Color(0xFF6D28D9),
+                const Color(0xFF8B5CF6),
+              ]
+            : [
+                const Color(0xFF064E3B),
+                const Color(0xFF065F46),
+                const Color(0xFF059669),
+              ]);
+
+    final shadowColor = isGym
+        ? const Color(0xFF2563EB)
+        : (isActivity ? const Color(0xFF8B5CF6) : const Color(0xFF059669));
+
+    final IconData headerIcon = isGym
+        ? Icons.fitness_center_rounded
+        : (isActivity ? Icons.sports_rounded : Icons.local_library_rounded);
+
+    final String defaultTypeName = isGym
+        ? 'GYM'
+        : (isActivity ? 'ACTIVITY ACADEMY' : 'LIBRARY');
+
+    final String headingText = isGym
+        ? 'Gym Membership'
+        : (isActivity ? 'Activity Academy Pass' : 'Library Membership');
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 100, 16, 0),
       padding: const EdgeInsets.all(20),
@@ -259,24 +294,11 @@ class _HeroCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: isGym
-              ? [
-                  const Color(0xFF0F2A5E),
-                  const Color(0xFF1A4A8A),
-                  const Color(0xFF2563EB),
-                ]
-              : [
-                  const Color(0xFF064E3B),
-                  const Color(0xFF065F46),
-                  const Color(0xFF059669),
-                ],
+          colors: gradientColors,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isGym
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFF059669))
-                .withValues(alpha: 0.4),
+            color: shadowColor.withValues(alpha: 0.4),
             blurRadius: 32,
             offset: const Offset(0, 14),
           ),
@@ -333,9 +355,7 @@ class _HeroCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.25)),
                 ),
                 child: Icon(
-                  isGym
-                      ? Icons.fitness_center_rounded
-                      : Icons.local_library_rounded,
+                  headerIcon,
                   color: Colors.white,
                   size: 22,
                 ),
@@ -344,8 +364,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            (member.membershipType ?? (isGym ? 'GYM' : 'LIBRARY'))
-                .toUpperCase(),
+            (member.membershipType ?? defaultTypeName).toUpperCase(),
             style: const TextStyle(
               color: Colors.white54,
               fontSize: 11,
@@ -355,7 +374,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            isGym ? 'Gym Membership' : 'Library Membership',
+            headingText,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,

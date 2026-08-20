@@ -987,6 +987,15 @@ class _MembershipCard extends StatelessWidget {
         ? DateFormat.yMMMd().format(summary.latestPaidAt!)
         : '—';
     final isLibrary = summary.kind == FacilityKind.library;
+    final isGym = summary.kind == FacilityKind.gym;
+
+    final IconData icon = isLibrary
+        ? Icons.menu_book_rounded
+        : (isGym ? Icons.fitness_center_rounded : Icons.sports_rounded);
+
+    final String title = (summary.facilityName != null && summary.facilityName!.trim().isNotEmpty)
+        ? summary.facilityName!
+        : (isLibrary ? l10n.libraries : (isGym ? l10n.gyms : 'Activity Academy'));
 
     return GlassContainer(
       level: GlassLevel.card,
@@ -1018,9 +1027,7 @@ class _MembershipCard extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isLibrary
-                  ? Icons.menu_book_rounded
-                  : Icons.fitness_center_rounded,
+              icon,
               color: Colors.white,
               size: 22,
             ),
@@ -1031,10 +1038,12 @@ class _MembershipCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isLibrary ? l10n.libraries : l10n.gyms,
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleSmall?.copyWith(color: Colors.white),
+                  ).textTheme.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(

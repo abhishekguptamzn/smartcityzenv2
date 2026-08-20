@@ -119,6 +119,61 @@ class FacilitiesRepository {
   }
 
   Future<List<MyMembershipSummary>> myMembershipSummaries() async {
+    // 1. First attempt direct memberships retrieval from dedicated API
+    try {
+      final response = await _api.myMemberships();
+      final data = response.data;
+      final rawList = data is Map<String, dynamic> && data['data'] is List
+          ? data['data'] as List
+          : (data is List ? data : null);
+
+      if (rawList != null && rawList.isNotEmpty) {
+        final List<MyMembershipSummary> summaries = [];
+        for (final raw in rawList) {
+          if (raw is! Map<String, dynamic>) continue;
+          final kindStr = (raw['kind'] ?? '').toString().toLowerCase();
+          final FacilityKind kind = switch (kindStr) {
+            'gym' || 'gyms' || 'gymmember' => FacilityKind.gym,
+            'activity' || 'activities' || 'activityenrollment' => FacilityKind.activity,
+            _ => FacilityKind.library,
+          };
+
+          final payableId = raw['payable_id']?.toString() ?? raw['id']?.toString();
+          if (payableId == null || payableId.isEmpty) continue;
+
+          final dateRaw = raw['latest_paid_at'] ?? raw['created_at'] ?? raw['start_date'];
+          final parsedDate = dateRaw != null ? DateTime.tryParse(dateRaw.toString()) : null;
+
+          final amountRaw = raw['amount'];
+          final double amount = amountRaw is num
+              ? amountRaw.toDouble()
+              : double.tryParse(amountRaw?.toString() ?? '0') ?? 0;
+
+          summaries.add(MyMembershipSummary(
+            kind: kind,
+            payableId: payableId,
+            latestPaidAt: parsedDate,
+            amount: amount,
+            currency: raw['currency']?.toString() ?? 'INR',
+            facilityId: raw['facility_id']?.toString(),
+            facilityName: raw['facility_name']?.toString(),
+          ));
+        }
+
+        if (summaries.isNotEmpty) {
+          summaries.sort((a, b) {
+            final aDate = a.latestPaidAt ?? DateTime(0);
+            final bDate = b.latestPaidAt ?? DateTime(0);
+            return bDate.compareTo(aDate);
+          });
+          return summaries;
+        }
+      }
+    } catch (_) {
+      // Fall through to payments-derived discovery
+    }
+
+    // 2. Fallback: derive memberships from self-scoped payments history
     final List<PaymentModel> all = await _paymentsRepository.listAllPages();
     final Map<(FacilityKind, String), PaymentModel> latestByRef = {};
 
@@ -128,9 +183,16 @@ class FacilitiesRepository {
       if (payableType == null || payableId == null) continue;
 
       final FacilityKind? kind = switch (payableType) {
-        'LibraryMember' => FacilityKind.library,
-        'GymMember' => FacilityKind.gym,
-        _ => null,
+        'LibraryMember' || 'Library' || 'App\\Models\\LibraryMember' || 'App\\Models\\Library' => FacilityKind.library,
+        'GymMember' || 'Gym' || 'App\\Models\\GymMember' || 'App\\Models\\Gym' => FacilityKind.gym,
+        'ActivityEnrollment' || 'Activity' || 'App\\Models\\ActivityEnrollment' || 'App\\Models\\Activity' => FacilityKind.activity,
+        _ => payableType.contains('Gym')
+            ? FacilityKind.gym
+            : (payableType.contains('Library')
+                ? FacilityKind.library
+                : (payableType.contains('Activity') || payableType.contains('Enrollment')
+                    ? FacilityKind.activity
+                    : null)),
       };
       if (kind == null) continue;
 

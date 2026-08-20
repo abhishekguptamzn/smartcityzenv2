@@ -27,23 +27,28 @@ abstract class FacilityMemberModel with _$FacilityMemberModel {
   factory FacilityMemberModel.fromJson(Map<String, dynamic> json) =>
       _$FacilityMemberModelFromJson(json);
 
-  /// The API returns the owning facility under `library_id` on library members
-  /// and `gym_id` on gym members, so both keys are normalised to `facility_id`
-  /// before the generated deserializer runs.
+  /// The API returns the owning facility under `library_id` on library members,
+  /// `gym_id` on gym members, and `activity_id` on activity enrollments, so all keys
+  /// are normalised to `facility_id` before the generated deserializer runs.
   factory FacilityMemberModel.fromApiJson(
     Map<String, dynamic> json, {
     FacilityKind? kind,
   }) {
     final Map<String, dynamic> normalised = Map<String, dynamic>.from(json);
     final Object? facilityId =
-        json['facility_id'] ?? json['library_id'] ?? json['gym_id'];
+        json['facility_id'] ?? json['library_id'] ?? json['gym_id'] ?? json['activity_id'];
     normalised['facility_id'] = facilityId?.toString();
+    if (json.containsKey('enrollment_type') && !json.containsKey('membership_type')) {
+      normalised['membership_type'] = json['enrollment_type'];
+    }
 
     final FacilityKind resolvedKind =
         kind ??
         (json.containsKey('gym_id') || json.containsKey('gym')
             ? FacilityKind.gym
-            : FacilityKind.library);
+            : (json.containsKey('activity_id') || json.containsKey('activity')
+                ? FacilityKind.activity
+                : FacilityKind.library));
 
     return FacilityMemberModel.fromJson(
       normalised,
