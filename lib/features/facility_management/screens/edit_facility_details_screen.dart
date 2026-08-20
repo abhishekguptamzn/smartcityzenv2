@@ -13,6 +13,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/app_network_image.dart';
+import '../../../shared/widgets/searchable_city_picker.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/amenity_selector_sheet.dart';
 import 'facility_dashboard_screen.dart';
@@ -52,6 +53,9 @@ class _EditFacilityDetailsScreenState
   bool _isLoadingAmenities = true;
   bool _uploadingPhoto = false;
 
+  String? _selectedCityId;
+  String? _selectedCityName;
+
   late TimeOfDay? _openingTime;
   late TimeOfDay? _closingTime;
   List<AmenityModel> _selectedAmenities = [];
@@ -61,6 +65,8 @@ class _EditFacilityDetailsScreenState
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _descController.text = widget.facility?.description ?? '';
+    _selectedCityId = widget.facility?.cityId ?? widget.facility?.city?.id;
+    _selectedCityName = widget.facility?.city?.name;
     _openingTime = _parseTimeString(widget.facility?.openingTime) ??
         const TimeOfDay(hour: 6, minute: 0);
     _closingTime = _parseTimeString(widget.facility?.closingTime) ??
@@ -202,6 +208,17 @@ class _EditFacilityDetailsScreenState
     final facilityName =
         v['name']?.toString() ?? widget.facility?.name ?? 'Facility';
 
+    if (_selectedCityId == null || _selectedCityId!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a city for the facility.'),
+          backgroundColor: Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirm = await showAppConfirmDialog(
       context: context,
       title: 'Save Facility Details',
@@ -210,6 +227,8 @@ class _EditFacilityDetailsScreenState
       confirmLabel: 'Save Changes',
       details: [
         ConfirmDetailRow(label: 'Facility', value: facilityName),
+        if (_selectedCityName != null && _selectedCityName!.isNotEmpty)
+          ConfirmDetailRow(label: 'City', value: _selectedCityName!),
         ConfirmDetailRow(
             label: 'Amenities', value: '${_selectedAmenities.length} selected'),
         ConfirmDetailRow(
@@ -228,6 +247,8 @@ class _EditFacilityDetailsScreenState
     try {
       final payload = {
         'name': v['name'],
+        if (_selectedCityId != null && _selectedCityId!.isNotEmpty)
+          'city_id': _selectedCityId,
         'description': _descController.text.trim(),
         'address': v['address'],
         'contact_phone': v['contact_phone'],
@@ -679,6 +700,30 @@ class _EditFacilityDetailsScreenState
                     errorText: 'Must be at least 3 characters'),
               ]),
             ),
+          ),
+          const SizedBox(height: 14),
+
+          // Searchable Facility City
+          SearchableCityPicker(
+            selectedCityId: _selectedCityId,
+            labelText: 'Facility City *',
+            prefixIcon: Icon(
+              Icons.apartment_rounded,
+              color: brandBlue,
+              size: 20,
+            ),
+            onCitySelected: (city) {
+              setState(() {
+                _selectedCityId = city.id;
+                _selectedCityName = city.name;
+              });
+            },
+            validator: (val) {
+              if (_selectedCityId == null || _selectedCityId!.trim().isEmpty) {
+                return 'Please select a facility city';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 14),
 
