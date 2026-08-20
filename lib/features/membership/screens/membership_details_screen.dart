@@ -1138,7 +1138,7 @@ class _PaymentsTab extends ConsumerWidget {
                           style: TextStyle(
                               color: Colors.white70, fontSize: 12)),
                       Text(
-                        'Rs.${totalPaid.toStringAsFixed(0)}',
+                        '₹${totalPaid.toStringAsFixed(0)}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -1202,7 +1202,7 @@ class _PaymentsTab extends ConsumerWidget {
                   ),
                   title: Text(
                     NumberFormat.currency(
-                            symbol: 'Rs.', decimalDigits: 0)
+                            symbol: '₹', decimalDigits: 0)
                         .format(p.amount),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
@@ -1373,7 +1373,7 @@ class _RenewalsTab extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'Rs.${r.amountPaid.toStringAsFixed(0)}',
+                      '₹${r.amountPaid.toStringAsFixed(0)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,

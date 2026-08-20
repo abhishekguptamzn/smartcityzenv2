@@ -223,7 +223,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
               ),
               const SizedBox(height: 18),
               Text(
-                'Refund Amount (INR)',
+                'Refund Amount (₹)',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
