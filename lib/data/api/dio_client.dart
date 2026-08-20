@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -32,8 +33,10 @@ class _AuthHeaderInterceptor extends Interceptor {
       options.headers['Authorization'] = 'Bearer $token';
     }
     options.headers['Accept'] = 'application/json';
-    options.headers['Accept-Encoding'] = 'gzip, deflate, br';
-    options.headers['Connection'] = 'keep-alive';
+    if (!kIsWeb) {
+      options.headers['Accept-Encoding'] = 'gzip, deflate, br';
+      options.headers['Connection'] = 'keep-alive';
+    }
     options.headers['Accept-Language'] = _localeCode();
     options.headers['X-Request-Id'] = _uuid.v4();
     handler.next(options);
@@ -127,6 +130,7 @@ class _ErrorMappingInterceptor extends Interceptor {
       'CONFLICT' => AppExceptionCode.conflict,
       'BAD_REQUEST' => AppExceptionCode.badRequest,
       'METHOD_NOT_ALLOWED' => AppExceptionCode.badRequest,
+      'PAYLOAD_TOO_LARGE' => AppExceptionCode.badRequest,
       'TOO_MANY_REQUESTS' => AppExceptionCode.rateLimited,
       'INTERNAL_SERVER_ERROR' => AppExceptionCode.server,
       _ => AppExceptionCode.unknown,
