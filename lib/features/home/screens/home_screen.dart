@@ -992,8 +992,16 @@ class _MembershipCard extends StatelessWidget {
       level: GlassLevel.card,
       borderRadius: BorderRadius.circular(20),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      onTap: () =>
-          context.push('/membership/${summary.kind.name}/${summary.payableId}'),
+      onTap: () {
+        final uri = Uri(
+          path: '/membership/${summary.kind.name}/${summary.payableId}',
+          queryParameters: {
+            if (summary.facilityId != null) 'facilityId': summary.facilityId!,
+            if (summary.facilityName != null) 'facilityName': summary.facilityName!,
+          },
+        );
+        context.push(uri.toString());
+      },
       gradientOverlay: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,

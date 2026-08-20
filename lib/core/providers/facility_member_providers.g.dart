@@ -96,3 +96,90 @@ final class FacilityMemberDetailFamily extends $Family
   @override
   String toString() => r'facilityMemberDetailProvider';
 }
+
+@ProviderFor(memberRenewals)
+const memberRenewalsProvider = MemberRenewalsFamily._();
+
+final class MemberRenewalsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<MembershipRenewalModel>>,
+          List<MembershipRenewalModel>,
+          FutureOr<List<MembershipRenewalModel>>
+        >
+    with
+        $FutureModifier<List<MembershipRenewalModel>>,
+        $FutureProvider<List<MembershipRenewalModel>> {
+  const MemberRenewalsProvider._({
+    required MemberRenewalsFamily super.from,
+    required (FacilityKind, String, String) super.argument,
+  }) : super(
+         retry: null,
+         name: r'memberRenewalsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$memberRenewalsHash();
+
+  @override
+  String toString() {
+    return r'memberRenewalsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<MembershipRenewalModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<MembershipRenewalModel>> create(Ref ref) {
+    final argument = this.argument as (FacilityKind, String, String);
+    return memberRenewals(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MemberRenewalsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$memberRenewalsHash() => r'ad2365c4e14f8933cef3bda0d9161db47fe33692';
+
+final class MemberRenewalsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<MembershipRenewalModel>>,
+          (FacilityKind, String, String)
+        > {
+  const MemberRenewalsFamily._()
+    : super(
+        retry: null,
+        name: r'memberRenewalsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  MemberRenewalsProvider call(
+    FacilityKind kind,
+    String facilityId,
+    String memberId,
+  ) => MemberRenewalsProvider._(
+    argument: (kind, facilityId, memberId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'memberRenewalsProvider';
+}

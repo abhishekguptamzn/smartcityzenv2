@@ -190,6 +190,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             bytes: bytes,
             filename: picked.name.isNotEmpty ? picked.name : 'avatar.jpg',
           );
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
       await ref.read(authControllerProvider.notifier).refreshMe();
 
       if (!mounted) return;
@@ -223,6 +225,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       setState(() => _uploadingPhoto = true);
       await ref.read(usersRepositoryProvider).deletePhoto(user.id);
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
       await ref.read(authControllerProvider.notifier).refreshMe();
 
       if (!mounted) return;

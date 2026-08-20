@@ -153,6 +153,8 @@ class FacilitiesRepository {
         latestPaidAt: payment.paidAt ?? payment.createdAt,
         amount: payment.amount,
         currency: payment.currency,
+        facilityId: payment.facilityId,
+        facilityName: payment.facilityName,
       );
     }).toList()..sort((a, b) {
       final aDate = a.latestPaidAt ?? DateTime(0);

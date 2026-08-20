@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PaymentModel {
 
- String get id;@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'payable_type') String? get payableType;@JsonKey(name: 'payable_id') String? get payableId;@JsonKey(fromJson: _toDouble) double get amount; String get currency; String get status;@JsonKey(name: 'payment_method') String? get paymentMethod;@JsonKey(name: 'transaction_reference') String? get transactionReference;@JsonKey(name: 'invoice_number') String? get invoiceNumber;@JsonKey(name: 'due_date') DateTime? get dueDate;@JsonKey(name: 'paid_at') DateTime? get paidAt; String? get notes; UserModel? get user;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
+ String get id;@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'payable_type') String? get payableType;@JsonKey(name: 'payable_id') String? get payableId;@JsonKey(fromJson: _toDouble) double get amount; String get currency; String get status;@JsonKey(name: 'payment_method') String? get paymentMethod;@JsonKey(name: 'transaction_reference') String? get transactionReference;@JsonKey(name: 'invoice_number') String? get invoiceNumber;@JsonKey(name: 'due_date') DateTime? get dueDate;@JsonKey(name: 'paid_at') DateTime? get paidAt; String? get notes;@JsonKey(name: 'facility_name') String? get facilityName;@JsonKey(name: 'facility_id') String? get facilityId; UserModel? get user;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;
 /// Create a copy of PaymentModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $PaymentModelCopyWith<PaymentModel> get copyWith => _$PaymentModelCopyWithImpl<P
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PaymentModel&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payableType, payableType) || other.payableType == payableType)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.transactionReference, transactionReference) || other.transactionReference == transactionReference)&&(identical(other.invoiceNumber, invoiceNumber) || other.invoiceNumber == invoiceNumber)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.user, user) || other.user == user)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PaymentModel&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payableType, payableType) || other.payableType == payableType)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.transactionReference, transactionReference) || other.transactionReference == transactionReference)&&(identical(other.invoiceNumber, invoiceNumber) || other.invoiceNumber == invoiceNumber)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.facilityName, facilityName) || other.facilityName == facilityName)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.user, user) || other.user == user)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,payableType,payableId,amount,currency,status,paymentMethod,transactionReference,invoiceNumber,dueDate,paidAt,notes,user,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,userId,payableType,payableId,amount,currency,status,paymentMethod,transactionReference,invoiceNumber,dueDate,paidAt,notes,facilityName,facilityId,user,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'PaymentModel(id: $id, userId: $userId, payableType: $payableType, payableId: $payableId, amount: $amount, currency: $currency, status: $status, paymentMethod: $paymentMethod, transactionReference: $transactionReference, invoiceNumber: $invoiceNumber, dueDate: $dueDate, paidAt: $paidAt, notes: $notes, user: $user, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'PaymentModel(id: $id, userId: $userId, payableType: $payableType, payableId: $payableId, amount: $amount, currency: $currency, status: $status, paymentMethod: $paymentMethod, transactionReference: $transactionReference, invoiceNumber: $invoiceNumber, dueDate: $dueDate, paidAt: $paidAt, notes: $notes, facilityName: $facilityName, facilityId: $facilityId, user: $user, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $PaymentModelCopyWith<$Res>  {
   factory $PaymentModelCopyWith(PaymentModel value, $Res Function(PaymentModel) _then) = _$PaymentModelCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'payable_type') String? payableType,@JsonKey(name: 'payable_id') String? payableId,@JsonKey(fromJson: _toDouble) double amount, String currency, String status,@JsonKey(name: 'payment_method') String? paymentMethod,@JsonKey(name: 'transaction_reference') String? transactionReference,@JsonKey(name: 'invoice_number') String? invoiceNumber,@JsonKey(name: 'due_date') DateTime? dueDate,@JsonKey(name: 'paid_at') DateTime? paidAt, String? notes, UserModel? user,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id,@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'payable_type') String? payableType,@JsonKey(name: 'payable_id') String? payableId,@JsonKey(fromJson: _toDouble) double amount, String currency, String status,@JsonKey(name: 'payment_method') String? paymentMethod,@JsonKey(name: 'transaction_reference') String? transactionReference,@JsonKey(name: 'invoice_number') String? invoiceNumber,@JsonKey(name: 'due_date') DateTime? dueDate,@JsonKey(name: 'paid_at') DateTime? paidAt, String? notes,@JsonKey(name: 'facility_name') String? facilityName,@JsonKey(name: 'facility_id') String? facilityId, UserModel? user,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$PaymentModelCopyWithImpl<$Res>
 
 /// Create a copy of PaymentModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = freezed,Object? payableType = freezed,Object? payableId = freezed,Object? amount = null,Object? currency = null,Object? status = null,Object? paymentMethod = freezed,Object? transactionReference = freezed,Object? invoiceNumber = freezed,Object? dueDate = freezed,Object? paidAt = freezed,Object? notes = freezed,Object? user = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = freezed,Object? payableType = freezed,Object? payableId = freezed,Object? amount = null,Object? currency = null,Object? status = null,Object? paymentMethod = freezed,Object? transactionReference = freezed,Object? invoiceNumber = freezed,Object? dueDate = freezed,Object? paidAt = freezed,Object? notes = freezed,Object? facilityName = freezed,Object? facilityId = freezed,Object? user = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -80,6 +80,8 @@ as String?,invoiceNumber: freezed == invoiceNumber ? _self.invoiceNumber : invoi
 as String?,dueDate: freezed == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,paidAt: freezed == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,facilityName: freezed == facilityName ? _self.facilityName : facilityName // ignore: cast_nullable_to_non_nullable
+as String?,facilityId: freezed == facilityId ? _self.facilityId : facilityId // ignore: cast_nullable_to_non_nullable
 as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as UserModel?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -180,10 +182,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes, @JsonKey(name: 'facility_name')  String? facilityName, @JsonKey(name: 'facility_id')  String? facilityId,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PaymentModel() when $default != null:
-return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.user,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.facilityName,_that.facilityId,_that.user,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -201,10 +203,10 @@ return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.am
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes, @JsonKey(name: 'facility_name')  String? facilityName, @JsonKey(name: 'facility_id')  String? facilityId,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _PaymentModel():
-return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.user,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.facilityName,_that.facilityId,_that.user,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -221,10 +223,10 @@ return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.am
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'payable_type')  String? payableType, @JsonKey(name: 'payable_id')  String? payableId, @JsonKey(fromJson: _toDouble)  double amount,  String currency,  String status, @JsonKey(name: 'payment_method')  String? paymentMethod, @JsonKey(name: 'transaction_reference')  String? transactionReference, @JsonKey(name: 'invoice_number')  String? invoiceNumber, @JsonKey(name: 'due_date')  DateTime? dueDate, @JsonKey(name: 'paid_at')  DateTime? paidAt,  String? notes, @JsonKey(name: 'facility_name')  String? facilityName, @JsonKey(name: 'facility_id')  String? facilityId,  UserModel? user, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _PaymentModel() when $default != null:
-return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.user,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.amount,_that.currency,_that.status,_that.paymentMethod,_that.transactionReference,_that.invoiceNumber,_that.dueDate,_that.paidAt,_that.notes,_that.facilityName,_that.facilityId,_that.user,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -236,7 +238,7 @@ return $default(_that.id,_that.userId,_that.payableType,_that.payableId,_that.am
 @JsonSerializable()
 
 class _PaymentModel extends PaymentModel {
-  const _PaymentModel({required this.id, @JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'payable_type') this.payableType, @JsonKey(name: 'payable_id') this.payableId, @JsonKey(fromJson: _toDouble) this.amount = 0, this.currency = 'INR', this.status = 'pending', @JsonKey(name: 'payment_method') this.paymentMethod, @JsonKey(name: 'transaction_reference') this.transactionReference, @JsonKey(name: 'invoice_number') this.invoiceNumber, @JsonKey(name: 'due_date') this.dueDate, @JsonKey(name: 'paid_at') this.paidAt, this.notes, this.user, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): super._();
+  const _PaymentModel({required this.id, @JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'payable_type') this.payableType, @JsonKey(name: 'payable_id') this.payableId, @JsonKey(fromJson: _toDouble) this.amount = 0, this.currency = 'INR', this.status = 'pending', @JsonKey(name: 'payment_method') this.paymentMethod, @JsonKey(name: 'transaction_reference') this.transactionReference, @JsonKey(name: 'invoice_number') this.invoiceNumber, @JsonKey(name: 'due_date') this.dueDate, @JsonKey(name: 'paid_at') this.paidAt, this.notes, @JsonKey(name: 'facility_name') this.facilityName, @JsonKey(name: 'facility_id') this.facilityId, this.user, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): super._();
   factory _PaymentModel.fromJson(Map<String, dynamic> json) => _$PaymentModelFromJson(json);
 
 @override final  String id;
@@ -252,6 +254,8 @@ class _PaymentModel extends PaymentModel {
 @override@JsonKey(name: 'due_date') final  DateTime? dueDate;
 @override@JsonKey(name: 'paid_at') final  DateTime? paidAt;
 @override final  String? notes;
+@override@JsonKey(name: 'facility_name') final  String? facilityName;
+@override@JsonKey(name: 'facility_id') final  String? facilityId;
 @override final  UserModel? user;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
@@ -269,16 +273,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaymentModel&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payableType, payableType) || other.payableType == payableType)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.transactionReference, transactionReference) || other.transactionReference == transactionReference)&&(identical(other.invoiceNumber, invoiceNumber) || other.invoiceNumber == invoiceNumber)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.user, user) || other.user == user)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaymentModel&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payableType, payableType) || other.payableType == payableType)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.transactionReference, transactionReference) || other.transactionReference == transactionReference)&&(identical(other.invoiceNumber, invoiceNumber) || other.invoiceNumber == invoiceNumber)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.facilityName, facilityName) || other.facilityName == facilityName)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.user, user) || other.user == user)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,payableType,payableId,amount,currency,status,paymentMethod,transactionReference,invoiceNumber,dueDate,paidAt,notes,user,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,userId,payableType,payableId,amount,currency,status,paymentMethod,transactionReference,invoiceNumber,dueDate,paidAt,notes,facilityName,facilityId,user,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'PaymentModel(id: $id, userId: $userId, payableType: $payableType, payableId: $payableId, amount: $amount, currency: $currency, status: $status, paymentMethod: $paymentMethod, transactionReference: $transactionReference, invoiceNumber: $invoiceNumber, dueDate: $dueDate, paidAt: $paidAt, notes: $notes, user: $user, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'PaymentModel(id: $id, userId: $userId, payableType: $payableType, payableId: $payableId, amount: $amount, currency: $currency, status: $status, paymentMethod: $paymentMethod, transactionReference: $transactionReference, invoiceNumber: $invoiceNumber, dueDate: $dueDate, paidAt: $paidAt, notes: $notes, facilityName: $facilityName, facilityId: $facilityId, user: $user, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -289,7 +293,7 @@ abstract mixin class _$PaymentModelCopyWith<$Res> implements $PaymentModelCopyWi
   factory _$PaymentModelCopyWith(_PaymentModel value, $Res Function(_PaymentModel) _then) = __$PaymentModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'payable_type') String? payableType,@JsonKey(name: 'payable_id') String? payableId,@JsonKey(fromJson: _toDouble) double amount, String currency, String status,@JsonKey(name: 'payment_method') String? paymentMethod,@JsonKey(name: 'transaction_reference') String? transactionReference,@JsonKey(name: 'invoice_number') String? invoiceNumber,@JsonKey(name: 'due_date') DateTime? dueDate,@JsonKey(name: 'paid_at') DateTime? paidAt, String? notes, UserModel? user,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
+ String id,@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'payable_type') String? payableType,@JsonKey(name: 'payable_id') String? payableId,@JsonKey(fromJson: _toDouble) double amount, String currency, String status,@JsonKey(name: 'payment_method') String? paymentMethod,@JsonKey(name: 'transaction_reference') String? transactionReference,@JsonKey(name: 'invoice_number') String? invoiceNumber,@JsonKey(name: 'due_date') DateTime? dueDate,@JsonKey(name: 'paid_at') DateTime? paidAt, String? notes,@JsonKey(name: 'facility_name') String? facilityName,@JsonKey(name: 'facility_id') String? facilityId, UserModel? user,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt
 });
 
 
@@ -306,7 +310,7 @@ class __$PaymentModelCopyWithImpl<$Res>
 
 /// Create a copy of PaymentModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = freezed,Object? payableType = freezed,Object? payableId = freezed,Object? amount = null,Object? currency = null,Object? status = null,Object? paymentMethod = freezed,Object? transactionReference = freezed,Object? invoiceNumber = freezed,Object? dueDate = freezed,Object? paidAt = freezed,Object? notes = freezed,Object? user = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = freezed,Object? payableType = freezed,Object? payableId = freezed,Object? amount = null,Object? currency = null,Object? status = null,Object? paymentMethod = freezed,Object? transactionReference = freezed,Object? invoiceNumber = freezed,Object? dueDate = freezed,Object? paidAt = freezed,Object? notes = freezed,Object? facilityName = freezed,Object? facilityId = freezed,Object? user = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_PaymentModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -321,6 +325,8 @@ as String?,invoiceNumber: freezed == invoiceNumber ? _self.invoiceNumber : invoi
 as String?,dueDate: freezed == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,paidAt: freezed == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,facilityName: freezed == facilityName ? _self.facilityName : facilityName // ignore: cast_nullable_to_non_nullable
+as String?,facilityId: freezed == facilityId ? _self.facilityId : facilityId // ignore: cast_nullable_to_non_nullable
 as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as UserModel?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable

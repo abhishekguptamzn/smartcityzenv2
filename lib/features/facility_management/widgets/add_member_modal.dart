@@ -225,6 +225,35 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       return;
     }
 
+    // Prevent duplicate enrollment if already a member in this facility
+    final membersAsync = ref.read(facilityMembersProvider((widget.kind, widget.facilityId)));
+    final currentMembers = membersAsync.asData?.value ?? [];
+    final citizenId = _selectedCitizen?.id ?? code;
+    final citizenEmail = _selectedCitizen?.email;
+
+    final existingMember = currentMembers.where((m) {
+      final user = m['user'] as Map<String, dynamic>? ?? {};
+      final uId = user['id']?.toString() ?? '';
+      final uEmail = user['email']?.toString() ?? '';
+      final memId = m['id']?.toString() ?? '';
+      final status = (m['status']?.toString() ?? 'active').toLowerCase();
+      final isExisting = (citizenId.isNotEmpty && (uId == citizenId || memId == citizenId)) ||
+          (citizenEmail != null && citizenEmail.isNotEmpty && uEmail.toLowerCase() == citizenEmail.toLowerCase());
+      return isExisting && status != 'cancelled';
+    }).firstOrNull;
+
+    if (existingMember != null) {
+      final passId = existingMember['id'] ?? 'Pass';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('This citizen is already enrolled in this facility ($passId). Please renew or record payment on their existing pass instead.'),
+          backgroundColor: const Color(0xFFDC2626),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     if (_selectedPlan != null) {
       final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
       final intervalUnit = _selectedPlan!.intervalCount > 1
@@ -534,17 +563,60 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
               itemBuilder: (ctx, i) {
                 final c = _searchResults[i];
                 final phoneStr = c.phone != null && c.phone!.isNotEmpty ? ' • ${c.phone}' : '';
+
+                final membersAsync = ref.read(facilityMembersProvider((widget.kind, widget.facilityId)));
+                final currentMembers = membersAsync.asData?.value ?? [];
+                final existing = currentMembers.where((m) {
+                  final user = m['user'] as Map<String, dynamic>? ?? {};
+                  final uId = user['id']?.toString() ?? '';
+                  final uEmail = user['email']?.toString() ?? '';
+                  final status = (m['status']?.toString() ?? 'active').toLowerCase();
+                  return status != 'cancelled' && (uId == c.id || (c.email.isNotEmpty && uEmail.toLowerCase() == c.email.toLowerCase()));
+                }).firstOrNull;
+
+                final isAlreadyEnrolled = existing != null;
+
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: scheme.primary.withValues(alpha: 0.1),
+                    backgroundColor: isAlreadyEnrolled ? Colors.amber.withValues(alpha: 0.15) : scheme.primary.withValues(alpha: 0.1),
                     child: Text(
                       c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                      style: TextStyle(color: scheme.primary, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: isAlreadyEnrolled ? Colors.amber.shade800 : scheme.primary, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      if (isAlreadyEnrolled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            'Already Member (${existing['id']})',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade800),
+                          ),
+                        ),
+                    ],
+                  ),
                   subtitle: Text('${c.email.isNotEmpty ? c.email : ""}$phoneStr'),
-                  onTap: () => _selectCitizen(c),
+                  onTap: () {
+                    if (isAlreadyEnrolled) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${c.name} is already enrolled (${existing['id']}). Please renew their existing pass from the members list.'),
+                          backgroundColor: Colors.amber.shade800,
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    }
+                    _selectCitizen(c);
+                  },
                 );
               },
             ),

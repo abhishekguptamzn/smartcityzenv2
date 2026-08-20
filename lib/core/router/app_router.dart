@@ -266,6 +266,7 @@ GoRouter goRouter(Ref ref) {
           kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
           memberId: state.pathParameters['memberId']!,
           facilityId: state.uri.queryParameters['facilityId'],
+          facilityName: state.uri.queryParameters['facilityName'],
         ),
       ),
       GoRoute(

@@ -16,5 +16,7 @@ abstract class MyMembershipSummary with _$MyMembershipSummary {
     required DateTime? latestPaidAt,
     required double amount,
     required String currency,
+    String? facilityId,
+    String? facilityName,
   }) = _MyMembershipSummary;
 }

@@ -12,6 +12,7 @@ import '../../../data/models/amenity_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/amenity_selector_sheet.dart';
 import 'facility_dashboard_screen.dart';
@@ -417,10 +418,10 @@ class _EditFacilityDetailsScreenState
               maxScale: 4.0,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  imageUrl,
+                child: AppNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Center(
+                  errorWidget: const Center(
                     child: Icon(Icons.broken_image_rounded,
                         color: Colors.white, size: 60),
                   ),
@@ -470,13 +471,16 @@ class _EditFacilityDetailsScreenState
     final isDark = theme.brightness == Brightness.dark;
     final f = widget.facility;
     final isGym = widget.kind == FacilityKind.gym;
+    final isActivity = widget.kind == FacilityKind.activity;
     const brandBlue = Color(0xFF2563EB);
     final lightBg = isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC);
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final cardBorder =
         isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7);
 
-    final facilityTitle = isGym ? 'Gym' : 'Library';
+    final facilityTitle = isGym
+        ? 'Gym'
+        : (isActivity ? 'Facility Center' : 'Library');
 
     final mediaAsync =
         ref.watch(facilityMediaProvider((widget.kind, widget.facilityId)));
@@ -526,7 +530,7 @@ class _EditFacilityDetailsScreenState
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 14),
-            child: _buildHeaderEmblem(isGym, isDark),
+            child: _buildHeaderEmblem(isDark),
           ),
         ],
         bottom: PreferredSize(
@@ -1276,19 +1280,16 @@ class _EditFacilityDetailsScreenState
                                 primaryPhoto.url;
                         _showImageLightbox(resUrl, primaryPhoto.caption);
                       },
-                      child: Image.network(
-                        ImageUrlResolver.resolve(primaryPhoto.url) ??
-                            primaryPhoto.url,
+                      child: AppNetworkImage(
+                        imageUrl: primaryPhoto.url,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: isDark
-                              ? const Color(0xFF1E293B)
-                              : Colors.grey.shade200,
-                          child: const Center(
-                            child: Icon(Icons.broken_image_rounded,
-                                size: 40, color: Colors.grey),
-                          ),
-                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        isLibrary: widget.kind == FacilityKind.library,
+                        fallbackIcon: widget.kind == FacilityKind.gym
+                            ? Icons.fitness_center_rounded
+                            : (widget.kind == FacilityKind.activity
+                                ? Icons.sports_kabaddi_rounded
+                                : Icons.menu_book_rounded),
                       ),
                     ),
 
@@ -1512,16 +1513,15 @@ class _EditFacilityDetailsScreenState
                               ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(17)),
-                                child: Image.network(
-                                  resolvedUrl,
+                                child: AppNetworkImage(
+                                  imageUrl: photo.url,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                    color: Colors.grey.shade200,
-                                    child: const Icon(
-                                        Icons.broken_image_rounded,
-                                        color: Colors.grey),
-                                  ),
+                                  isLibrary: widget.kind == FacilityKind.library,
+                                  fallbackIcon: widget.kind == FacilityKind.gym
+                                      ? Icons.fitness_center_rounded
+                                      : (widget.kind == FacilityKind.activity
+                                          ? Icons.sports_kabaddi_rounded
+                                          : Icons.menu_book_rounded),
                                 ),
                               ),
                               // Cover Tag
@@ -1636,22 +1636,34 @@ class _EditFacilityDetailsScreenState
   }
 
   // Header Emblem
-  Widget _buildHeaderEmblem(bool isGym, bool isDark) {
+  Widget _buildHeaderEmblem(bool isDark) {
+    final isGym = widget.kind == FacilityKind.gym;
+    final isActivity = widget.kind == FacilityKind.activity;
+    final iconColor = isGym
+        ? const Color(0xFFF97316)
+        : (isActivity ? const Color(0xFF0D9488) : const Color(0xFF2563EB));
+
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+        color: isDark
+            ? const Color(0xFF1E293B)
+            : iconColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+          color: iconColor.withValues(alpha: 0.25),
           width: 1.2,
         ),
       ),
       child: Center(
         child: Icon(
-          isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded,
-          color: const Color(0xFF2563EB),
+          isGym
+              ? Icons.fitness_center_rounded
+              : (isActivity
+                  ? Icons.sports_kabaddi_rounded
+                  : Icons.menu_book_rounded),
+          color: iconColor,
           size: 20,
         ),
       ),
@@ -1667,7 +1679,36 @@ class _EditFacilityDetailsScreenState
     Color cardBorder,
     Color brandBlue,
   ) {
-    final facilityName = f?.name ?? (isGym ? 'Gym Facility' : 'Library Hub');
+    final isActivity = widget.kind == FacilityKind.activity;
+    final facilityName = f?.name ??
+        (isGym
+            ? 'Gym Facility'
+            : (isActivity ? 'Facility Center' : 'Library Hub'));
+    final categoryLabel = isGym
+        ? 'GYM NAME'
+        : (isActivity ? 'FACILITY NAME' : 'LIBRARY NAME');
+    final heroIcon = isGym
+        ? Icons.fitness_center_rounded
+        : (isActivity
+            ? Icons.sports_kabaddi_rounded
+            : Icons.menu_book_rounded);
+    final themeGradient = isGym
+        ? const LinearGradient(
+            colors: [Color(0xFFF97316), Color(0xFFEA580C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : (isActivity
+            ? const LinearGradient(
+                colors: [Color(0xFF0D9488), Color(0xFF059669)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ));
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1693,15 +1734,16 @@ class _EditFacilityDetailsScreenState
                 width: 68,
                 height: 68,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: themeGradient,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                      color: (isGym
+                              ? const Color(0xFFF97316)
+                              : (isActivity
+                                  ? const Color(0xFF0D9488)
+                                  : const Color(0xFF2563EB)))
+                          .withValues(alpha: 0.35),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -1709,9 +1751,7 @@ class _EditFacilityDetailsScreenState
                 ),
                 child: Center(
                   child: Icon(
-                    isGym
-                        ? Icons.fitness_center_rounded
-                        : Icons.menu_book_rounded,
+                    heroIcon,
                     color: Colors.white,
                     size: 32,
                   ),
@@ -1732,9 +1772,14 @@ class _EditFacilityDetailsScreenState
                       BoxShadow(color: Colors.black12, blurRadius: 4),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(Icons.edit_rounded,
-                        size: 12, color: Color(0xFF2563EB)),
+                        size: 12,
+                        color: isGym
+                            ? const Color(0xFFF97316)
+                            : (isActivity
+                                ? const Color(0xFF0D9488)
+                                : const Color(0xFF2563EB))),
                   ),
                 ),
               ),
@@ -1746,11 +1791,15 @@ class _EditFacilityDetailsScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isGym ? 'GYM NAME' : 'LIBRARY NAME',
-                  style: const TextStyle(
+                  categoryLabel,
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF2563EB),
+                    color: isGym
+                        ? const Color(0xFFF97316)
+                        : (isActivity
+                            ? const Color(0xFF0D9488)
+                            : const Color(0xFF2563EB)),
                     letterSpacing: 0.6,
                   ),
                 ),

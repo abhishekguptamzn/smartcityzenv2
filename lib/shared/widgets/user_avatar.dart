@@ -80,12 +80,18 @@ class UserAvatar extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => fallbackInitials(),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
-            if (loadingProgress.expectedTotalBytes != null &&
-                loadingProgress.cumulativeBytesLoaded >=
-                    (loadingProgress.expectedTotalBytes ?? 0)) {
-              return child;
-            }
-            return fallbackInitials();
+            return Container(
+              width: radius * 2,
+              height: radius * 2,
+              color: backgroundColor ?? Colors.grey.shade200,
+              child: Center(
+                child: SizedBox(
+                  width: radius * 0.7,
+                  height: radius * 0.7,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
           },
         ),
       ),

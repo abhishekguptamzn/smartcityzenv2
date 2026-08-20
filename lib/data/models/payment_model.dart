@@ -23,6 +23,8 @@ abstract class PaymentModel with _$PaymentModel {
     @JsonKey(name: 'due_date') DateTime? dueDate,
     @JsonKey(name: 'paid_at') DateTime? paidAt,
     String? notes,
+    @JsonKey(name: 'facility_name') String? facilityName,
+    @JsonKey(name: 'facility_id') String? facilityId,
     UserModel? user,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,

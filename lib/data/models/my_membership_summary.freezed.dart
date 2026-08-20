@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MyMembershipSummary {
 
- FacilityKind get kind; String get payableId; DateTime? get latestPaidAt; double get amount; String get currency;
+ FacilityKind get kind; String get payableId; DateTime? get latestPaidAt; double get amount; String get currency; String? get facilityId; String? get facilityName;
 /// Create a copy of MyMembershipSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $MyMembershipSummaryCopyWith<MyMembershipSummary> get copyWith => _$MyMembership
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MyMembershipSummary&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.latestPaidAt, latestPaidAt) || other.latestPaidAt == latestPaidAt)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MyMembershipSummary&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.latestPaidAt, latestPaidAt) || other.latestPaidAt == latestPaidAt)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.facilityName, facilityName) || other.facilityName == facilityName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,kind,payableId,latestPaidAt,amount,currency);
+int get hashCode => Object.hash(runtimeType,kind,payableId,latestPaidAt,amount,currency,facilityId,facilityName);
 
 @override
 String toString() {
-  return 'MyMembershipSummary(kind: $kind, payableId: $payableId, latestPaidAt: $latestPaidAt, amount: $amount, currency: $currency)';
+  return 'MyMembershipSummary(kind: $kind, payableId: $payableId, latestPaidAt: $latestPaidAt, amount: $amount, currency: $currency, facilityId: $facilityId, facilityName: $facilityName)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $MyMembershipSummaryCopyWith<$Res>  {
   factory $MyMembershipSummaryCopyWith(MyMembershipSummary value, $Res Function(MyMembershipSummary) _then) = _$MyMembershipSummaryCopyWithImpl;
 @useResult
 $Res call({
- FacilityKind kind, String payableId, DateTime? latestPaidAt, double amount, String currency
+ FacilityKind kind, String payableId, DateTime? latestPaidAt, double amount, String currency, String? facilityId, String? facilityName
 });
 
 
@@ -62,14 +62,16 @@ class _$MyMembershipSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MyMembershipSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? payableId = null,Object? latestPaidAt = freezed,Object? amount = null,Object? currency = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? payableId = null,Object? latestPaidAt = freezed,Object? amount = null,Object? currency = null,Object? facilityId = freezed,Object? facilityName = freezed,}) {
   return _then(_self.copyWith(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as FacilityKind,payableId: null == payableId ? _self.payableId : payableId // ignore: cast_nullable_to_non_nullable
 as String,latestPaidAt: freezed == latestPaidAt ? _self.latestPaidAt : latestPaidAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,
+as String,facilityId: freezed == facilityId ? _self.facilityId : facilityId // ignore: cast_nullable_to_non_nullable
+as String?,facilityName: freezed == facilityName ? _self.facilityName : facilityName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -154,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency,  String? facilityId,  String? facilityName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MyMembershipSummary() when $default != null:
-return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency);case _:
+return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency,_that.facilityId,_that.facilityName);case _:
   return orElse();
 
 }
@@ -175,10 +177,10 @@ return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency,  String? facilityId,  String? facilityName)  $default,) {final _that = this;
 switch (_that) {
 case _MyMembershipSummary():
-return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency);case _:
+return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency,_that.facilityId,_that.facilityName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +197,10 @@ return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( FacilityKind kind,  String payableId,  DateTime? latestPaidAt,  double amount,  String currency,  String? facilityId,  String? facilityName)?  $default,) {final _that = this;
 switch (_that) {
 case _MyMembershipSummary() when $default != null:
-return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency);case _:
+return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that.currency,_that.facilityId,_that.facilityName);case _:
   return null;
 
 }
@@ -210,7 +212,7 @@ return $default(_that.kind,_that.payableId,_that.latestPaidAt,_that.amount,_that
 
 
 class _MyMembershipSummary implements MyMembershipSummary {
-  const _MyMembershipSummary({required this.kind, required this.payableId, required this.latestPaidAt, required this.amount, required this.currency});
+  const _MyMembershipSummary({required this.kind, required this.payableId, required this.latestPaidAt, required this.amount, required this.currency, this.facilityId, this.facilityName});
   
 
 @override final  FacilityKind kind;
@@ -218,6 +220,8 @@ class _MyMembershipSummary implements MyMembershipSummary {
 @override final  DateTime? latestPaidAt;
 @override final  double amount;
 @override final  String currency;
+@override final  String? facilityId;
+@override final  String? facilityName;
 
 /// Create a copy of MyMembershipSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -229,16 +233,16 @@ _$MyMembershipSummaryCopyWith<_MyMembershipSummary> get copyWith => __$MyMembers
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MyMembershipSummary&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.latestPaidAt, latestPaidAt) || other.latestPaidAt == latestPaidAt)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MyMembershipSummary&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.payableId, payableId) || other.payableId == payableId)&&(identical(other.latestPaidAt, latestPaidAt) || other.latestPaidAt == latestPaidAt)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.facilityName, facilityName) || other.facilityName == facilityName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,kind,payableId,latestPaidAt,amount,currency);
+int get hashCode => Object.hash(runtimeType,kind,payableId,latestPaidAt,amount,currency,facilityId,facilityName);
 
 @override
 String toString() {
-  return 'MyMembershipSummary(kind: $kind, payableId: $payableId, latestPaidAt: $latestPaidAt, amount: $amount, currency: $currency)';
+  return 'MyMembershipSummary(kind: $kind, payableId: $payableId, latestPaidAt: $latestPaidAt, amount: $amount, currency: $currency, facilityId: $facilityId, facilityName: $facilityName)';
 }
 
 
@@ -249,7 +253,7 @@ abstract mixin class _$MyMembershipSummaryCopyWith<$Res> implements $MyMembershi
   factory _$MyMembershipSummaryCopyWith(_MyMembershipSummary value, $Res Function(_MyMembershipSummary) _then) = __$MyMembershipSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- FacilityKind kind, String payableId, DateTime? latestPaidAt, double amount, String currency
+ FacilityKind kind, String payableId, DateTime? latestPaidAt, double amount, String currency, String? facilityId, String? facilityName
 });
 
 
@@ -266,14 +270,16 @@ class __$MyMembershipSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MyMembershipSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? payableId = null,Object? latestPaidAt = freezed,Object? amount = null,Object? currency = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? payableId = null,Object? latestPaidAt = freezed,Object? amount = null,Object? currency = null,Object? facilityId = freezed,Object? facilityName = freezed,}) {
   return _then(_MyMembershipSummary(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as FacilityKind,payableId: null == payableId ? _self.payableId : payableId // ignore: cast_nullable_to_non_nullable
 as String,latestPaidAt: freezed == latestPaidAt ? _self.latestPaidAt : latestPaidAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,
+as String,facilityId: freezed == facilityId ? _self.facilityId : facilityId // ignore: cast_nullable_to_non_nullable
+as String?,facilityName: freezed == facilityName ? _self.facilityName : facilityName // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

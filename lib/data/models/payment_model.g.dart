@@ -25,6 +25,8 @@ _PaymentModel _$PaymentModelFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['paid_at'] as String),
       notes: json['notes'] as String?,
+      facilityName: json['facility_name'] as String?,
+      facilityId: json['facility_id'] as String?,
       user: json['user'] == null
           ? null
           : UserModel.fromJson(json['user'] as Map<String, dynamic>),
@@ -51,6 +53,8 @@ Map<String, dynamic> _$PaymentModelToJson(_PaymentModel instance) =>
       'due_date': instance.dueDate?.toIso8601String(),
       'paid_at': instance.paidAt?.toIso8601String(),
       'notes': instance.notes,
+      'facility_name': instance.facilityName,
+      'facility_id': instance.facilityId,
       'user': instance.user,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
