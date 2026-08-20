@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/providers/facilities_providers.dart';
 import '../../../core/providers/facility_member_providers.dart';
 import '../../../core/providers/gym_attendance_providers.dart';
 import '../../../core/providers/payments_providers.dart';
@@ -11,6 +12,7 @@ import '../../../core/providers/payments_providers.dart';
 import '../../../data/models/facility_member_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/payment_model.dart';
+import '../../../data/repositories/client_facility_repository.dart';
 import '../../../data/repositories/gym_attendance_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
@@ -18,6 +20,18 @@ import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../../checkin/gym_checkin_qr_payload.dart';
+
+final memberCheckInHistoryProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, (FacilityKind, String, String)>((ref, args) async {
+  final (kind, facilityId, memberId) = args;
+  final repo = ref.watch(clientFacilityRepositoryProvider);
+  final report = await repo.getMemberAttendanceReport(kind, facilityId, memberId, period: 'all');
+  final rawRecords = report['records'] ?? report['sessions'] ?? report['attendance'] ?? [];
+  if (rawRecords is List) {
+    return rawRecords.cast<Map<String, dynamic>>();
+  }
+  return [];
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -50,29 +64,13 @@ class _MembershipDetailsScreenState
   @override
   void initState() {
     super.initState();
-    final tabCount = widget.kind == FacilityKind.gym ? 4 : 3;
-    _tabController = TabController(length: tabCount, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _showCheckInSheet(
-    BuildContext context,
-    FacilityMemberModel member,
-  ) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _CheckInSheet(
-        gymId: widget.facilityId!,
-        member: member,
-      ),
-    );
   }
 
   @override
@@ -101,44 +99,38 @@ class _MembershipDetailsScreenState
         ),
         centerTitle: true,
       ),
-      body: AmbientBackground(
-        child: !hasFacilityId
-            ? _DegradedView(l10n: l10n)
-            : Consumer(
-                builder: (context, ref, _) {
-                  final memberAsync = ref.watch(
-                    facilityMemberDetailProvider(
-                      widget.kind,
-                      widget.facilityId!,
-                      widget.memberId,
-                    ),
-                  );
-                  return memberAsync.when(
-                    loading: () => const LoadingIndicator(),
-                    error: (err, _) => ErrorStateView(
-                      error: err,
-                      onRetry: () => ref.invalidate(
-                        facilityMemberDetailProvider(
-                          widget.kind,
-                          widget.facilityId!,
-                          widget.memberId,
-                        ),
+      body: !hasFacilityId
+          ? const Center(child: Text('Facility details unavailable'))
+          : Consumer(
+              builder: (context, ref, _) {
+                final memberAsync = ref.watch(
+                  facilityMemberDetailProvider(
+                    widget.kind,
+                    widget.facilityId!,
+                    widget.memberId,
+                  ),
+                );
+                return memberAsync.when(
+                  loading: () => const LoadingIndicator(),
+                  error: (err, _) => ErrorStateView(
+                    error: err,
+                    onRetry: () => ref.invalidate(
+                      facilityMemberDetailProvider(
+                        widget.kind,
+                        widget.facilityId!,
+                        widget.memberId,
                       ),
                     ),
-                    data: (member) => _MembershipBody(
-                      member: member,
-                      kind: widget.kind,
-                      facilityId: widget.facilityId!,
-                      tabController: _tabController,
-                      onCheckIn:
-                          widget.kind == FacilityKind.gym && member.isActive
-                              ? () => _showCheckInSheet(context, member)
-                              : null,
-                    ),
-                  );
-                },
-              ),
-      ),
+                  ),
+                  data: (member) => _MembershipBody(
+                    member: member,
+                    kind: widget.kind,
+                    facilityId: widget.facilityId!,
+                    tabController: _tabController,
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -153,22 +145,18 @@ class _MembershipBody extends StatelessWidget {
     required this.kind,
     required this.facilityId,
     required this.tabController,
-    this.onCheckIn,
   });
 
   final FacilityMemberModel member;
   final FacilityKind kind;
   final String facilityId;
   final TabController tabController;
-  final VoidCallback? onCheckIn;
 
   @override
   Widget build(BuildContext context) {
-    final isGym = kind == FacilityKind.gym;
-
     return Column(
       children: [
-        _HeroCard(member: member, kind: kind, onCheckIn: onCheckIn),
+        _HeroCard(member: member, kind: kind),
         Container(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: TabBar(
@@ -176,10 +164,9 @@ class _MembershipBody extends StatelessWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            tabs: [
+            tabs: const [
               _Tab(icon: Icons.dashboard_rounded, label: 'Overview'),
-              if (isGym)
-                _Tab(icon: Icons.access_time_rounded, label: 'Check-ins'),
+              _Tab(icon: Icons.access_time_rounded, label: 'Check-ins'),
               _Tab(icon: Icons.receipt_long_rounded, label: 'Payments'),
               _Tab(icon: Icons.autorenew_rounded, label: 'Renewals'),
             ],
@@ -190,9 +177,16 @@ class _MembershipBody extends StatelessWidget {
           child: TabBarView(
             controller: tabController,
             children: [
-              _OverviewTab(member: member, kind: kind),
-              if (isGym)
-                _CheckInTab(gymId: facilityId, memberId: member.id),
+              _OverviewTab(
+                member: member,
+                kind: kind,
+                facilityId: facilityId,
+              ),
+              _CheckInTab(
+                kind: kind,
+                facilityId: facilityId,
+                memberId: member.id,
+              ),
               _PaymentsTab(payableId: member.id),
               _RenewalsTab(
                 kind: kind,
@@ -219,7 +213,7 @@ class _Tab extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(label),
         ],
       ),
@@ -232,11 +226,10 @@ class _Tab extends StatelessWidget {
 // ────────────────────────────────────────────────────────────────────────────
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.member, required this.kind, this.onCheckIn});
+  const _HeroCard({required this.member, required this.kind});
 
   final FacilityMemberModel member;
   final FacilityKind kind;
-  final VoidCallback? onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -253,56 +246,24 @@ class _HeroCard extends StatelessWidget {
     }
 
     final gradientColors = isGym
-        ? [
-            const Color(0xFF0F2A5E),
-            const Color(0xFF1A4A8A),
-            const Color(0xFF2563EB),
-          ]
+        ? [const Color(0xFF0F2A5E), const Color(0xFF1A4A8A), const Color(0xFF2563EB)]
         : (isActivity
-            ? [
-                const Color(0xFF4C1D95),
-                const Color(0xFF6D28D9),
-                const Color(0xFF8B5CF6),
-              ]
-            : [
-                const Color(0xFF064E3B),
-                const Color(0xFF065F46),
-                const Color(0xFF059669),
-              ]);
+            ? [const Color(0xFF4C1D95), const Color(0xFF6366F1), const Color(0xFF8B5CF6)]
+            : [const Color(0xFF064E3B), const Color(0xFF059669), const Color(0xFF10B981)]);
 
-    final shadowColor = isGym
-        ? const Color(0xFF2563EB)
-        : (isActivity ? const Color(0xFF8B5CF6) : const Color(0xFF059669));
-
-    final IconData headerIcon = isGym
-        ? Icons.fitness_center_rounded
-        : (isActivity ? Icons.sports_rounded : Icons.local_library_rounded);
-
-    final String defaultTypeName = isGym
-        ? 'GYM'
-        : (isActivity ? 'ACTIVITY ACADEMY' : 'LIBRARY');
-
-    final String headingText = isGym
-        ? 'Gym Membership'
-        : (isActivity ? 'Activity Academy Pass' : 'Library Membership');
+    final shadowColor = isGym ? const Color(0xFF2563EB) : (isActivity ? const Color(0xFF8B5CF6) : const Color(0xFF059669));
+    final headerIcon = isGym ? Icons.fitness_center_rounded : (isActivity ? Icons.sports_rounded : Icons.local_library_rounded);
+    final String defaultTypeName = isGym ? 'GYM' : (isActivity ? 'ACTIVITY ACADEMY' : 'LIBRARY');
+    final String tierFormatted = (member.membershipType != null && member.membershipType!.toLowerCase() != 'none' && member.membershipType!.trim().isNotEmpty) ? member.membershipType!.toUpperCase() : defaultTypeName;
+    final String headingText = isGym ? 'Gym Membership' : (isActivity ? 'Activity Academy Pass' : 'Library Membership');
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 100, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor.withValues(alpha: 0.4),
-            blurRadius: 32,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
+        boxShadow: [BoxShadow(color: shadowColor.withValues(alpha: 0.4), blurRadius: 32, offset: const Offset(0, 14))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,133 +272,37 @@ class _HeroCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3)),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999), border: Border.all(color: Colors.white.withValues(alpha: 0.3))),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive
-                            ? const Color(0xFF34D399)
-                            : const Color(0xFFF87171),
-                      ),
-                    ),
+                    Container(width: 7, height: 7, decoration: BoxDecoration(shape: BoxShape.circle, color: isActive ? const Color(0xFF34D399) : const Color(0xFFF87171))),
                     const SizedBox(width: 6),
-                    Text(
-                      isActive ? 'ACTIVE' : 'EXPIRED',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
+                    Text(isActive ? 'ACTIVE' : 'EXPIRED', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.8)),
                   ],
                 ),
               ),
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25)),
-                ),
-                child: Icon(
-                  headerIcon,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                width: 46, height: 46,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withValues(alpha: 0.25))),
+                child: Icon(headerIcon, color: Colors.white, size: 22),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          Text(
-            (member.membershipType ?? defaultTypeName).toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.4,
-            ),
-          ),
+          Text(tierFormatted, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.4)),
           const SizedBox(height: 4),
-          Text(
-            headingText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          Text(headingText, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(
-            'Member ID: ${member.id}',
-            style: const TextStyle(color: Colors.white60, fontSize: 11),
-          ),
+          Text('Member ID: ${member.id}', style: const TextStyle(color: Colors.white60, fontSize: 11)),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(
-                child: _HeroStat(
-                  label: 'Valid Until',
-                  value: endDateStr,
-                  icon: Icons.calendar_today_rounded,
-                ),
-              ),
+              Expanded(child: _HeroStat(label: 'Valid Until', value: endDateStr, icon: Icons.calendar_today_rounded)),
               const SizedBox(width: 12),
-              Expanded(
-                child: _HeroStat(
-                  label: daysLeft != null && daysLeft >= 0
-                      ? 'Days Left'
-                      : 'Expired',
-                  value: daysLeft != null
-                      ? (daysLeft >= 0
-                          ? '$daysLeft days'
-                          : '${daysLeft.abs()} days ago')
-                      : 'N/A',
-                  icon: Icons.hourglass_bottom_rounded,
-                  valueColor:
-                      daysLeft != null && daysLeft < 7 && daysLeft >= 0
-                          ? const Color(0xFFFBBF24)
-                          : null,
-                ),
-              ),
+              Expanded(child: _HeroStat(label: daysLeft != null && daysLeft >= 0 ? 'Days Left' : 'Expired', value: daysLeft != null ? (daysLeft >= 0 ? '$daysLeft days' : '${daysLeft.abs()} days ago') : 'N/A', icon: Icons.hourglass_bottom_rounded, valueColor: daysLeft != null && daysLeft < 7 && daysLeft >= 0 ? const Color(0xFFFBBF24) : null)),
             ],
           ),
-          if (onCheckIn != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onCheckIn,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF1A4A8A),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                icon: const Icon(Icons.qr_code_scanner_rounded),
-                label: const Text(
-                  'Quick Check-In',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -445,13 +310,7 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _HeroStat extends StatelessWidget {
-  const _HeroStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.valueColor,
-  });
-
+  const _HeroStat({required this.label, required this.value, required this.icon, this.valueColor});
   final String label;
   final String value;
   final IconData icon;
@@ -460,33 +319,19 @@ class _HeroStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.15))),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.white60),
-          const SizedBox(width: 8),
+          Icon(icon, color: Colors.white70, size: 18),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 10)),
+                Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: valueColor ?? Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
+                Text(value, style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
               ],
             ),
           ),
@@ -500,11 +345,29 @@ class _HeroStat extends StatelessWidget {
 // Overview Tab
 // ────────────────────────────────────────────────────────────────────────────
 
-class _OverviewTab extends ConsumerWidget {
-  const _OverviewTab({required this.member, required this.kind});
+IconData _getAmenityIcon(String name) {
+  final lower = name.toLowerCase();
+  if (lower.contains('wifi') || lower.contains('wi-fi') || lower.contains('internet')) return Icons.wifi_rounded;
+  if (lower.contains('ac') || lower.contains('air') || lower.contains('cooling')) return Icons.ac_unit_rounded;
+  if (lower.contains('parking')) return Icons.local_parking_rounded;
+  if (lower.contains('shower') || lower.contains('bath')) return Icons.shower_rounded;
+  if (lower.contains('locker')) return Icons.lock_rounded;
+  if (lower.contains('water') || lower.contains('drink')) return Icons.water_drop_rounded;
+  if (lower.contains('treadmill') || lower.contains('cardio') || lower.contains('gym') || lower.contains('fitness')) return Icons.fitness_center_rounded;
+  if (lower.contains('book') || lower.contains('read') || lower.contains('study') || lower.contains('library')) return Icons.menu_book_rounded;
+  if (lower.contains('cafe') || lower.contains('coffee') || lower.contains('canteen') || lower.contains('tea')) return Icons.local_cafe_rounded;
+  if (lower.contains('trainer') || lower.contains('coach') || lower.contains('instructor')) return Icons.sports_rounded;
+  if (lower.contains('pool') || lower.contains('swim')) return Icons.pool_rounded;
+  if (lower.contains('cctv') || lower.contains('security')) return Icons.security_rounded;
+  if (lower.contains('power') || lower.contains('charging') || lower.contains('socket')) return Icons.power_rounded;
+  return Icons.check_circle_outline_rounded;
+}
 
+class _OverviewTab extends ConsumerWidget {
+  const _OverviewTab({required this.member, required this.kind, required this.facilityId});
   final FacilityMemberModel member;
   final FacilityKind kind;
+  final String facilityId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -513,171 +376,51 @@ class _OverviewTab extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-    final paymentsAsync =
-        ref.watch(paymentListProvider(const PaymentListParams()));
-    final List<PaymentModel> allPayments = paymentsAsync.when(
-      data: (v) => v,
-      loading: () => const <PaymentModel>[],
-      error: (_, _) => const <PaymentModel>[],
-    );
-    final memberPayments =
-        allPayments.where((p) => p.payableId == member.id).toList();
-    final totalPaid = memberPayments
-        .fold<double>(0, (s, p) => s + (p.isPaid ? p.amount : 0));
-    final paidCount = memberPayments.where((p) => p.isPaid).length;
+    final startStr = member.startDate != null ? DateFormat.yMMMd().format(member.startDate!) : 'N/A';
+    final endStr = member.endDate != null ? DateFormat.yMMMd().format(member.endDate!) : 'N/A';
+    int? daysLeft;
+    if (member.endDate != null) daysLeft = member.endDate!.difference(DateTime.now()).inDays;
+    final tierText = (member.membershipType != null && member.membershipType!.toLowerCase() != 'none' && member.membershipType!.trim().isNotEmpty) ? member.membershipType!.toUpperCase() : 'STANDARD';
 
-    final startStr = member.startDate != null
-        ? DateFormat.yMMMd().format(member.startDate!)
-        : 'N/A';
-    final endStr = member.endDate != null
-        ? DateFormat.yMMMd().format(member.endDate!)
-        : 'N/A';
+    final facilityAsync = ref.watch(facilityDetailProvider(kind, facilityId));
+    final facilityAmenities = facilityAsync.value?.amenities ?? [];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
-        _SectionLabel('QUICK STATS'),
-        const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.55,
-          children: [
-            _StatCard(
-              icon: Icons.payments_rounded,
-              label: 'Total Paid',
-              value: 'Rs.${totalPaid.toStringAsFixed(0)}',
-              color: const Color(0xFF10B981),
-            ),
-            _StatCard(
-              icon: Icons.receipt_rounded,
-              label: 'Transactions',
-              value: '$paidCount',
-              color: const Color(0xFF6366F1),
-            ),
-            _StatCard(
-              icon: Icons.calendar_month_rounded,
-              label: 'Member Since',
-              value: member.startDate != null
-                  ? DateFormat('MMM yyyy').format(member.startDate!)
-                  : 'N/A',
-              color: const Color(0xFF0EA5E9),
-            ),
-            _StatCard(
-              icon: member.isActive && !member.isExpired
-                  ? Icons.check_circle_rounded
-                  : Icons.cancel_rounded,
-              label: 'Status',
-              value: member.isActive && !member.isExpired
-                  ? 'Active'
-                  : 'Expired',
-              color: member.isActive && !member.isExpired
-                  ? const Color(0xFF10B981)
-                  : const Color(0xFFEF4444),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
         _SectionLabel('MEMBER INFORMATION'),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4)),
-            ],
-          ),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4))),
           child: Column(
             children: [
-              _DetailRow(
-                icon: Icons.badge_rounded,
-                label: 'Member ID',
-                value: member.id,
-                accent: const Color(0xFF6366F1),
-              ),
+              _DetailRow(icon: Icons.badge_rounded, label: 'Member ID', value: member.id, accent: const Color(0xFF6366F1)),
+              _RowDivider(),
+              _DetailRow(icon: Icons.workspace_premium_rounded, label: 'Membership Tier', value: tierText, accent: const Color(0xFFF59E0B)),
+              _RowDivider(),
+              _DetailRow(icon: isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded, label: 'Facility Type', value: kind.name.toUpperCase(), accent: const Color(0xFF2563EB)),
+              _RowDivider(),
+              _DetailRow(icon: Icons.login_rounded, label: 'Start Date', value: startStr, accent: const Color(0xFF10B981)),
+              _RowDivider(),
+              _DetailRow(icon: Icons.logout_rounded, label: 'End Date', value: endStr, accent: const Color(0xFFEF4444)),
+              _RowDivider(),
+              _DetailRow(icon: Icons.hourglass_bottom_rounded, label: 'Validity', value: daysLeft != null ? (daysLeft >= 0 ? '$daysLeft days remaining' : 'Expired ${daysLeft.abs()} days ago') : 'Active', accent: const Color(0xFF8B5CF6)),
               _RowDivider(),
               _DetailRow(
-                icon: Icons.workspace_premium_rounded,
-                label: 'Tier',
-                value: member.membershipType ?? 'Standard',
-                accent: const Color(0xFFF59E0B),
-              ),
-              _RowDivider(),
-              _DetailRow(
-                icon: Icons.login_rounded,
-                label: 'Start Date',
-                value: startStr,
-                accent: const Color(0xFF10B981),
-              ),
-              _RowDivider(),
-              _DetailRow(
-                icon: Icons.logout_rounded,
-                label: 'End Date',
-                value: endStr,
-                accent: const Color(0xFFEF4444),
-              ),
-              _RowDivider(),
-              _DetailRow(
-                icon: Icons.info_rounded,
-                label: 'Status',
-                value: member.status.toUpperCase(),
-                accent: member.isActive
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFEF4444),
+                icon: Icons.info_rounded, label: 'Status', accent: member.isActive && !member.isExpired ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                customValue: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: (member.isActive && !member.isExpired ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)), child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: member.isActive && !member.isExpired ? const Color(0xFF10B981) : const Color(0xFFEF4444))), const SizedBox(width: 5), Text(member.isActive && !member.isExpired ? 'ACTIVE' : 'EXPIRED', style: TextStyle(color: member.isActive && !member.isExpired ? const Color(0xFF10B981) : const Color(0xFFEF4444), fontWeight: FontWeight.w700, fontSize: 11))])),
               ),
             ],
           ),
         ),
         const SizedBox(height: 20),
-        _SectionLabel('INCLUDED BENEFITS'),
+        _SectionLabel('INCLUDED BENEFITS & AMENITIES'),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.4)),
-          ),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4))),
           child: Column(
-            children: [
-              _BenefitRow(
-                icon: Icons.wifi_rounded,
-                label: 'Free Wi-Fi',
-                accent: const Color(0xFF0EA5E9),
-              ),
-              _RowDivider(),
-              _BenefitRow(
-                icon: isGym
-                    ? Icons.fitness_center_rounded
-                    : Icons.menu_book_rounded,
-                label: isGym ? 'Full Gym Access' : 'Full Library Access',
-                accent: isGym
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFF059669),
-              ),
-              if (isGym) ...[
-                _RowDivider(),
-                _BenefitRow(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'QR Check-in / Check-out',
-                  accent: const Color(0xFF8B5CF6),
-                ),
-              ],
-              _RowDivider(),
-              _BenefitRow(
-                icon: Icons.receipt_long_rounded,
-                label: 'Digital Receipts & Invoices',
-                accent: const Color(0xFFF59E0B),
-              ),
+            children: facilityAmenities.isNotEmpty ? facilityAmenities.asMap().entries.map((e) => Column(children: [if (e.key > 0) _RowDivider(), _BenefitRow(icon: _getAmenityIcon(e.value.name), label: e.value.name, accent: [const Color(0xFF0EA5E9), const Color(0xFF10B981), const Color(0xFF8B5CF6), const Color(0xFFF59E0B)][e.key % 4])])).toList() : [
+              _BenefitRow(icon: Icons.wifi_rounded, label: 'High-speed Wi-Fi Access', accent: const Color(0xFF0EA5E9)), _RowDivider(), _BenefitRow(icon: isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded, label: isGym ? 'Gym Floor Access' : 'Library Access', accent: const Color(0xFF2563EB)), _RowDivider(), _BenefitRow(icon: Icons.qr_code_scanner_rounded, label: 'Digital QR Check-in', accent: const Color(0xFF8B5CF6)),
             ],
           ),
         ),
@@ -689,209 +432,221 @@ class _OverviewTab extends ConsumerWidget {
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
-
   @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            letterSpacing: 1.2,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-              color: color.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                      color: color)),
-              Text(label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.55),
-                      )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Text(text, style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.2, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)));
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.accent,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color accent;
-
+  const _DetailRow({required this.icon, required this.label, this.value, this.customValue, required this.accent});
+  final IconData icon; final String label; final String? value; final Widget? customValue; final Color accent;
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 17, color: accent),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-          ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Row(children: [Container(width: 36, height: 36, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: accent)), const SizedBox(width: 14), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65), fontWeight: FontWeight.w500))), const SizedBox(width: 8), if (customValue != null) customValue! else if (value != null) Flexible(child: Text(value!, textAlign: TextAlign.end, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 2))]));
 }
 
 class _BenefitRow extends StatelessWidget {
-  const _BenefitRow(
-      {required this.icon, required this.label, required this.accent});
-  final IconData icon;
-  final String label;
-  final Color accent;
-
+  const _BenefitRow({required this.icon, required this.label, required this.accent});
+  final IconData icon; final String label; final Color accent;
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 17, color: accent),
-          ),
-          const SizedBox(width: 14),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF10B981), size: 18),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(children: [Container(width: 34, height: 34, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: accent)), const SizedBox(width: 14), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium)), const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18)]));
 }
 
 class _RowDivider extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Divider(
-      height: 1,
-      indent: 64,
-      endIndent: 0,
-      color: Theme.of(context)
-          .colorScheme
-          .outlineVariant
-          .withValues(alpha: 0.4),
-    );
-  }
+  Widget build(BuildContext context) => Divider(height: 1, indent: 64, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4));
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Check-in History Tab (gym only)
+// Check-in History Tab
 // ────────────────────────────────────────────────────────────────────────────
 
 class _CheckInTab extends ConsumerWidget {
-  const _CheckInTab({required this.gymId, required this.memberId});
+  const _CheckInTab({
+    required this.kind,
+    required this.facilityId,
+    required this.memberId,
+  });
 
-  final String gymId;
+  final FacilityKind kind;
+  final String facilityId;
   final String memberId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final attendanceAsync =
-        ref.watch(memberAttendanceHistoryProvider(gymId, memberId));
+    if (kind == FacilityKind.gym) {
+      final attendanceAsync =
+          ref.watch(memberAttendanceHistoryProvider(facilityId, memberId));
 
-    return attendanceAsync.when(
+      return attendanceAsync.when(
+        loading: () => const LoadingIndicator(),
+        error: (error, _) => ErrorStateView(
+          error: error,
+          onRetry: () =>
+              ref.invalidate(memberAttendanceHistoryProvider(facilityId, memberId)),
+        ),
+        data: (records) {
+          if (records.isEmpty) {
+            return const EmptyStateView(
+              icon: Icons.history_rounded,
+              message: 'No check-in records yet.',
+            );
+          }
+
+          final totalSessions = records.length;
+          final totalSeconds =
+              records.fold<int>(0, (s, r) => s + (r.duration ?? 0));
+          final totalHours = totalSeconds ~/ 3600;
+          final openSessions = records.where((r) => r.isOpenSession).length;
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+            children: [
+              Row(
+                children: [
+                  _CheckInStat(
+                    label: 'Sessions',
+                    value: '$totalSessions',
+                    icon: Icons.fitness_center_rounded,
+                    color: const Color(0xFF6366F1),
+                  ),
+                  const SizedBox(width: 10),
+                  _CheckInStat(
+                    label: 'Total Hours',
+                    value: '${totalHours}h',
+                    icon: Icons.timer_rounded,
+                    color: const Color(0xFF10B981),
+                  ),
+                  const SizedBox(width: 10),
+                  _CheckInStat(
+                    label: 'Open',
+                    value: '$openSessions',
+                    icon: Icons.lock_open_rounded,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionLabel('HISTORY'),
+              const SizedBox(height: 10),
+              ...records.asMap().entries.map((entry) {
+                final i = entry.key;
+                final r = entry.value;
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final accent = r.isOpenSession
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFF10B981);
+                return Container(
+                  margin: EdgeInsets.only(top: i == 0 ? 0 : 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: accent.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          r.isOpenSession
+                              ? Icons.timer_rounded
+                              : Icons.check_circle_rounded,
+                          color: accent,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              r.date != null
+                                  ? DateFormat('EEE, d MMM yyyy')
+                                      .format(r.date!)
+                                  : 'Unknown date',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                if (r.checkInAt != null) ...[
+                                  const Icon(Icons.login_rounded,
+                                      size: 12, color: Color(0xFF10B981)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat('h:mm a').format(r.checkInAt!),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                            color: const Color(0xFF10B981)),
+                                  ),
+                                ],
+                                if (r.checkOutAt != null) ...[
+                                  const SizedBox(width: 10),
+                                  const Icon(Icons.logout_rounded,
+                                      size: 12, color: Color(0xFFEF4444)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat('h:mm a').format(r.checkOutAt!),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                            color: const Color(0xFFEF4444)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          r.isOpenSession
+                              ? 'Open'
+                              : (r.formattedDuration ?? 'N/A'),
+                          style: TextStyle(
+                            color: accent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          );
+        },
+      );
+    }
+
+    // For Library and Activity (or fallback)
+    final historyAsync = ref.watch(memberCheckInHistoryProvider((kind, facilityId, memberId)));
+
+    return historyAsync.when(
       loading: () => const LoadingIndicator(),
       error: (error, _) => ErrorStateView(
         error: error,
         onRetry: () =>
-            ref.invalidate(memberAttendanceHistoryProvider(gymId, memberId)),
+            ref.invalidate(memberCheckInHistoryProvider((kind, facilityId, memberId))),
       ),
       data: (records) {
         if (records.isEmpty) {
@@ -902,10 +657,13 @@ class _CheckInTab extends ConsumerWidget {
         }
 
         final totalSessions = records.length;
-        final totalSeconds =
-            records.fold<int>(0, (s, r) => s + (r.duration ?? 0));
-        final totalHours = totalSeconds ~/ 3600;
-        final openSessions = records.where((r) => r.isOpenSession).length;
+        final totalMinutes = records.fold<int>(0, (s, r) => s + ((r['duration_minutes'] as num?)?.toInt() ?? 0));
+        final totalHours = totalMinutes ~/ 60;
+        final openSessions = records.where((r) => r['is_currently_inside'] == true).length;
+
+        final IconData icon = kind == FacilityKind.library
+            ? Icons.menu_book_rounded
+            : Icons.sports_rounded;
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
@@ -915,7 +673,7 @@ class _CheckInTab extends ConsumerWidget {
                 _CheckInStat(
                   label: 'Sessions',
                   value: '$totalSessions',
-                  icon: Icons.fitness_center_rounded,
+                  icon: icon,
                   color: const Color(0xFF6366F1),
                 ),
                 const SizedBox(width: 10),
@@ -941,9 +699,15 @@ class _CheckInTab extends ConsumerWidget {
               final i = entry.key;
               final r = entry.value;
               final isDark = Theme.of(context).brightness == Brightness.dark;
-              final accent = r.isOpenSession
+              final isInside = r['is_currently_inside'] == true;
+              final accent = isInside
                   ? const Color(0xFFF59E0B)
                   : const Color(0xFF10B981);
+              final checkInTime = r['check_in_time'] ?? '--';
+              final checkOutTime = r['check_out_time'] ?? '--';
+              final dateFormatted = r['date_formatted'] ?? r['date'] ?? 'Session';
+              final durText = r['duration_text'] ?? (isInside ? 'In Session' : 'Recorded');
+
               return Container(
                 margin: EdgeInsets.only(top: i == 0 ? 0 : 10),
                 padding: const EdgeInsets.all(14),
@@ -963,7 +727,7 @@ class _CheckInTab extends ConsumerWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        r.isOpenSession
+                        isInside
                             ? Icons.timer_rounded
                             : Icons.check_circle_rounded,
                         color: accent,
@@ -976,10 +740,7 @@ class _CheckInTab extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            r.date != null
-                                ? DateFormat('EEE, d MMM yyyy')
-                                    .format(r.date!)
-                                : 'Unknown date',
+                            dateFormatted.toString(),
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -988,26 +749,24 @@ class _CheckInTab extends ConsumerWidget {
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              if (r.checkInAt != null) ...[
-                                const Icon(Icons.login_rounded,
-                                    size: 12, color: Color(0xFF10B981)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  DateFormat('h:mm a').format(r.checkInAt!),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                          color: const Color(0xFF10B981)),
-                                ),
-                              ],
-                              if (r.checkOutAt != null) ...[
+                              const Icon(Icons.login_rounded,
+                                  size: 12, color: Color(0xFF10B981)),
+                              const SizedBox(width: 4),
+                              Text(
+                                checkInTime.toString(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                        color: const Color(0xFF10B981)),
+                              ),
+                              if (checkOutTime != '--' && !isInside) ...[
                                 const SizedBox(width: 10),
                                 const Icon(Icons.logout_rounded,
                                     size: 12, color: Color(0xFFEF4444)),
                                 const SizedBox(width: 4),
                                 Text(
-                                  DateFormat('h:mm a').format(r.checkOutAt!),
+                                  checkOutTime.toString(),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -1028,9 +787,7 @@ class _CheckInTab extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        r.isOpenSession
-                            ? 'Open'
-                            : (r.formattedDuration ?? 'N/A'),
+                        durText.toString(),
                         style: TextStyle(
                           color: accent,
                           fontWeight: FontWeight.w600,
