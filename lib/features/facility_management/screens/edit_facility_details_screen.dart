@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/utils/file_validator.dart';
 import '../../../core/utils/image_url_resolver.dart';
 import '../../../data/models/amenity_model.dart';
 import '../../../data/models/facility_model.dart';
@@ -311,15 +312,33 @@ class _EditFacilityDetailsScreenState
       );
       if (picked == null) return;
 
-      setState(() => _uploadingPhoto = true);
       final bytes = await picked.readAsBytes();
+      final filename = picked.name.isNotEmpty ? picked.name : 'facility_photo.jpg';
+
+      final validationError = FileValidator.validateImageBytes(
+        bytes,
+        filename: filename,
+      );
+      if (validationError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validationError),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _uploadingPhoto = true);
 
       final repo = ref.read(clientFacilityRepositoryProvider);
       await repo.uploadFacilityMedia(
         widget.kind,
         widget.facilityId,
         bytes: bytes,
-        filename: picked.name.isNotEmpty ? picked.name : 'facility_photo.jpg',
+        filename: filename,
       );
 
       _invalidateAllFacilityData();

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/active_checkin_provider.dart';
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/utils/file_validator.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/gym_attendance_model.dart';
@@ -305,6 +306,17 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   Future<void> _uploadFromGallery() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked == null || !mounted) return;
+
+    final validationError = await FileValidator.validateXFile(picked);
+    if (validationError != null) {
+      if (!mounted) return;
+      setState(() {
+        _status = _ScanStatus.error;
+        _errorMessage = validationError;
+      });
+      return;
+    }
+
     final capture = await _controller.analyzeImage(picked.path);
     if (!mounted) return;
     final raw = capture?.barcodes.firstOrNull?.rawValue;

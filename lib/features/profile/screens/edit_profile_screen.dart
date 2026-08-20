@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/utils/file_validator.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/users_repository.dart';
@@ -182,13 +183,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       );
       if (picked == null) return;
 
-      setState(() => _uploadingPhoto = true);
       final bytes = await picked.readAsBytes();
+      final filename = picked.name.isNotEmpty ? picked.name : 'avatar.jpg';
+
+      final validationError = FileValidator.validateImageBytes(
+        bytes,
+        filename: filename,
+      );
+      if (validationError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validationError),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _uploadingPhoto = true);
 
       await ref.read(usersRepositoryProvider).uploadPhoto(
             user.id,
             bytes: bytes,
-            filename: picked.name.isNotEmpty ? picked.name : 'avatar.jpg',
+            filename: filename,
           );
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
