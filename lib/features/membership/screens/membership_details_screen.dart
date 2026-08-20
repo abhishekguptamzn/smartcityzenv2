@@ -417,11 +417,106 @@ class _OverviewTab extends ConsumerWidget {
         _SectionLabel('INCLUDED BENEFITS & AMENITIES'),
         const SizedBox(height: 10),
         Container(
-          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4))),
-          child: Column(
-            children: facilityAmenities.isNotEmpty ? facilityAmenities.asMap().entries.map((e) => Column(children: [if (e.key > 0) _RowDivider(), _BenefitRow(icon: _getAmenityIcon(e.value.name), label: e.value.name, accent: [const Color(0xFF0EA5E9), const Color(0xFF10B981), const Color(0xFF8B5CF6), const Color(0xFFF59E0B)][e.key % 4])])).toList() : [
-              _BenefitRow(icon: Icons.wifi_rounded, label: 'High-speed Wi-Fi Access', accent: const Color(0xFF0EA5E9)), _RowDivider(), _BenefitRow(icon: isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded, label: isGym ? 'Gym Floor Access' : 'Library Access', accent: const Color(0xFF2563EB)), _RowDivider(), _BenefitRow(icon: Icons.qr_code_scanner_rounded, label: 'Digital QR Check-in', accent: const Color(0xFF8B5CF6)),
-            ],
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+          ),
+          child: facilityAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              ),
+            ),
+            error: (_, __) => Column(
+              children: [
+                _BenefitRow(
+                  icon: Icons.wifi_rounded,
+                  label: 'High-speed Wi-Fi Access',
+                  accent: const Color(0xFF0EA5E9),
+                ),
+                _RowDivider(),
+                _BenefitRow(
+                  icon: isGym
+                      ? Icons.fitness_center_rounded
+                      : (kind == FacilityKind.activity ? Icons.sports_rounded : Icons.menu_book_rounded),
+                  label: isGym
+                      ? 'Gym Floor Access'
+                      : (kind == FacilityKind.activity ? 'Activity Academy Access' : 'Library Access'),
+                  accent: const Color(0xFF2563EB),
+                ),
+                _RowDivider(),
+                _BenefitRow(
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'Digital QR Check-in',
+                  accent: const Color(0xFF8B5CF6),
+                ),
+              ],
+            ),
+            data: (facility) {
+              final activeAmenities = (facility.amenities ?? [])
+                  .where((a) => a.isEffectiveActive)
+                  .toList();
+
+              if (activeAmenities.isEmpty) {
+                return Column(
+                  children: [
+                    _BenefitRow(
+                      icon: Icons.wifi_rounded,
+                      label: 'High-speed Wi-Fi Access',
+                      accent: const Color(0xFF0EA5E9),
+                    ),
+                    _RowDivider(),
+                    _BenefitRow(
+                      icon: isGym
+                          ? Icons.fitness_center_rounded
+                          : (kind == FacilityKind.activity ? Icons.sports_rounded : Icons.menu_book_rounded),
+                      label: isGym
+                          ? 'Gym Floor Access'
+                          : (kind == FacilityKind.activity ? 'Activity Academy Access' : 'Library Access'),
+                      accent: const Color(0xFF2563EB),
+                    ),
+                    _RowDivider(),
+                    _BenefitRow(
+                      icon: Icons.qr_code_scanner_rounded,
+                      label: 'Digital QR Check-in',
+                      accent: const Color(0xFF8B5CF6),
+                    ),
+                  ],
+                );
+              }
+
+              final accents = [
+                const Color(0xFF0EA5E9),
+                const Color(0xFF10B981),
+                const Color(0xFF8B5CF6),
+                const Color(0xFFF59E0B),
+                const Color(0xFFEC4899),
+                const Color(0xFF06B6D4),
+              ];
+
+              return Column(
+                children: activeAmenities.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final a = entry.value;
+                  return Column(
+                    children: [
+                      if (i > 0) _RowDivider(),
+                      _BenefitRow(
+                        icon: _getAmenityIcon(a.name),
+                        label: a.name,
+                        accent: accents[i % accents.length],
+                      ),
+                    ],
+                  );
+                }).toList(),
+              );
+            },
           ),
         ),
       ],
