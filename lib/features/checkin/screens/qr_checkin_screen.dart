@@ -93,50 +93,66 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
     try {
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
         final decoded = jsonDecode(trimmed);
-        if (decoded is Map && decoded['type'] == 'facility_checkin' && decoded['facility_id'] != null) {
-          final rawKind = decoded['facility_type']?.toString().toLowerCase() ?? 'gym';
-          final kind = (rawKind == 'gym' || rawKind == 'gyms') ? FacilityKind.gym : FacilityKind.library;
-          final facilityId = decoded['facility_id'].toString();
-          final facilityName = decoded['facility_name']?.toString() ?? (kind == FacilityKind.gym ? 'Gym Facility' : 'Library Hub');
+        if (decoded is Map && (decoded['type'] == 'facility_checkin' || decoded.containsKey('facility_id') || decoded.containsKey('gym_id') || decoded.containsKey('library_id') || decoded.containsKey('activity_id'))) {
+          final rawKind = (decoded['facility_type'] ?? decoded['type'] ?? '').toString().toLowerCase();
+          final facilityId = (decoded['facility_id'] ?? decoded['id'] ?? decoded['gym_id'] ?? decoded['library_id'] ?? decoded['activity_id'])?.toString() ?? '';
 
-          setState(() => _status = _ScanStatus.checkingIn);
-          try {
-            final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, facilityId);
-            ref.invalidate(activeCheckinProvider);
-            if (!mounted) return;
+          if (facilityId.isNotEmpty) {
+            FacilityKind kind;
+            if (rawKind.contains('gym') || facilityId.toUpperCase().startsWith('GYM')) {
+              kind = FacilityKind.gym;
+            } else if (rawKind.contains('act') || rawKind.contains('fac') || rawKind.contains('center') || facilityId.toUpperCase().startsWith('ACT') || facilityId.toUpperCase().startsWith('FAC')) {
+              kind = FacilityKind.activity;
+            } else {
+              kind = FacilityKind.library;
+            }
 
-            final statusStr = checkinRes['status']?.toString() ?? 'checked_in';
-            final isCheckOut = statusStr == 'checked_out';
-            final durationMinutes = checkinRes['duration_minutes'];
+            final facilityName = decoded['facility_name']?.toString() ?? (kind == FacilityKind.gym ? 'Gym Facility' : (kind == FacilityKind.activity ? 'Facility Center' : 'Library Hub'));
 
-            setState(() {
-              _status = _ScanStatus.success;
-              _decodedInfo = _DecodedQrInfo(
-                type: isCheckOut ? _QrType.gymCheckOut : (kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess),
-                title: facilityName,
-                subtitle: isCheckOut ? 'Check-Out Confirmed' : '${kind.displayName} Check-In Confirmed',
-                rawValue: trimmed,
-                categoryLabel: isCheckOut ? '${kind.displayName} Check-Out' : '${kind.displayName} Check-In',
-                categoryIcon: isCheckOut ? Icons.logout_rounded : (kind == FacilityKind.gym ? Icons.fitness_center_rounded : Icons.local_library_rounded),
-                accentColor: isCheckOut ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
-                metadata: {
-                  'Facility': facilityName,
-                  'Type': kind.displayName,
-                  'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
-                  if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
-                  'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
-                },
-              );
-            });
-            return;
-          } catch (e) {
-            final appException = AppException.from(e);
-            if (!mounted) return;
-            setState(() {
-              _status = _ScanStatus.error;
-              _errorMessage = appException?.message ?? 'Check-in failed. Please verify your membership pass.';
-            });
-            return;
+            setState(() => _status = _ScanStatus.checkingIn);
+            try {
+              final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, facilityId);
+              ref.invalidate(activeCheckinProvider);
+              if (!mounted) return;
+
+              final statusStr = checkinRes['status']?.toString() ?? 'checked_in';
+              final isCheckOut = statusStr == 'checked_out';
+              final durationMinutes = checkinRes['duration_minutes'];
+              final resolvedName = checkinRes['facility_name']?.toString() ?? facilityName;
+
+              setState(() {
+                _status = _ScanStatus.success;
+                _decodedInfo = _DecodedQrInfo(
+                  type: isCheckOut ? _QrType.gymCheckOut : (kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess),
+                  title: resolvedName,
+                  subtitle: isCheckOut ? 'Check-Out Confirmed' : '${kind.displayName} Check-In Confirmed',
+                  rawValue: trimmed,
+                  categoryLabel: isCheckOut ? '${kind.displayName} Check-Out' : '${kind.displayName} Check-In',
+                  categoryIcon: isCheckOut
+                      ? Icons.logout_rounded
+                      : (kind == FacilityKind.gym
+                          ? Icons.fitness_center_rounded
+                          : (kind == FacilityKind.activity ? Icons.domain_rounded : Icons.local_library_rounded)),
+                  accentColor: isCheckOut ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+                  metadata: {
+                    'Facility': resolvedName,
+                    'Type': kind.displayName,
+                    'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
+                    if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
+                    'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+                  },
+                );
+              });
+              return;
+            } catch (e) {
+              final appException = AppException.from(e);
+              if (!mounted) return;
+              setState(() {
+                _status = _ScanStatus.error;
+                _errorMessage = appException?.message ?? 'Check-in failed. Please verify your membership pass.';
+              });
+              return;
+            }
           }
         }
       }
@@ -196,28 +212,62 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
       }
     }
 
-    // 2. Check if it's a Library Access Pass / QR
-    if (trimmed.toUpperCase().startsWith('LIB') ||
-        trimmed.toLowerCase().contains('library')) {
-      setState(() {
-        _status = _ScanStatus.success;
-        _decodedInfo = _DecodedQrInfo(
-          type: _QrType.libraryAccess,
-          title: 'Smart Library Entrance Pass',
-          subtitle: 'Digital Access Granted',
-          rawValue: trimmed,
-          categoryLabel: 'Library Pass',
-          categoryIcon: Icons.local_library_rounded,
-          accentColor: const Color(0xFF0284C7),
-          metadata: {
-            'Service': 'Digital Library Reader Pass',
-            'Scanned Code': trimmed,
-            'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
-            'Access': 'Entry Verified',
-          },
-        );
-      });
-      return;
+    // 2. Check if it's a direct Facility ID (e.g. LIB..., GYM..., ACT..., FAC...)
+    final upper = trimmed.toUpperCase();
+    if ((upper.startsWith('LIB') || upper.startsWith('GYM') || upper.startsWith('ACT') || upper.startsWith('FAC')) && trimmed.length <= 20) {
+      final kind = upper.startsWith('GYM')
+          ? FacilityKind.gym
+          : (upper.startsWith('ACT') || upper.startsWith('FAC') ? FacilityKind.activity : FacilityKind.library);
+      final facilityName = kind == FacilityKind.gym
+          ? 'Gym Facility'
+          : (kind == FacilityKind.activity ? 'Facility Center' : 'Library Hub');
+
+      setState(() => _status = _ScanStatus.checkingIn);
+      try {
+        final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, trimmed);
+        ref.invalidate(activeCheckinProvider);
+        if (!mounted) return;
+
+        final statusStr = checkinRes['status']?.toString() ?? 'checked_in';
+        final isCheckOut = statusStr == 'checked_out';
+        final durationMinutes = checkinRes['duration_minutes'];
+        final resolvedName = checkinRes['facility_name']?.toString() ?? facilityName;
+
+        setState(() {
+          _status = _ScanStatus.success;
+          _decodedInfo = _DecodedQrInfo(
+            type: isCheckOut
+                ? _QrType.gymCheckOut
+                : (kind == FacilityKind.gym ? _QrType.gymCheckIn : _QrType.libraryAccess),
+            title: resolvedName,
+            subtitle: isCheckOut ? 'Check-Out Confirmed' : '${kind.displayName} Check-In Confirmed',
+            rawValue: trimmed,
+            categoryLabel: isCheckOut ? '${kind.displayName} Check-Out' : '${kind.displayName} Check-In',
+            categoryIcon: isCheckOut
+                ? Icons.logout_rounded
+                : (kind == FacilityKind.gym
+                    ? Icons.fitness_center_rounded
+                    : (kind == FacilityKind.activity ? Icons.domain_rounded : Icons.local_library_rounded)),
+            accentColor: isCheckOut ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
+            metadata: {
+              'Facility': resolvedName,
+              'Type': kind.displayName,
+              'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
+              if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
+              'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+            },
+          );
+        });
+        return;
+      } catch (e) {
+        final appException = AppException.from(e);
+        if (!mounted) return;
+        setState(() {
+          _status = _ScanStatus.error;
+          _errorMessage = appException?.message ?? 'Check-in failed. Please verify your membership pass.';
+        });
+        return;
+      }
     }
 
     // 3. Check if it's a Citizen Identity Pass (CID-...)
