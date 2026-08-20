@@ -71,18 +71,25 @@ class UsersApi {
     required List<int> bytes,
     required String filename,
   }) async {
+    final lower = filename.toLowerCase();
+    final ext = lower.endsWith('.png')
+        ? 'png'
+        : lower.endsWith('.webp')
+            ? 'webp'
+            : 'jpeg';
+    final safeFilename = filename.isNotEmpty
+        ? (filename.contains('.') ? filename : '$filename.$ext')
+        : 'avatar.$ext';
+
     final formData = FormData.fromMap({
       'image': MultipartFile.fromBytes(
         bytes,
-        filename: filename,
+        filename: safeFilename,
       ),
     });
     return _dio.post(
       '/users/$id/photo',
       data: formData,
-      options: Options(
-        contentType: 'multipart/form-data',
-      ),
     );
   }
 

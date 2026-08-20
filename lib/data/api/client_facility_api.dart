@@ -304,14 +304,23 @@ class ClientFacilityApi {
     required String filename,
     String? caption,
   }) {
+    final lower = filename.toLowerCase();
+    final ext = lower.endsWith('.png')
+        ? 'png'
+        : lower.endsWith('.webp')
+            ? 'webp'
+            : 'jpeg';
+    final safeFilename = filename.isNotEmpty
+        ? (filename.contains('.') ? filename : '$filename.$ext')
+        : 'facility.$ext';
+
     final formData = FormData.fromMap({
-      'image': MultipartFile.fromBytes(bytes, filename: filename),
+      'image': MultipartFile.fromBytes(bytes, filename: safeFilename),
       if (caption != null && caption.isNotEmpty) 'caption': caption,
     });
     return _dio.post(
       '/$type/$facilityId/media',
       data: formData,
-      options: Options(contentType: 'multipart/form-data'),
     );
   }
 
