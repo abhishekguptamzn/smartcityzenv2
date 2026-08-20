@@ -364,7 +364,12 @@ IconData _getAmenityIcon(String name) {
 }
 
 class _OverviewTab extends ConsumerWidget {
-  const _OverviewTab({required this.member, required this.kind, required this.facilityId});
+  const _OverviewTab({
+    required this.member,
+    required this.kind,
+    required this.facilityId,
+  });
+
   final FacilityMemberModel member;
   final FacilityKind kind;
   final String facilityId;
@@ -382,12 +387,64 @@ class _OverviewTab extends ConsumerWidget {
     if (member.endDate != null) daysLeft = member.endDate!.difference(DateTime.now()).inDays;
     final tierText = (member.membershipType != null && member.membershipType!.toLowerCase() != 'none' && member.membershipType!.trim().isNotEmpty) ? member.membershipType!.toUpperCase() : 'STANDARD';
 
+    final paymentsAsync = ref.watch(paymentListProvider(const PaymentListParams()));
+    final List<PaymentModel> allPayments = paymentsAsync.when(
+      data: (v) => v,
+      loading: () => const <PaymentModel>[],
+      error: (_, _) => const <PaymentModel>[],
+    );
+    final memberPayments = allPayments.where((p) => p.payableId == member.id).toList();
+    final totalPaid = memberPayments.fold<double>(0, (s, p) => s + (p.isPaid ? p.amount : 0));
+    final paidCount = memberPayments.where((p) => p.isPaid).length;
+
     final facilityAsync = ref.watch(facilityDetailProvider(kind, facilityId));
-    final facilityAmenities = facilityAsync.value?.amenities ?? [];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
+        _SectionLabel('QUICK STATS'),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.55,
+          children: [
+            _StatCard(
+              icon: Icons.payments_rounded,
+              label: 'Total Paid',
+              value: '₹${totalPaid.toStringAsFixed(0)}',
+              color: const Color(0xFF10B981),
+            ),
+            _StatCard(
+              icon: Icons.receipt_rounded,
+              label: 'Transactions',
+              value: '$paidCount',
+              color: const Color(0xFF6366F1),
+            ),
+            _StatCard(
+              icon: Icons.calendar_month_rounded,
+              label: 'Member Since',
+              value: member.startDate != null
+                  ? DateFormat('MMM yyyy').format(member.startDate!)
+                  : 'N/A',
+              color: const Color(0xFF0EA5E9),
+            ),
+            _StatCard(
+              icon: Icons.hourglass_bottom_rounded,
+              label: 'Validity',
+              value: daysLeft != null
+                  ? (daysLeft >= 0 ? '$daysLeft Days' : 'Expired')
+                  : (member.isActive ? 'Active' : 'Expired'),
+              color: daysLeft != null && daysLeft < 7 && daysLeft >= 0
+                  ? const Color(0xFFF59E0B)
+                  : const Color(0xFF8B5CF6),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
         _SectionLabel('MEMBER INFORMATION'),
         const SizedBox(height: 10),
         Container(
@@ -548,6 +605,80 @@ class _BenefitRow extends StatelessWidget {
 class _RowDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Divider(height: 1, indent: 64, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4));
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
