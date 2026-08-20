@@ -833,55 +833,6 @@ class _GenericSuccessViewState extends State<_GenericSuccessView>
                             ],
                           ),
                         )),
-                    const Divider(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Raw Data',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF94A3B8),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        TextButton.icon(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(0, 30),
-                          ),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: info.rawValue));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Copied payload to clipboard!'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 14),
-                          label: const Text('Copy', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        info.rawValue,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: Color(0xFF334155),
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
                   ],
                 ),
               ),

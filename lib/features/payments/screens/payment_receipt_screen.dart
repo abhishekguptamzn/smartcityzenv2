@@ -42,11 +42,21 @@ class PaymentReceiptScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(paymentDetailProvider(paymentId)),
           ),
           data: (payment) {
+            final isINR = payment.currency.toUpperCase() == 'INR' || payment.currency.isEmpty;
+            final currencySymbol = isINR ? '₹' : payment.currency;
             final currencyFormat = NumberFormat.currency(
-              name: payment.currency,
+              locale: 'en_IN',
+              symbol: currencySymbol,
               decimalDigits: 2,
             );
             final accent = payment.isPaid ? scheme.secondary : scheme.error;
+            final paymentTimestamp = payment.paidAt ?? payment.createdAt;
+            final facilityName = (payment.facilityName?.isNotEmpty == true)
+                ? payment.facilityName!
+                : ((payment.notes?.isNotEmpty == true && !payment.notes!.startsWith('http'))
+                    ? payment.notes!
+                    : (payment.payableType != null ? payment.payableType! : 'Civic Facility'));
+
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -73,11 +83,17 @@ class PaymentReceiptScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         Text(
                           currencyFormat.format(payment.amount),
-                          style: Theme.of(context).textTheme.headlineMedium,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          payment.status,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          payment.status.toUpperCase(),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ],
                     ),
@@ -90,11 +106,16 @@ class PaymentReceiptScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ReceiptRow(label: l10n.status, value: payment.status),
+                        _ReceiptRow(
+                          label: 'Facility',
+                          value: facilityName,
+                        ),
+                        const Divider(height: 24),
+                        _ReceiptRow(label: l10n.status, value: payment.status.toUpperCase()),
                         const Divider(height: 24),
                         _ReceiptRow(
                           label: l10n.paymentMethod,
-                          value: payment.paymentMethod ?? '—',
+                          value: (payment.paymentMethod ?? 'UPI / BHIM QR').toUpperCase(),
                         ),
                         const Divider(height: 24),
                         _ReceiptRow(
@@ -108,20 +129,23 @@ class PaymentReceiptScreen extends ConsumerWidget {
                         ),
                         const Divider(height: 24),
                         _ReceiptRow(
-                          label: l10n.dueDate,
-                          value: payment.dueDate != null
-                              ? DateFormat.yMMMd().format(payment.dueDate!)
-                              : '—',
+                          label: 'Payment Date',
+                          value: paymentTimestamp != null
+                              ? DateFormat('dd MMM yyyy').format(paymentTimestamp.toLocal())
+                              : (payment.dueDate != null
+                                  ? DateFormat('dd MMM yyyy').format(payment.dueDate!.toLocal())
+                                  : '—'),
                         ),
                         const Divider(height: 24),
                         _ReceiptRow(
-                          label: l10n.paidOn,
-                          value: payment.paidAt != null
-                              ? DateFormat.yMMMd().format(payment.paidAt!)
+                          label: 'Payment Time',
+                          value: paymentTimestamp != null
+                              ? DateFormat('hh:mm a').format(paymentTimestamp.toLocal())
                               : '—',
                         ),
                         if (payment.notes != null &&
-                            payment.notes!.isNotEmpty) ...[
+                            payment.notes!.isNotEmpty &&
+                            payment.notes != facilityName) ...[
                           const Divider(height: 24),
                           _ReceiptRow(label: l10n.notes, value: payment.notes!),
                         ],

@@ -403,14 +403,14 @@ class _OverviewTab extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       children: [
         _SectionLabel('QUICK STATS'),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.55,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 2.1,
           children: [
             _StatCard(
               icon: Icons.payments_rounded,
@@ -444,7 +444,7 @@ class _OverviewTab extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         _SectionLabel('MEMBER INFORMATION'),
         const SizedBox(height: 10),
         Container(

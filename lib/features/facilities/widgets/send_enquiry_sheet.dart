@@ -93,8 +93,20 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
 
     final user = ref.read(authControllerProvider).value;
     final name = (user?.name != null && user!.name.trim().isNotEmpty) ? user.name.trim() : 'Citizen Member';
-    final email = user?.email.trim() ?? '';
-    final phone = user?.phone?.trim() ?? '';
+    final rawEmail = user?.email.trim() ?? '';
+    final email = rawEmail.isNotEmpty ? rawEmail : 'citizen@smartcitizen.online';
+    final rawPhone = user?.phone?.trim() ?? '';
+    String? phone;
+    if (rawPhone.isNotEmpty) {
+      final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 12 && digits.startsWith('91')) {
+        phone = digits.substring(2);
+      } else if (digits.length == 11 && digits.startsWith('0')) {
+        phone = digits.substring(1);
+      } else if (digits.length == 10) {
+        phone = digits;
+      }
+    }
 
     String refCode = 'ENQ-${DateTime.now().year}-${1000 + Random().nextInt(8999)}';
 
@@ -107,7 +119,7 @@ class _SendEnquirySheetState extends ConsumerState<SendEnquirySheet>
           {
             'name': name,
             'email': email,
-            'phone': phone,
+            if (phone != null) 'phone': phone,
             'subject': _enquiryType,
             'message': _messageController.text.trim(),
           },

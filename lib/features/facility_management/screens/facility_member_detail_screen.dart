@@ -71,6 +71,14 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
     ref.invalidate(memberDetailsProvider((widget.kind, widget.facilityId, widget.memberId)));
     ref.invalidate(memberAttendanceReportProvider((widget.kind, widget.facilityId, widget.memberId, _selectedAttendancePeriod)));
     ref.invalidate(memberPaymentsProvider((widget.kind, widget.facilityId, widget.memberId)));
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Member history refreshed'),
+        duration: Duration(milliseconds: 1200),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _openDirectCommunicationSheet(BuildContext context, Map<String, dynamic> member) async {
@@ -752,7 +760,14 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                     )
                   else
                     ...records.map((r) {
-                      final dateStr = r['date'] ?? '';
+                      final rawDate = r['date']?.toString() ?? '';
+                      String formattedDate = rawDate;
+                      if (rawDate.isNotEmpty) {
+                        final parsed = DateTime.tryParse(rawDate);
+                        if (parsed != null) {
+                          formattedDate = DateFormat('dd MMM yyyy').format(parsed.toLocal());
+                        }
+                      }
                       final inTime = r['check_in_time'] ?? '--';
                       final outTime = r['check_out_time'] ?? 'Active Inside';
                       final duration = r['duration_minutes'];
@@ -785,7 +800,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(dateStr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(formattedDate, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   const SizedBox(height: 2),
                                   Text('In: $inTime • Out: $outTime', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
                                 ],
