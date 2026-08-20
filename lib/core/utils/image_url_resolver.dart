@@ -48,6 +48,10 @@ class ImageUrlResolver {
       } catch (_) {}
     }
 
+    if (targetHost == 'smartct.online') {
+      targetHost = 'admin.smartct.online';
+    }
+
     final String portPart = targetPort != null ? ':$targetPort' : '';
     final String rootOrigin = '$targetScheme://$targetHost$portPart';
 
@@ -63,20 +67,24 @@ class ImageUrlResolver {
     try {
       final uri = Uri.parse(trimmed);
 
-      // If this is a Laravel backend storage URL (contains /storage/ or localhost/127.0.0.1/10.0.2.2)
+      final effectiveOrigin =
+          rootOrigin.replaceAll('://smartct.online', '://admin.smartct.online');
+
+      // If this is a Laravel backend storage URL (contains /storage/ or localhost/127.0.0.1/10.0.2.2/smartct.online)
       final isLocalOrEmulatorHost =
           uri.host == 'localhost' ||
           uri.host == '127.0.0.1' ||
           uri.host == '10.0.2.2' ||
           uri.host == '10.0.3.2' ||
           uri.host == '0.0.0.0' ||
+          uri.host == 'smartct.online' ||
           uri.host.isEmpty;
 
       if (isLocalOrEmulatorHost || trimmed.contains('/storage/')) {
         // Rewrite to match the active API origin completely (scheme, host, and target port)
         final path = uri.path.startsWith('/') ? uri.path : '/${uri.path}';
         final query = uri.hasQuery ? '?${uri.query}' : '';
-        return '$rootOrigin$path$query';
+        return '$effectiveOrigin$path$query';
       }
 
       // If on Web and host was hardcoded to 10.0.2.2, point back to targetHost

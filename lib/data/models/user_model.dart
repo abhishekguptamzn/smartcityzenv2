@@ -73,6 +73,13 @@ abstract class UserModel with _$UserModel {
 
   String? get effectiveAvatarUrl {
     final url = photoUrl ?? avatar;
-    return ImageUrlResolver.resolve(url);
+    if (url == null || url.trim().isEmpty) return null;
+    final resolved = ImageUrlResolver.resolve(url);
+    if (resolved == null) return null;
+    if (updatedAt != null) {
+      final sep = resolved.contains('?') ? '&' : '?';
+      return '$resolved${sep}t=${updatedAt!.millisecondsSinceEpoch}';
+    }
+    return resolved;
   }
 }
