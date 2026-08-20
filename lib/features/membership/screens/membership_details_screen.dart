@@ -17,7 +17,6 @@ import '../../../data/repositories/gym_attendance_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../../checkin/gym_checkin_qr_payload.dart';
 
@@ -490,7 +489,7 @@ class _OverviewTab extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) => Column(
+            error: (_, _) => Column(
               children: [
                 _BenefitRow(
                   icon: Icons.wifi_rounded,
@@ -1565,55 +1564,3 @@ class _CheckInSheetState extends ConsumerState<_CheckInSheet> {
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Degraded view
-// ────────────────────────────────────────────────────────────────────────────
-
-class _DegradedView extends StatelessWidget {
-  const _DegradedView({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.support_agent_rounded,
-                  size: 40, color: Color(0xFF6366F1)),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Contact Staff',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.contactStaffBody,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
