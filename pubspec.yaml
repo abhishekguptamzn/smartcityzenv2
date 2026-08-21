@@ -53,6 +53,7 @@ dependencies:
   intl: any
 
   # Utilities
+  geolocator: ^13.0.2
   url_launcher: ^6.3.1
   uuid: ^4.5.1
   logger: ^2.5.0

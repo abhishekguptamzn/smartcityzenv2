@@ -1,0 +1,92 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'location_service.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+
+@ProviderFor(locationService)
+const locationServiceProvider = LocationServiceProvider._();
+
+final class LocationServiceProvider
+    extends
+        $FunctionalProvider<LocationService, LocationService, LocationService>
+    with $Provider<LocationService> {
+  const LocationServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'locationServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$locationServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<LocationService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LocationService create(Ref ref) {
+    return locationService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LocationService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LocationService>(value),
+    );
+  }
+}
+
+String _$locationServiceHash() => r'347d171ff0e8ffe39618ec7b7608be7bd7c86f0a';
+
+@ProviderFor(currentUserCoordinates)
+const currentUserCoordinatesProvider = CurrentUserCoordinatesProvider._();
+
+final class CurrentUserCoordinatesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserCoordinates?>,
+          UserCoordinates?,
+          FutureOr<UserCoordinates?>
+        >
+    with $FutureModifier<UserCoordinates?>, $FutureProvider<UserCoordinates?> {
+  const CurrentUserCoordinatesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentUserCoordinatesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserCoordinatesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<UserCoordinates?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserCoordinates?> create(Ref ref) {
+    return currentUserCoordinates(ref);
+  }
+}
+
+String _$currentUserCoordinatesHash() =>
+    r'78d3798e1c1ff4c74f363717fd3c90131262f02c';
