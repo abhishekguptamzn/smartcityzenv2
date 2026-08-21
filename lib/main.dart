@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
+import 'core/providers/local_auth_providers.dart';
 import 'core/providers/locale_controller.dart';
 import 'core/providers/theme_mode_controller.dart';
 import 'core/router/app_router.dart';
@@ -11,6 +12,7 @@ import 'core/services/incident_reporter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/url_strategy_helper.dart';
 import 'core/widgets/responsive_web_shell.dart';
+import 'features/security/screens/app_lock_screen.dart';
 import 'l10n/gen/app_localizations.dart';
 
 final Logger appLogger = Logger();
@@ -85,9 +87,21 @@ class MyApp extends ConsumerWidget {
       supportedLocales: supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: router,
-      builder: (context, child) => ResponsiveWebShell(
-        child: child ?? const SizedBox(),
-      ),
+      builder: (context, child) {
+        final lockState = ref.watch(appLockControllerProvider);
+
+        return ResponsiveWebShell(
+          child: Stack(
+            children: [
+              child ?? const SizedBox(),
+              if (lockState.isLocked)
+                const Positioned.fill(
+                  child: AppLockScreen(),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

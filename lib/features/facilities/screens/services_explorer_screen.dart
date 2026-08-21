@@ -1,23 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/providers/cities_providers.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
-import '../../../core/services/location_service.dart';
-import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/loading_indicator.dart';
-import '../models/civic_service_item.dart';
 import '../models/facility_hierarchy_models.dart';
-import '../widgets/categories/facility_category_row.dart';
-import '../widgets/categories/facility_type_chips.dart';
-import '../widgets/facility_search_bar.dart';
-import '../widgets/listings/facility_center_card.dart';
-import '../widgets/listings/facility_filter_bar.dart';
-import '../widgets/send_enquiry_sheet.dart';
+import 'facility_category_centers_screen.dart';
 
 class ServicesExplorerScreen extends ConsumerStatefulWidget {
   const ServicesExplorerScreen({
@@ -35,582 +26,736 @@ class ServicesExplorerScreen extends ConsumerStatefulWidget {
 
 class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen> {
   late final TextEditingController _searchController;
-  final ScrollController _scrollController = ScrollController();
-  Timer? _debounceTimer;
-
-  String _search = '';
-  FacilityCategoryItem? _selectedCategory;
-  FacilityTypeItem? _selectedType;
-  FacilitySortFilter _selectedFilter = FacilitySortFilter.nearest;
-  final Set<String> _favoriteIds = {};
-  UserCoordinates? _userCoords;
 
   @override
   void initState() {
     super.initState();
-    _search = widget.initialSearch ?? '';
-    _searchController = TextEditingController(text: _search);
-    _scrollController.addListener(_onScroll);
-    _fetchGpsLocation();
+    _searchController = TextEditingController(text: widget.initialSearch ?? '');
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     _searchController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchGpsLocation() async {
-    final locationSvc = ref.read(locationServiceProvider);
-    final coords = await locationSvc.getCurrentLocation();
-    if (mounted && coords != null) {
-      setState(() => _userCoords = coords);
-    }
-  }
+  void _openCategory({
+    required BuildContext context,
+    required List<FacilityCategoryItem> allCategories,
+    required String categorySlug,
+    String? typeSlug,
+    String? initialSearch,
+  }) {
+    // Locate the matching category item or build a fallback
+    final matchedCat = allCategories.firstWhere(
+      (c) => c.slug == categorySlug || c.id == categorySlug,
+      orElse: () => FacilityCategoryItem(
+        id: categorySlug,
+        name: categorySlug.replaceAll('-', ' ').toUpperCase(),
+        slug: categorySlug,
+        icon: Icons.category_rounded,
+        gradientColors: [const Color(0xFF0D9488), const Color(0xFF0284C7)],
+        description: 'Municipal Services',
+      ),
+    );
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-      final user = ref.read(authControllerProvider).value;
-      if (_selectedCategory == null) return;
-
-      final query = FacilityExplorerQuery(
-        categoryId: _selectedCategory!.id,
-        typeId: _selectedType?.id,
-        search: _search.isEmpty ? null : _search,
-        cityId: user?.cityId,
-        userLat: _userCoords?.latitude,
-        userLng: _userCoords?.longitude,
-      );
-
-      ref.read(facilityExplorerListProvider(query).notifier).loadMore();
-    }
-  }
-
-  void _onSearchChanged(String val) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() => _search = val.trim());
-      }
-    });
-  }
-
-  void _handleBack() {
-    if (_selectedType != null && _selectedType!.id != 'all') {
-      setState(() => _selectedType = null);
-      return;
-    }
-    if (_selectedCategory != null || _search.isNotEmpty) {
-      setState(() {
-        _selectedCategory = null;
-        _selectedType = null;
-        _search = '';
-        _searchController.clear();
-      });
-      return;
-    }
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/home');
-    }
-  }
-
-  Future<void> _makeCall(String phoneNumber) async {
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
-    final uri = Uri.parse('tel:$cleanPhone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open dialer for $phoneNumber'),
-          behavior: SnackBarBehavior.floating,
+    FacilityTypeItem? matchedType;
+    if (typeSlug != null) {
+      matchedType = matchedCat.types.firstWhere(
+        (t) => t.slug == typeSlug || t.id == typeSlug,
+        orElse: () => FacilityTypeItem(
+          id: typeSlug,
+          categoryId: matchedCat.id,
+          name: typeSlug.replaceAll('-', ' '),
+          slug: typeSlug,
+          icon: Icons.circle,
         ),
       );
     }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FacilityCategoryCentersScreen(
+          category: matchedCat,
+          initialType: matchedType,
+          initialSearch: initialSearch,
+        ),
+      ),
+    );
   }
 
-  Future<void> _openDirections(FacilityModel facility) async {
-    if (facility.latitude != null && facility.longitude != null) {
-      final geoUri = Uri.parse('geo:${facility.latitude},${facility.longitude}?q=${facility.latitude},${facility.longitude}');
-      if (await canLaunchUrl(geoUri)) {
-        await launchUrl(geoUri);
-        return;
-      }
-      final webMapUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${facility.latitude},${facility.longitude}');
-      if (await canLaunchUrl(webMapUri)) {
-        await launchUrl(webMapUri, mode: LaunchMode.externalApplication);
-        return;
-      }
-    }
-    if (facility.address != null && facility.address!.isNotEmpty) {
-      final queryUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(facility.address!)}');
-      if (await canLaunchUrl(queryUri)) {
-        await launchUrl(queryUri, mode: LaunchMode.externalApplication);
-      }
-    }
+  void _showCitySelectorSheet(BuildContext context, String currentCity) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Select City',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Browse civic centers and amenities by city',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (context, ref, _) {
+                  final citiesAsync = ref.watch(citiesListProvider);
+                  return citiesAsync.when(
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: LoadingIndicator(),
+                      ),
+                    ),
+                    error: (error, stackTrace) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          'Current city: $currentCity',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    data: (cities) {
+                      if (cities.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: Text(
+                              'Current city: $currentCity',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: cities.length,
+                        separatorBuilder: (ctx, idx) => const Divider(height: 1),
+                        itemBuilder: (context, i) {
+                          final c = cities[i];
+                          final isSelected = c.name.toLowerCase() == currentCity.toLowerCase();
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF0D9488).withValues(alpha: 0.15)
+                                    : Colors.grey.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.location_city_rounded,
+                                size: 18,
+                                color: isSelected ? const Color(0xFF0D9488) : Colors.grey,
+                              ),
+                            ),
+                            title: Text(
+                              c.name,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? const Color(0xFF0D9488) : null,
+                              ),
+                            ),
+                            subtitle: c.state.isNotEmpty
+                                ? Text(c.state, style: const TextStyle(fontSize: 12))
+                                : null,
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488))
+                                : null,
+                            onTap: () => Navigator.of(ctx).pop(),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).value;
-    final cityName = user?.city?.name ?? 'Your City';
+    final cityName = user?.city?.name ?? 'Muzaffarnagar';
+    final firstName = user?.name.split(' ').first ?? 'Citizen';
 
     final categoriesAsync = ref.watch(unifiedFacilityCategoriesProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        _handleBack();
-      },
-      child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        body: SafeArea(
-          child: categoriesAsync.when(
-            loading: () => const Center(child: LoadingIndicator()),
-            error: (error, _) => ErrorStateView(
-              error: error,
-              onRetry: () => ref.invalidate(unifiedFacilityCategoriesProvider),
-            ),
-            data: (categories) {
-              // Handle initial kind/slug navigation if provided
-              if (_selectedCategory == null && widget.initialKind != null) {
-                final match = categories.firstWhere(
-                  (c) => c.slug == widget.initialKind || c.id == widget.initialKind,
-                  orElse: () => categories.first,
-                );
-                _selectedCategory = match;
-              }
-
-              // Active category defaults to the first category (Libraries) if none selected
-              final activeCategory = _selectedCategory ?? categories.first;
-              final types = activeCategory.types;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0B1120) : const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: categoriesAsync.when(
+          loading: () => const Center(child: LoadingIndicator()),
+          error: (error, _) => ErrorStateView(
+            error: error,
+            onRetry: () => ref.invalidate(unifiedFacilityCategoriesProvider),
+          ),
+          data: (allCategories) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 36),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Top Header: Back, Title, City Indicator & Onboard button
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 16, 6),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: _handleBack,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          tooltip: 'Back',
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0D9488), Color(0xFF0284C7)],
+                  // 1. TOP HEADER: Greeting, City Dropdown, Notification Bell
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello, $firstName 👋',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF1E293B),
+                              letterSpacing: -0.2,
                             ),
-                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.grid_view_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                activeCategory.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.2,
+                          const SizedBox(height: 3),
+                          GestureDetector(
+                            onTap: () => _showCitySelectorSheet(context, cityName),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.location_on_rounded,
+                                  size: 15,
+                                  color: Color(0xFF475569),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.location_pin,
-                                    size: 11.5,
-                                    color: Color(0xFF0D9488),
+                                const SizedBox(width: 3),
+                                Text(
+                                  cityName,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
                                   ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Serving $cityName',
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0D9488),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (user?.isOnboardingUser == true) ...[
-                          const SizedBox(width: 8),
-                          Material(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFCCFBF1),
-                            borderRadius: BorderRadius.circular(10),
-                            child: InkWell(
-                              onTap: () => context.push('/onboard'),
-                              borderRadius: BorderRadius.circular(10),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.rocket_launch_rounded,
-                                      size: 14,
-                                      color: Color(0xFF0F766E),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Onboard',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F766E),
-                                      ),
-                                    ),
-                                  ],
                                 ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 18,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Notification Bell with Green Badge Dot
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                Icons.notifications_none_rounded,
+                                size: 22,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                              ),
+                              onPressed: () => context.push('/support'),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 9,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
                               ),
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // 2. SEARCH BAR with Filter Icon
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.search_rounded,
+                          size: 22,
+                          color: Color(0xFF0D9488),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search centers in $cityName...',
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            onSubmitted: (query) {
+                              if (query.trim().isNotEmpty) {
+                                _openCategory(
+                                  context: context,
+                                  allCategories: allCategories,
+                                  categorySlug: 'libraries',
+                                  initialSearch: query.trim(),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        Container(
+                          height: 24,
+                          width: 1,
+                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(
+                            Icons.tune_rounded,
+                            size: 20,
+                            color: Color(0xFF64748B),
+                          ),
+                          onPressed: () {
+                            _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: 'libraries',
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
 
-                  // 2. Global Search Bar
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-                    child: FacilitySearchBar(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      onClear: () {
-                        _searchController.clear();
-                        setState(() => _search = '');
-                      },
-                      hintText: 'Search centers in $cityName...',
+                  const SizedBox(height: 24),
+
+                  // 3. SECTION 1: 📖 Libraries
+                  _buildSectionHeader('📖 Libraries', isDark),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.menu_book_rounded,
+                          iconColor: const Color(0xFF10B981),
+                          title: 'Public Libraries',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'libraries',
+                            typeSlug: 'public-library',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.account_balance_rounded,
+                          iconColor: const Color(0xFF2563EB),
+                          title: 'Central Libraries',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'libraries',
+                            typeSlug: 'central-library',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.chair_rounded,
+                          iconColor: const Color(0xFF8B5CF6),
+                          title: 'Study Lounges',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'libraries',
+                            typeSlug: 'study-lounge',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 4. SECTION 2: 💪 Fitness & Wellness
+                  _buildSectionHeader('💪 Fitness & Wellness', isDark),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.fitness_center_rounded,
+                          iconColor: const Color(0xFFF97316),
+                          title: 'Gyms',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'gyms',
+                            typeSlug: 'gym',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.directions_run_rounded,
+                          iconColor: const Color(0xFFE11D48),
+                          title: 'Fitness Centers',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'gyms',
+                            typeSlug: 'fitness-center',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.self_improvement_rounded,
+                          iconColor: const Color(0xFF059669),
+                          title: 'Yoga Studios',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'gyms',
+                            typeSlug: 'yoga',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.spa_rounded,
+                          iconColor: const Color(0xFF0891B2),
+                          title: 'Wellness Centers',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'gyms',
+                            typeSlug: 'wellness',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 5. SECTION 3: 🎓 Education
+                  _buildSectionHeader('🎓 Education', isDark),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.school_rounded,
+                          iconColor: const Color(0xFF10B981),
+                          title: 'Coaching Institutes',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'coaching',
+                            typeSlug: 'coaching',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.auto_stories_rounded,
+                          iconColor: const Color(0xFF3B82F6),
+                          title: 'Tutoring Centers',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'coaching',
+                            typeSlug: 'tuition',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.palette_rounded,
+                          iconColor: const Color(0xFF8B5CF6),
+                          title: 'Dance Classes',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'dance',
+                            typeSlug: 'dance',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSquircleServiceCard(
+                          icon: Icons.laptop_chromebook_rounded,
+                          iconColor: const Color(0xFFEA580C),
+                          title: 'Skill Development',
+                          isDark: isDark,
+                          onTap: () => _openCategory(
+                            context: context,
+                            allCategories: allCategories,
+                            categorySlug: 'coaching',
+                            typeSlug: 'skills',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 6. SECTION 4: 🏙️ More Services
+                  _buildSectionHeader('🏙️ More Services', isDark),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.add_box_rounded,
+                            iconColor: const Color(0xFFE11D48),
+                            title: 'Hospitals & Clinics',
+                            isDark: isDark,
+                            onTap: () => _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: 'healthcare',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.restaurant_rounded,
+                            iconColor: const Color(0xFFF97316),
+                            title: 'Restaurants & Cafes',
+                            isDark: isDark,
+                            onTap: () => _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: 'attractions',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.shopping_bag_rounded,
+                            iconColor: const Color(0xFF10B981),
+                            title: 'Local Businesses',
+                            isDark: isDark,
+                            onTap: () => _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: 'attractions',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.calendar_month_rounded,
+                            iconColor: const Color(0xFF2563EB),
+                            title: 'Events & Activities',
+                            isDark: isDark,
+                            onTap: () => context.push('/activities'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.shield_rounded,
+                            iconColor: const Color(0xFF059669),
+                            title: 'Emergency Services',
+                            isDark: isDark,
+                            onTap: () => _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: 'emergency',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  // 3. Level 1: Facility Categories (Horizontal Row of Icons & Names)
-                  FacilityCategoryRow(
-                    categories: categories,
-                    selectedCategory: activeCategory,
-                    onSelectCategory: (cat) {
-                      setState(() {
-                        _selectedCategory = cat;
-                        _selectedType = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 4. Level 2: Facility Types inside Selected Category (Icons & Names)
-                  if (types.isNotEmpty) ...[
-                    FacilityTypeChips(
-                      types: types,
-                      selectedType: _selectedType,
-                      activeColor: activeCategory.gradientColors.first,
-                      onSelectType: (t) {
-                        setState(() => _selectedType = t);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // 5. Level 3: City-Scoped Facility Centers Listing
-                  Expanded(
-                    child: _buildFacilityCentersList(
-                      activeCategory: activeCategory,
-                      cityName: cityName,
-                      userCityId: user?.cityId,
-                    ),
-                  ),
+                  // Stop strictly at More Services (no feed below)
+                  const SizedBox(height: 16),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildFacilityCentersList({
-    required FacilityCategoryItem activeCategory,
-    required String cityName,
-    required String? userCityId,
-  }) {
-    // If it's a static non-directory category (Healthcare, Emergency), show civic items
-    if (activeCategory.id == 'healthcare' ||
-        activeCategory.id == 'emergency' ||
-        activeCategory.id == 'attractions') {
-      return _buildCivicStaticList(activeCategory, cityName);
-    }
-
-    final query = FacilityExplorerQuery(
-      categoryId: activeCategory.id,
-      typeId: _selectedType?.id,
-      search: _search.isEmpty ? null : _search,
-      cityId: userCityId,
-      userLat: _userCoords?.latitude,
-      userLng: _userCoords?.longitude,
-    );
-
-    final facilitiesAsync = ref.watch(facilityExplorerListProvider(query));
-
-    return facilitiesAsync.when(
-      loading: () => const Center(child: LoadingIndicator()),
-      error: (error, _) => ErrorStateView(
-        error: error,
-        onRetry: () => ref.invalidate(facilityExplorerListProvider(query)),
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 16.5,
+        fontWeight: FontWeight.w700,
+        color: isDark ? Colors.white : const Color(0xFF1E293B),
+        letterSpacing: -0.2,
       ),
-      data: (facilities) {
-        // Filter & Sort
-        var items = facilities.where((f) {
-          if (_selectedFilter == FacilitySortFilter.openNow && !f.isOpenNow) return false;
-          return true;
-        }).toList();
+    );
+  }
 
-        switch (_selectedFilter) {
-          case FacilitySortFilter.nearest:
-            items.sort((a, b) => (a.distanceKm ?? 99999).compareTo(b.distanceKm ?? 99999));
-            break;
-          case FacilitySortFilter.openNow:
-            items.sort((a, b) => (b.isOpenNow ? 1 : 0).compareTo(a.isOpenNow ? 1 : 0));
-            break;
-          case FacilitySortFilter.az:
-            items.sort((a, b) => a.name.compareTo(b.name));
-            break;
-          case FacilitySortFilter.topRated:
-            // Keep current order or sort by status
-            break;
-        }
-
-        if (items.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: activeCategory.gradientColors.first.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      activeCategory.icon,
-                      size: 48,
-                      color: activeCategory.gradientColors.first,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No ${activeCategory.name} found in $cityName',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _search.isNotEmpty
-                        ? 'Try clearing your search query "$_search"'
-                        : 'No active centers registered in $cityName yet.',
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_search.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _search = '');
-                      },
-                      icon: const Icon(Icons.clear_rounded, size: 16),
-                      label: const Text('Clear Search'),
-                    ),
-                  ],
-                ],
+  Widget _buildSquircleServiceCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            height: 72,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.025),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                size: 32,
+                color: iconColor,
               ),
             ),
-          );
-        }
-
-        final isWide = MediaQuery.sizeOf(context).width > 700;
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(facilityExplorerListProvider(query));
-            await ref.read(facilityExplorerListProvider(query).future);
-          },
-          child: Column(
-            children: [
-              FacilityFilterBar(
-                itemCount: items.length,
-                cityName: cityName,
-                selectedFilter: _selectedFilter,
-                hasActiveGps: _userCoords?.isExactGps == true,
-                onSelectFilter: (f) => setState(() => _selectedFilter = f),
-              ),
-              Expanded(
-                child: isWide
-                    ? GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                        itemCount: items.length,
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 460,
-                          mainAxisExtent: 380,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                        ),
-                        itemBuilder: (context, index) => _buildCard(items[index], cityName),
-                      )
-                    : ListView.separated(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                        itemCount: items.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 14),
-                        itemBuilder: (context, index) => _buildCard(items[index], cityName),
-                      ),
-              ),
-            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCard(FacilityModel facility, String cityName) {
-    final isFav = _favoriteIds.contains(facility.id);
-
-    return FacilityCenterCard(
-      facility: facility,
-      isFavorite: isFav,
-      onToggleFavorite: () {
-        setState(() {
-          if (isFav) {
-            _favoriteIds.remove(facility.id);
-          } else {
-            _favoriteIds.add(facility.id);
-          }
-        });
-      },
-      onTap: () => _navigateToDetail(facility),
-      onViewDetails: () => _navigateToDetail(facility),
-      onSendEnquiry: () => SendEnquirySheet.show(
-        context,
-        facilityId: facility.id,
-        facilityKind: facility.kind,
-        facilityTitle: facility.name,
-        facilitySubtitle: facility.address ?? cityName,
-        categoryName: facility.kind.displayName,
-        facilityPhone: facility.contactPhone,
-        facilityEmail: facility.contactEmail,
+          const SizedBox(height: 8),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white70 : const Color(0xFF334155),
+              height: 1.2,
+            ),
+          ),
+        ],
       ),
-      onCall: facility.contactPhone != null ? () => _makeCall(facility.contactPhone!) : null,
-      onDirections: () => _openDirections(facility),
-    );
-  }
-
-  void _navigateToDetail(FacilityModel facility) {
-    context.push('/services/${facility.kind.name}/${facility.id}');
-  }
-
-  Widget _buildCivicStaticList(FacilityCategoryItem cat, String cityName) {
-    final civicCat = switch (cat.id) {
-      'healthcare' => CivicCategory.healthcare,
-      'emergency' => CivicCategory.emergency,
-      'attractions' => CivicCategory.heritage,
-      _ => CivicCategory.all,
-    };
-
-    final filtered = kCivicServicesCatalog.where((s) {
-      if (s.category != civicCat) return false;
-      if (_search.isNotEmpty) {
-        final q = _search.toLowerCase();
-        return s.title.toLowerCase().contains(q) ||
-            s.description.toLowerCase().contains(q) ||
-            s.location.toLowerCase().contains(q);
-      }
-      return true;
-    }).toList();
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      itemCount: filtered.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final item = filtered[i];
-        final loc = item.location.replaceAll('City', cityName);
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: item.gradientColors),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(item.icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      loc,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ),
-              if (item.phone != null)
-                IconButton(
-                  icon: const Icon(Icons.phone_rounded, color: Color(0xFF059669)),
-                  onPressed: () => _makeCall(item.phone!),
-                ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

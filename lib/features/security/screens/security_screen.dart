@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/providers/local_auth_providers.dart';
 import '../../../core/providers/login_history_providers.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -14,6 +15,7 @@ import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import 'set_app_pin_screen.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -107,6 +109,127 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
           children: [
+            // App Lock & Biometric Protection Panel
+            Consumer(
+              builder: (context, ref, child) {
+                final lockState = ref.watch(appLockControllerProvider);
+                final controller = ref.read(appLockControllerProvider.notifier);
+
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F766E).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.security_rounded,
+                                  size: 20,
+                                  color: Color(0xFF0F766E),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'App Lock & Biometrics',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      lockState.isMandatory
+                                          ? 'Enforced by Municipal Policy'
+                                          : (lockState.isConfigured ? 'Secured with Local PIN' : 'Not configured'),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: lockState.isMandatory
+                                            ? const Color(0xFF0F766E)
+                                            : (scheme.brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                        fontWeight: lockState.isMandatory ? FontWeight.w700 : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (!lockState.isMandatory)
+                                Switch.adaptive(
+                                  value: lockState.isLockEnabled,
+                                  activeTrackColor: const Color(0xFF0F766E),
+                                  onChanged: (val) async {
+                                    if (val && !lockState.isConfigured) {
+                                      // Must set up PIN first
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const SetAppPinScreen()),
+                                      );
+                                    } else {
+                                      await controller.toggleAppLock(val);
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 16),
+
+                        // Set / Change PIN Tile
+                        ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.pin_rounded, size: 20),
+                          title: Text(
+                            lockState.isConfigured ? 'Change App PIN' : 'Set Up App PIN',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            lockState.isConfigured
+                                ? 'Update your 4-digit device PIN'
+                                : 'Create a 4-digit PIN stored securely on this device',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SetAppPinScreen(isChanging: lockState.isConfigured),
+                            ),
+                          ),
+                        ),
+
+                        // Unlock with Biometrics Toggle
+                        if (lockState.biometricsAvailable)
+                          ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.fingerprint_rounded, size: 20),
+                            title: const Text('Unlock with Biometrics', style: TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: const Text('Use Face ID or Fingerprint on app launch', style: TextStyle(fontSize: 11.5)),
+                            trailing: Switch.adaptive(
+                              value: lockState.isBiometricsEnabled,
+                              activeTrackColor: const Color(0xFF0F766E),
+                              onChanged: lockState.isConfigured
+                                  ? (val) => controller.toggleBiometrics(val)
+                                  : null,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
             Card(
               child: ListTile(
                 leading: Container(

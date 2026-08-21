@@ -3,6 +3,9 @@
     <!-- Internet access for Laravel API -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Biometric Authentication -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <!-- Camera access -->
     <uses-permission android:name="android.permission.CAMERA" />
 

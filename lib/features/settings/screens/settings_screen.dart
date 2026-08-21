@@ -321,9 +321,9 @@ class SettingsScreen extends ConsumerWidget {
                   _buildDivider(scheme),
                   _SettingsMenuTile(
                     icon: Icons.security_rounded,
-                    accent: const Color(0xFFE11D48),
+                    accent: const Color(0xFF0F766E),
                     title: l10n.security,
-                    subtitle: 'Password, login sessions & devices',
+                    subtitle: 'App lock, PIN, biometrics & login sessions',
                     onTap: () => context.push('/security'),
                   ),
                 ],
