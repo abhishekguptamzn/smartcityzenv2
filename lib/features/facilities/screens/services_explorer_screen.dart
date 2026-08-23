@@ -231,100 +231,133 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 1. TOP HEADER: Greeting, City Dropdown, Notification Bell
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Hello, $firstName 👋',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : const Color(0xFF1E293B),
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          GestureDetector(
-                            onTap: () => _showCitySelectorSheet(context, cityName),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.location_on_rounded,
-                                  size: 15,
-                                  color: Color(0xFF475569),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  cityName,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Hello, $firstName',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text('👋', style: TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: () => _showCitySelectorSheet(context, cityName),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.location_on_rounded,
+                                        size: 13,
+                                        color: Color(0xFF0D9488),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        cityName,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 16,
+                                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 2),
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 18,
-                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
 
-                      // Notification Bell with Green Badge Dot
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                        // Support & Notification Shortcut
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  Icons.support_agent_rounded,
+                                  size: 22,
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
                                 ),
-                              ],
-                            ),
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              icon: Icon(
-                                Icons.notifications_none_rounded,
-                                size: 22,
-                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                onPressed: () => context.push('/support'),
                               ),
-                              onPressed: () => context.push('/support'),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 9,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
+                              Positioned(
+                                top: 9,
+                                right: 9,
+                                child: Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
                   // 2. SEARCH BAR with Cross-Category Query Support
                   Container(
@@ -423,7 +456,17 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionHeader(category.name, isDark),
+                          _buildSectionHeaderWithIcon(
+                            title: category.name,
+                            icon: category.icon,
+                            color: category.primaryColor,
+                            isDark: isDark,
+                            onViewAll: () => _openCategory(
+                              context: context,
+                              allCategories: allCategories,
+                              categorySlug: category.slug,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           if (types.isNotEmpty)
                             Wrap(
@@ -472,7 +515,12 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                   }),
 
                   // 4. CIVIC & EMERGENCY SERVICES
-                  _buildSectionHeader('🏙️ Civic & Emergency Services', isDark),
+                  _buildSectionHeaderWithIcon(
+                    title: 'Civic & Emergency Services',
+                    icon: Icons.shield_rounded,
+                    color: const Color(0xFF0D9488),
+                    isDark: isDark,
+                  ),
                   const SizedBox(height: 12),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -480,7 +528,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 86,
+                          width: 88,
                           child: _buildSquircleServiceCard(
                             icon: Icons.local_hospital_rounded,
                             iconColor: const Color(0xFFE11D48),
@@ -495,7 +543,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                         ),
                         const SizedBox(width: 10),
                         SizedBox(
-                          width: 86,
+                          width: 88,
                           child: _buildSquircleServiceCard(
                             icon: Icons.restaurant_rounded,
                             iconColor: const Color(0xFFF97316),
@@ -510,11 +558,11 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                         ),
                         const SizedBox(width: 10),
                         SizedBox(
-                          width: 86,
+                          width: 88,
                           child: _buildSquircleServiceCard(
-                            icon: Icons.shield_rounded,
-                            iconColor: const Color(0xFF059669),
-                            title: 'Emergency Helpline',
+                            icon: Icons.local_police_rounded,
+                            iconColor: const Color(0xFFDC2626),
+                            title: 'Emergency 112',
                             isDark: isDark,
                             onTap: () => _openCategory(
                               context: context,
@@ -525,9 +573,9 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                         ),
                         const SizedBox(width: 10),
                         SizedBox(
-                          width: 86,
+                          width: 88,
                           child: _buildSquircleServiceCard(
-                            icon: Icons.confirmation_num_rounded,
+                            icon: Icons.support_agent_rounded,
                             iconColor: const Color(0xFF2563EB),
                             title: 'Citizen Support',
                             isDark: isDark,
@@ -547,15 +595,61 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
     );
   }
 
-  Widget _buildSectionHeader(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16.5,
-        fontWeight: FontWeight.w700,
-        color: isDark ? Colors.white : const Color(0xFF1E293B),
-        letterSpacing: -0.2,
-      ),
+  Widget _buildSectionHeaderWithIcon({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required bool isDark,
+    VoidCallback? onViewAll,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16.5,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        ),
+        if (onViewAll != null)
+          InkWell(
+            onTap: onViewAll,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: color),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -576,25 +670,41 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
             height: 72,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: isDark
+                  ? iconColor.withValues(alpha: 0.12)
+                  : iconColor.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                color: iconColor.withValues(alpha: isDark ? 0.3 : 0.2),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.025),
-                  blurRadius: 8,
+                  color: iconColor.withValues(alpha: 0.12),
+                  blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Center(
-              child: Icon(
-                icon,
-                size: 32,
-                color: iconColor,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: iconColor.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  icon,
+                  size: 24,
+                  color: iconColor,
+                ),
               ),
             ),
           ),
@@ -606,8 +716,8 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white70 : const Color(0xFF334155),
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
               height: 1.2,
             ),
           ),

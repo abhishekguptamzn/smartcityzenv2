@@ -24,16 +24,18 @@ class FacilityTypeChips extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
-      height: 40,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         itemCount: types.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final type = types[index];
           final isSelected = (selectedType == null && type.id == 'all') ||
               (selectedType != null && selectedType!.id == type.id);
+          final chipColor = type.color ?? activeColor;
 
           return Material(
             color: Colors.transparent,
@@ -42,50 +44,58 @@ class FacilityTypeChips extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 onSelectType(type);
               },
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? activeColor
+                      ? chipColor
                       : (isDark ? const Color(0xFF1E293B) : Colors.white),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(
                     color: isSelected
-                        ? activeColor
-                        : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        ? chipColor
+                        : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
                     width: 1.2,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: activeColor.withValues(alpha: 0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: isSelected
+                          ? chipColor.withValues(alpha: 0.35)
+                          : Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                      blurRadius: isSelected ? 8 : 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      type.icon,
-                      size: 16,
-                      color: isSelected
-                          ? Colors.white
-                          : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.25)
+                            : chipColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        type.icon,
+                        size: 14,
+                        color: isSelected ? Colors.white : chipColor,
+                      ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Text(
                       type.name,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
                             ? Colors.white
-                            : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                            : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                        letterSpacing: -0.1,
                       ),
                     ),
                   ],

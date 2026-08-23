@@ -72,18 +72,34 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             pinned: true,
             elevation: 0,
             backgroundColor: isDark ? const Color(0xFF181B26) : Colors.white,
-            leading: CircleAvatar(
-              backgroundColor: Colors.black.withValues(alpha: 0.45),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
+            leading: Center(
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24, width: 1),
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
             actions: [
-              CircleAvatar(
-                backgroundColor: Colors.black.withValues(alpha: 0.45),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24, width: 1),
+                ),
                 child: IconButton(
-                  icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.share_rounded, color: Colors.white, size: 19),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: 'Check out ${activity.name} on Smart CityZen!'));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -92,7 +108,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(

@@ -10,6 +10,7 @@ class FacilityCategoryItem {
     required this.icon,
     required this.gradientColors,
     required this.description,
+    this.rawIcon,
     this.types = const [],
     this.facilityKind,
     this.isActivity = false,
@@ -19,6 +20,7 @@ class FacilityCategoryItem {
   final String name;
   final String slug;
   final IconData icon;
+  final String? rawIcon;
   final List<Color> gradientColors;
   final String description;
   final List<FacilityTypeItem> types;
@@ -35,6 +37,7 @@ class FacilityTypeItem {
     required this.name,
     required this.slug,
     required this.icon,
+    this.rawIcon,
     this.color,
   });
 
@@ -43,46 +46,224 @@ class FacilityTypeItem {
   final String name;
   final String slug;
   final IconData icon;
+  final String? rawIcon;
   final Color? color;
 }
 
+Color parseHexColor(String? hexString, {Color fallback = const Color(0xFF0D9488)}) {
+  if (hexString == null || hexString.trim().isEmpty) return fallback;
+  final clean = hexString.replaceAll('#', '').trim();
+  if (clean.length == 6) {
+    final val = int.tryParse('FF$clean', radix: 16);
+    if (val != null) return Color(val);
+  } else if (clean.length == 8) {
+    final val = int.tryParse(clean, radix: 16);
+    if (val != null) return Color(val);
+  }
+  return fallback;
+}
+
 /// Helper to parse icon names or map categories to icon/colors
-IconData resolveCategoryIcon(String? iconName, {IconData fallback = Icons.category_rounded}) {
-  if (iconName == null || iconName.isEmpty) return fallback;
-  final lower = iconName.toLowerCase();
-  if (lower.contains('book') || lower.contains('library') || lower.contains('read')) {
-    return Icons.local_library_rounded;
+IconData resolveCategoryIcon(
+  String? iconName, {
+  String? nameHint,
+  IconData fallback = Icons.category_rounded,
+}) {
+  final raw = (iconName ?? '').toLowerCase().trim();
+  final hint = (nameHint ?? '').toLowerCase().trim();
+  final target = raw.isNotEmpty ? raw : hint;
+
+  if (target.isEmpty) return fallback;
+
+  // 1. Direct standard Material Icon name mapping (snake_case or kebab-case)
+  final normalized = target.replaceAll('-', '_').replaceAll(' ', '_');
+
+  const directMap = <String, IconData>{
+    // Education & Knowledge
+    'school': Icons.school_rounded,
+    'education': Icons.school_rounded,
+    'menu_book': Icons.menu_book_rounded,
+    'book': Icons.local_library_rounded,
+    'library': Icons.local_library_rounded,
+    'local_library': Icons.local_library_rounded,
+    'calculate': Icons.calculate_rounded,
+    'abacus': Icons.calculate_rounded,
+    'coaching': Icons.menu_book_rounded,
+    'tuition': Icons.school_rounded,
+    'home_tuition': Icons.home_work_rounded,
+    'school_tuition': Icons.school_rounded,
+    'code': Icons.code_rounded,
+    'coding': Icons.code_rounded,
+    'coding_classes': Icons.code_rounded,
+    'precision_manufacturing': Icons.precision_manufacturing_rounded,
+    'robotics': Icons.precision_manufacturing_rounded,
+    'translate': Icons.translate_rounded,
+    'languages': Icons.translate_rounded,
+
+    // Sports & Fitness
+    'fitness_center': Icons.fitness_center_rounded,
+    'gym': Icons.fitness_center_rounded,
+    'fitness': Icons.fitness_center_rounded,
+    'fitness_training': Icons.fitness_center_rounded,
+    'exercise': Icons.fitness_center_rounded,
+    'directions_run': Icons.directions_run_rounded,
+    'running': Icons.directions_run_rounded,
+    'zumba': Icons.directions_run_rounded,
+    'sports_cricket': Icons.sports_cricket_rounded,
+    'cricket': Icons.sports_cricket_rounded,
+    'cricket_academy': Icons.sports_cricket_rounded,
+    'sports_soccer': Icons.sports_soccer_rounded,
+    'football': Icons.sports_soccer_rounded,
+    'football_academy': Icons.sports_soccer_rounded,
+    'sports_tennis': Icons.sports_tennis_rounded,
+    'tennis': Icons.sports_tennis_rounded,
+    'tennis_academy': Icons.sports_tennis_rounded,
+    'badminton': Icons.sports_tennis_rounded,
+    'badminton_academy': Icons.sports_tennis_rounded,
+    'pool': Icons.pool_rounded,
+    'swimming': Icons.pool_rounded,
+    'swimming_pool': Icons.pool_rounded,
+    'self_improvement': Icons.self_improvement_rounded,
+    'yoga': Icons.self_improvement_rounded,
+    'meditation': Icons.self_improvement_rounded,
+    'sports_kabaddi': Icons.sports_kabaddi_rounded,
+    'kabaddi': Icons.sports_kabaddi_rounded,
+    'martial_arts': Icons.sports_kabaddi_rounded,
+    'karate': Icons.sports_mma_rounded,
+    'sports_gymnastics': Icons.sports_gymnastics_rounded,
+    'sports_basketball': Icons.sports_basketball_rounded,
+    'basketball': Icons.sports_basketball_rounded,
+    'sports_volleyball': Icons.sports_volleyball_rounded,
+    'volleyball': Icons.sports_volleyball_rounded,
+
+    // Arts, Culture & Music
+    'palette': Icons.palette_rounded,
+    'arts': Icons.palette_rounded,
+    'art': Icons.palette_rounded,
+    'brush': Icons.brush_rounded,
+    'painting': Icons.brush_rounded,
+    'draw': Icons.draw_rounded,
+    'drawing': Icons.draw_rounded,
+    'mic': Icons.mic_rounded,
+    'singing': Icons.mic_rounded,
+    'singing_classes': Icons.mic_rounded,
+    'music': Icons.music_note_rounded,
+    'music_note': Icons.music_note_rounded,
+    'library_music': Icons.library_music_rounded,
+    'music_classes': Icons.library_music_rounded,
+    'nightlife': Icons.nightlife_rounded,
+    'dance': Icons.nightlife_rounded,
+    'dance_classes': Icons.nightlife_rounded,
+    'dance_fitness': Icons.music_note_rounded,
+    'theater_comedy': Icons.theater_comedy_rounded,
+    'drama': Icons.theater_comedy_rounded,
+    'casino': Icons.casino_rounded,
+    'chess': Icons.casino_rounded,
+    'interests': Icons.interests_rounded,
+    'hobby': Icons.interests_rounded,
+    'hobby_classes': Icons.interests_rounded,
+
+    // Kids & Childcare
+    'child_care': Icons.child_care_rounded,
+    'child_friendly': Icons.child_friendly_rounded,
+    'kids': Icons.child_care_rounded,
+    'children': Icons.child_care_rounded,
+
+    // Civic, Health & Emergency
+    'local_hospital': Icons.local_hospital_rounded,
+    'hospital': Icons.local_hospital_rounded,
+    'healthcare': Icons.local_hospital_rounded,
+    'health': Icons.medical_services_rounded,
+    'medical_services': Icons.medical_services_rounded,
+    'emergency': Icons.local_police_rounded,
+    'local_police': Icons.local_police_rounded,
+    'police': Icons.local_police_rounded,
+    'shield': Icons.shield_rounded,
+    'museum': Icons.museum_rounded,
+    'attractions': Icons.museum_rounded,
+    'restaurant': Icons.restaurant_rounded,
+    'dining': Icons.restaurant_rounded,
+    'local_cafe': Icons.local_cafe_rounded,
+    'directions_bus': Icons.directions_bus_rounded,
+    'transit': Icons.directions_bus_rounded,
+    'home': Icons.home_rounded,
+    'grid_view': Icons.grid_view_rounded,
+  };
+
+  if (directMap.containsKey(normalized)) {
+    return directMap[normalized]!;
   }
-  if (lower.contains('gym') || lower.contains('fitness') || lower.contains('dumb')) {
-    return Icons.fitness_center_rounded;
+
+  // 2. Keyword fallback matching on icon name & name hint
+  final combined = '$raw $hint'.toLowerCase();
+
+  if (combined.contains('sing') || combined.contains('vocal') || combined.contains('mic') || combined.contains('karaoke')) {
+    return Icons.mic_rounded;
   }
-  if (lower.contains('sport') || lower.contains('cricket') || lower.contains('foot') || lower.contains('ball')) {
+  if (combined.contains('cricket') || combined.contains('bat')) {
+    return Icons.sports_cricket_rounded;
+  }
+  if (combined.contains('tennis') || combined.contains('badminton') || combined.contains('squash') || combined.contains('racket')) {
+    return Icons.sports_tennis_rounded;
+  }
+  if (combined.contains('foot') || combined.contains('soccer')) {
     return Icons.sports_soccer_rounded;
   }
-  if (lower.contains('swim') || lower.contains('pool') || lower.contains('aqua')) {
+  if (combined.contains('swim') || combined.contains('pool') || combined.contains('aqua') || combined.contains('diving')) {
     return Icons.pool_rounded;
   }
-  if (lower.contains('yoga') || lower.contains('meditat')) {
+  if (combined.contains('yoga') || combined.contains('meditat') || combined.contains('wellness')) {
     return Icons.self_improvement_rounded;
   }
-  if (lower.contains('dance') || lower.contains('music') || lower.contains('art')) {
-    return Icons.theater_comedy_rounded;
+  if (combined.contains('dance') || combined.contains('zumba') || combined.contains('choreograph')) {
+    return Icons.nightlife_rounded;
   }
-  if (lower.contains('edu') || lower.contains('school') || lower.contains('coach')) {
+  if (combined.contains('music') || combined.contains('guitar') || combined.contains('piano') || combined.contains('instrument')) {
+    return Icons.library_music_rounded;
+  }
+  if (combined.contains('paint') || combined.contains('brush') || combined.contains('draw') || combined.contains('sketch') || combined.contains('craft') || combined.contains('art')) {
+    return Icons.palette_rounded;
+  }
+  if (combined.contains('code') || combined.contains('program') || combined.contains('develop') || combined.contains('software')) {
+    return Icons.code_rounded;
+  }
+  if (combined.contains('robot') || combined.contains('ai') || combined.contains('machine') || combined.contains('tech')) {
+    return Icons.precision_manufacturing_rounded;
+  }
+  if (combined.contains('abacus') || combined.contains('math') || combined.contains('calculat')) {
+    return Icons.calculate_rounded;
+  }
+  if (combined.contains('chess') || combined.contains('board') || combined.contains('game')) {
+    return Icons.casino_rounded;
+  }
+  if (combined.contains('martial') || combined.contains('karate') || combined.contains('judo') || combined.contains('boxing') || combined.contains('kabaddi')) {
+    return Icons.sports_kabaddi_rounded;
+  }
+  if (combined.contains('gym') || combined.contains('fit') || combined.contains('workout') || combined.contains('train') || combined.contains('body')) {
+    return Icons.fitness_center_rounded;
+  }
+  if (combined.contains('book') || combined.contains('librar') || combined.contains('read') || combined.contains('study')) {
+    return Icons.local_library_rounded;
+  }
+  if (combined.contains('school') || combined.contains('edu') || combined.contains('tutor') || combined.contains('tuition') || combined.contains('coach') || combined.contains('class')) {
     return Icons.school_rounded;
   }
-  if (lower.contains('health') || lower.contains('hosp') || lower.contains('med')) {
+  if (combined.contains('kid') || combined.contains('child') || combined.contains('toddler') || combined.contains('nursery')) {
+    return Icons.child_care_rounded;
+  }
+  if (combined.contains('lang') || combined.contains('speak') || combined.contains('english') || combined.contains('french') || combined.contains('hindi')) {
+    return Icons.translate_rounded;
+  }
+  if (combined.contains('hosp') || combined.contains('clinic') || combined.contains('doctor') || combined.contains('med')) {
     return Icons.local_hospital_rounded;
   }
-  if (lower.contains('museum') || lower.contains('heritage') || lower.contains('attract')) {
-    return Icons.museum_rounded;
-  }
-  if (lower.contains('transit') || lower.contains('bus') || lower.contains('metro')) {
-    return Icons.directions_bus_rounded;
-  }
-  if (lower.contains('police') || lower.contains('emerg') || lower.contains('alert')) {
+  if (combined.contains('police') || combined.contains('emerg') || combined.contains('alert') || combined.contains('safe') || combined.contains('fire')) {
     return Icons.local_police_rounded;
   }
+  if (combined.contains('museum') || combined.contains('monument') || combined.contains('heritage') || combined.contains('sight')) {
+    return Icons.museum_rounded;
+  }
+
   return fallback;
 }
 
@@ -97,6 +278,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
       name: 'Public Libraries',
       slug: 'libraries',
       icon: Icons.local_library_rounded,
+      rawIcon: 'local_library',
       gradientColors: [Color(0xFF0F766E), Color(0xFF14B8A6)],
       description: 'Study Hubs, Books, Digital Archives & Reading Rooms',
       facilityKind: FacilityKind.library,
@@ -107,6 +289,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'All Libraries',
           slug: 'all',
           icon: Icons.grid_view_rounded,
+          color: Color(0xFF0F766E),
         ),
         FacilityTypeItem(
           id: 'central',
@@ -114,6 +297,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'Central Libraries',
           slug: 'central',
           icon: Icons.menu_book_rounded,
+          color: Color(0xFF0F766E),
         ),
         FacilityTypeItem(
           id: 'study',
@@ -121,6 +305,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'Study Lounges',
           slug: 'study',
           icon: Icons.chair_rounded,
+          color: Color(0xFF0F766E),
         ),
         FacilityTypeItem(
           id: 'digital',
@@ -128,6 +313,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'Digital Libraries',
           slug: 'digital',
           icon: Icons.laptop_chromebook_rounded,
+          color: Color(0xFF0F766E),
         ),
       ],
     ),
@@ -140,6 +326,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
       name: 'Gyms & Fitness',
       slug: 'gyms',
       icon: Icons.fitness_center_rounded,
+      rawIcon: 'fitness_center',
       gradientColors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
       description: 'Gymnasiums, Fitness Centers & Cardio Studios',
       facilityKind: FacilityKind.gym,
@@ -150,6 +337,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'All Gyms',
           slug: 'all',
           icon: Icons.grid_view_rounded,
+          color: Color(0xFF0284C7),
         ),
         FacilityTypeItem(
           id: 'general',
@@ -157,6 +345,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'Fitness Centers',
           slug: 'fitness',
           icon: Icons.fitness_center_rounded,
+          color: Color(0xFF0284C7),
         ),
         FacilityTypeItem(
           id: 'cardio',
@@ -164,6 +353,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'Strength & Cardio',
           slug: 'strength',
           icon: Icons.directions_run_rounded,
+          color: Color(0xFF0284C7),
         ),
         FacilityTypeItem(
           id: 'crossfit',
@@ -171,24 +361,34 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'CrossFit Studios',
           slug: 'crossfit',
           icon: Icons.sports_gymnastics_rounded,
+          color: Color(0xFF0284C7),
         ),
       ],
     ),
   );
 
-  // 3. Dynamic Activity Categories from Backend API (Sports, Yoga, Dance, Coaching, Aquatics, etc.)
+  // 3. Dynamic Activity Categories from Backend API (Sports, Education, Arts, Kids, Fitness, etc.)
   final defaultGradients = [
-    [const Color(0xFFEA580C), const Color(0xFFFB923C)], // Sports (Orange)
-    [const Color(0xFF059669), const Color(0xFF34D399)], // Wellness (Green)
-    [const Color(0xFF7C3AED), const Color(0xFFA78BFA)], // Arts (Purple)
-    [const Color(0xFF4F46E5), const Color(0xFF818CF8)], // Education (Indigo)
-    [const Color(0xFFDB2777), const Color(0xFFF472B6)], // Dance (Pink)
-    [const Color(0xFF0284C7), const Color(0xFF60A5FA)], // Swimming (Blue)
+    [const Color(0xFF3B82F6), const Color(0xFF60A5FA)], // Education (Blue)
+    [const Color(0xFF00E3FD), const Color(0xFF38BDF8)], // Fitness (Cyan)
+    [const Color(0xFFEC4899), const Color(0xFFF472B6)], // Arts (Pink)
+    [const Color(0xFFF59E0B), const Color(0xFFFBBF24)], // Kids (Amber)
+    [const Color(0xFF10B981), const Color(0xFF34D399)], // Sports (Emerald)
+    [const Color(0xFF8B5CF6), const Color(0xFFA78BFA)], // Purple
+    [const Color(0xFFEA580C), const Color(0xFFFB923C)], // Orange
   ];
 
   for (var i = 0; i < activityCategories.length; i++) {
     final cat = activityCategories[i];
-    final gradient = defaultGradients[i % defaultGradients.length];
+    final catColor = parseHexColor(
+      cat.color,
+      fallback: defaultGradients[i % defaultGradients.length].first,
+    );
+    final gradient = [
+      catColor,
+      defaultGradients[i % defaultGradients.length].last,
+    ];
+
     final types = <FacilityTypeItem>[
       FacilityTypeItem(
         id: 'all',
@@ -196,6 +396,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
         name: 'All ${cat.name}',
         slug: 'all',
         icon: Icons.grid_view_rounded,
+        color: catColor,
       ),
       ...cat.types.map(
         (t) => FacilityTypeItem(
@@ -203,7 +404,9 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           categoryId: cat.id,
           name: t.name,
           slug: t.slug,
-          icon: resolveCategoryIcon(t.icon ?? t.name),
+          icon: resolveCategoryIcon(t.icon, nameHint: t.name),
+          rawIcon: t.icon,
+          color: catColor,
         ),
       ),
     ];
@@ -213,9 +416,10 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
         id: cat.id,
         name: cat.name,
         slug: cat.slug,
-        icon: resolveCategoryIcon(cat.icon ?? cat.name),
+        icon: resolveCategoryIcon(cat.icon, nameHint: cat.name),
+        rawIcon: cat.icon,
         gradientColors: gradient,
-        description: cat.description ?? 'Verified academies and activity centers in your city.',
+        description: cat.description ?? 'Verified academies and centers in your city.',
         facilityKind: FacilityKind.activity,
         isActivity: true,
         types: types,
@@ -230,6 +434,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
       name: 'City Attractions',
       slug: 'attractions',
       icon: Icons.museum_rounded,
+      rawIcon: 'museum',
       gradientColors: [Color(0xFFD97706), Color(0xFFFBBF24)],
       description: 'Monuments, Heritage Sites & Cultural Landmarks',
       types: [
@@ -239,6 +444,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'All Attractions',
           slug: 'all',
           icon: Icons.grid_view_rounded,
+          color: Color(0xFFD97706),
         ),
       ],
     ),
@@ -251,6 +457,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
       name: 'Hospitals & Health',
       slug: 'healthcare',
       icon: Icons.local_hospital_rounded,
+      rawIcon: 'local_hospital',
       gradientColors: [Color(0xFFE11D48), Color(0xFFFB7185)],
       description: 'Emergency Desks, Clinics & Municipal Hospitals',
       types: [
@@ -260,6 +467,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'All Healthcare',
           slug: 'all',
           icon: Icons.grid_view_rounded,
+          color: Color(0xFFE11D48),
         ),
       ],
     ),
@@ -272,6 +480,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
       name: 'Emergency 112',
       slug: 'emergency',
       icon: Icons.local_police_rounded,
+      rawIcon: 'local_police',
       gradientColors: [Color(0xFFDC2626), Color(0xFFF87171)],
       description: 'Police, Fire Brigade, Disaster Control & Ambulance',
       types: [
@@ -281,6 +490,7 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
           name: 'All Emergency Services',
           slug: 'all',
           icon: Icons.grid_view_rounded,
+          color: Color(0xFFDC2626),
         ),
       ],
     ),
