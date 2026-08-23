@@ -8,6 +8,8 @@ import '../services/location_service.dart';
 import 'activities_providers.dart';
 import 'auth_controller.dart';
 
+import 'cities_providers.dart';
+
 part 'facility_explorer_providers.g.dart';
 
 enum FacilitySortFilter {
@@ -72,11 +74,13 @@ class FacilityExplorerList extends _$FacilityExplorerList {
 
   Future<List<FacilityModel>> _fetchPage(int page, FacilityExplorerQuery query) async {
     final locationSvc = ref.read(locationServiceProvider);
+    final selectedCity = ref.watch(selectedCityProvider);
     final user = ref.read(authControllerProvider).value;
-    final cityId = query.cityId ?? user?.cityId;
+    final effectiveCity = selectedCity ?? user?.city;
+    final cityId = query.cityId ?? effectiveCity?.id;
 
-    final userLat = query.userLat ?? user?.city?.latitude;
-    final userLng = query.userLng ?? user?.city?.longitude;
+    final userLat = query.userLat ?? effectiveCity?.latitude;
+    final userLng = query.userLng ?? effectiveCity?.longitude;
 
     if (query.categoryId == 'libraries') {
       final repo = ref.read(facilitiesRepositoryProvider);

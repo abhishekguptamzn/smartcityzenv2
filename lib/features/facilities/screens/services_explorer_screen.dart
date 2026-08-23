@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -190,7 +191,10 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                             trailing: isSelected
                                 ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488))
                                 : null,
-                            onTap: () => Navigator.of(ctx).pop(),
+                            onTap: () {
+                              ref.read(selectedCityProvider.notifier).setCity(c);
+                              Navigator.of(ctx).pop();
+                            },
                           );
                         },
                       );
@@ -208,8 +212,10 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedCity = ref.watch(selectedCityProvider);
     final user = ref.watch(authControllerProvider).value;
-    final cityName = user?.city?.name ?? 'Muzaffarnagar';
+    final effectiveCity = selectedCity ?? user?.city;
+    final cityName = effectiveCity?.name ?? 'Muzaffarnagar';
     final firstName = user?.name.split(' ').first ?? 'Citizen';
 
     final categoriesAsync = ref.watch(unifiedFacilityCategoriesProvider);
@@ -660,8 +666,12 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -670,17 +680,15 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
             height: 72,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDark
-                  ? iconColor.withValues(alpha: 0.12)
-                  : iconColor.withValues(alpha: 0.07),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: iconColor.withValues(alpha: isDark ? 0.3 : 0.2),
+                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: iconColor.withValues(alpha: 0.12),
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -688,17 +696,11 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
             ),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.all(10),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  color: iconColor.withValues(alpha: isDark ? 0.20 : 0.12),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: iconColor.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Icon(
                   icon,

@@ -368,26 +368,31 @@ List<FacilityCategoryItem> buildUnifiedCategories(List<ActivityCategoryModel> ac
   );
 
   // 3. Dynamic Activity Categories from Backend API (Sports, Education, Arts, Kids, Fitness, etc.)
+  final curatedCategoryPalettes = <String, List<Color>>{
+    'education': [const Color(0xFF1D4ED8), const Color(0xFF3B82F6)], // Vibrant Royal Azure
+    'fitness': [const Color(0xFF0284C7), const Color(0xFF38BDF8)], // Cyan Sky
+    'arts': [const Color(0xFFBE185D), const Color(0xFFEC4899)], // Rose Magenta
+    'kids': [const Color(0xFF6D28D9), const Color(0xFF8B5CF6)], // Deep Violet Purple
+    'sports': [const Color(0xFFEA580C), const Color(0xFFF97316)], // Energetic Flame Orange
+  };
+
   final defaultGradients = [
-    [const Color(0xFF3B82F6), const Color(0xFF60A5FA)], // Education (Blue)
-    [const Color(0xFF00E3FD), const Color(0xFF38BDF8)], // Fitness (Cyan)
-    [const Color(0xFFEC4899), const Color(0xFFF472B6)], // Arts (Pink)
-    [const Color(0xFFF59E0B), const Color(0xFFFBBF24)], // Kids (Amber)
-    [const Color(0xFF10B981), const Color(0xFF34D399)], // Sports (Emerald)
-    [const Color(0xFF8B5CF6), const Color(0xFFA78BFA)], // Purple
-    [const Color(0xFFEA580C), const Color(0xFFFB923C)], // Orange
+    [const Color(0xFF1D4ED8), const Color(0xFF3B82F6)], // Royal Blue
+    [const Color(0xFFEA580C), const Color(0xFFF97316)], // Flame Orange
+    [const Color(0xFF0284C7), const Color(0xFF38BDF8)], // Sky Cyan
+    [const Color(0xFFBE185D), const Color(0xFFEC4899)], // Rose Pink
+    [const Color(0xFF6D28D9), const Color(0xFF8B5CF6)], // Violet Purple
+    [const Color(0xFF0F766E), const Color(0xFF14B8A6)], // Emerald Teal
   ];
 
   for (var i = 0; i < activityCategories.length; i++) {
     final cat = activityCategories[i];
-    final catColor = parseHexColor(
-      cat.color,
-      fallback: defaultGradients[i % defaultGradients.length].first,
-    );
-    final gradient = [
-      catColor,
-      defaultGradients[i % defaultGradients.length].last,
-    ];
+    final slugKey = cat.slug.toLowerCase();
+    final gradient = curatedCategoryPalettes[slugKey] ??
+        (cat.color != null && cat.color!.isNotEmpty
+            ? [parseHexColor(cat.color), parseHexColor(cat.color).withValues(alpha: 0.8)]
+            : defaultGradients[i % defaultGradients.length]);
+    final catColor = gradient.first;
 
     final types = <FacilityTypeItem>[
       FacilityTypeItem(

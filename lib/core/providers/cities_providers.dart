@@ -21,3 +21,20 @@ Future<CityInformationModel> cityInformation(Ref ref, {String? cityId}) async {
   final effectiveId = cityId ?? user?.city?.id ?? 'current';
   return repo.getInformation(effectiveId);
 }
+
+@Riverpod(keepAlive: true)
+class SelectedCity extends _$SelectedCity {
+  @override
+  CityModel? build() {
+    final user = ref.watch(authControllerProvider).value;
+    return user?.city;
+  }
+
+  void setCity(CityModel city) {
+    state = city;
+  }
+
+  void clearCity() {
+    state = null;
+  }
+}

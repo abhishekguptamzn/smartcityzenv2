@@ -124,3 +124,56 @@ final class CityInformationFamily extends $Family
   @override
   String toString() => r'cityInformationProvider';
 }
+
+@ProviderFor(SelectedCity)
+const selectedCityProvider = SelectedCityProvider._();
+
+final class SelectedCityProvider
+    extends $NotifierProvider<SelectedCity, CityModel?> {
+  const SelectedCityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'selectedCityProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$selectedCityHash();
+
+  @$internal
+  @override
+  SelectedCity create() => SelectedCity();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CityModel? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CityModel?>(value),
+    );
+  }
+}
+
+String _$selectedCityHash() => r'cfdc6598d3769e84679670c3a537df5344b21acb';
+
+abstract class _$SelectedCity extends $Notifier<CityModel?> {
+  CityModel? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<CityModel?, CityModel?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CityModel?, CityModel?>,
+              CityModel?,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}

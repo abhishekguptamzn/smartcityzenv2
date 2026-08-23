@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/providers/cities_providers.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
 import '../../../core/services/location_service.dart';
 import '../../../data/models/facility_model.dart';
@@ -149,11 +150,115 @@ class _FacilityCategoryCentersScreenState
     }
   }
 
+  void _showCityPicker(BuildContext context, String currentCity) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Switch City',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Browse centers in other cities across India',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (context, ref, _) {
+                  final citiesAsync = ref.watch(citiesListProvider);
+                  return citiesAsync.when(
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: LoadingIndicator(),
+                      ),
+                    ),
+                    error: (e, s) => Text('Current city: $currentCity'),
+                    data: (cities) {
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: cities.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, i) {
+                          final c = cities[i];
+                          final isSelected = c.name.toLowerCase() == currentCity.toLowerCase();
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF0D9488).withValues(alpha: 0.15)
+                                    : Colors.grey.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.location_city_rounded,
+                                size: 18,
+                                color: isSelected ? const Color(0xFF0D9488) : Colors.grey,
+                              ),
+                            ),
+                            title: Text(
+                              c.name,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? const Color(0xFF0D9488) : null,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488))
+                                : null,
+                            onTap: () {
+                              ref.read(selectedCityProvider.notifier).setCity(c);
+                              Navigator.of(ctx).pop();
+                            },
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedCity = ref.watch(selectedCityProvider);
     final user = ref.watch(authControllerProvider).value;
-    final cityName = user?.city?.name ?? 'Your City';
+    final effectiveCity = selectedCity ?? user?.city;
+    final cityName = effectiveCity?.name ?? 'Muzaffarnagar';
+    final userCityId = effectiveCity?.id;
     final types = widget.category.types;
 
     return Scaffold(
@@ -233,23 +338,32 @@ class _FacilityCategoryCentersScreenState
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFF0D9488)),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          cityName,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                            fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: () => _showCityPicker(context, cityName),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFF0D9488)),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            cityName,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? Colors.white70 : const Color(0xFF0D9488),
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 14,
+                          color: isDark ? Colors.white60 : const Color(0xFF0D9488),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -318,7 +432,7 @@ class _FacilityCategoryCentersScreenState
 
           // Facility Centers Listing
           Expanded(
-            child: _buildCentersList(cityName, user?.cityId),
+            child: _buildCentersList(cityName, userCityId),
           ),
         ],
       ),
@@ -334,7 +448,7 @@ class _FacilityCategoryCentersScreenState
 
     final query = FacilityExplorerQuery(
       categoryId: widget.category.id,
-      typeId: _selectedType?.id,
+      typeId: (_selectedType != null && _selectedType!.id != 'all') ? _selectedType!.id : null,
       search: _search.isEmpty ? null : _search,
       cityId: userCityId,
       userLat: _userCoords?.latitude,
@@ -403,7 +517,9 @@ class _FacilityCategoryCentersScreenState
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No ${widget.category.name} found in $cityName',
+                              _selectedType != null && _selectedType!.id != 'all'
+                                  ? 'No ${_selectedType!.name} centers found in $cityName'
+                                  : 'No ${widget.category.name} found in $cityName',
                               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                               textAlign: TextAlign.center,
                             ),
@@ -411,21 +527,52 @@ class _FacilityCategoryCentersScreenState
                             Text(
                               _search.isNotEmpty
                                   ? 'Try adjusting your search "$_search"'
-                                  : 'No centers registered under this category yet.',
+                                  : 'Explore all ${_selectedType?.name ?? widget.category.name} or switch to another city.',
                               style: const TextStyle(fontSize: 13, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
-                            if (_search.isNotEmpty) ...[
-                              const SizedBox(height: 14),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _search = '');
-                                },
-                                icon: const Icon(Icons.clear_rounded, size: 16),
-                                label: const Text('Clear Search'),
-                              ),
-                            ],
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                if (_selectedType != null && _selectedType!.id != 'all')
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: widget.category.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      setState(() => _selectedType = null);
+                                    },
+                                    icon: const Icon(Icons.grid_view_rounded, size: 16),
+                                    label: Text('All ${widget.category.name}'),
+                                  ),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                  onPressed: () => _showCityPicker(context, cityName),
+                                  icon: const Icon(Icons.location_city_rounded, size: 16),
+                                  label: const Text('Switch City'),
+                                ),
+                                if (_search.isNotEmpty)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _search = '');
+                                    },
+                                    icon: const Icon(Icons.clear_rounded, size: 16),
+                                    label: const Text('Clear Search'),
+                                  ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
