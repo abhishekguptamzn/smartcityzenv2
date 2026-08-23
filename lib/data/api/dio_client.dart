@@ -57,19 +57,24 @@ class _ErrorMappingInterceptor extends Interceptor {
     if (!path.contains('/incidents')) {
       final statusCode = err.response?.statusCode ?? 500;
       if (statusCode >= 500 || err.response == null) {
+        final sanitizedQueryParams = Map<String, dynamic>.from(
+          err.requestOptions.queryParameters,
+        )..removeWhere(
+            (key, _) => _sensitiveBodyKeyPattern.hasMatch('"$key":'),
+          );
         IncidentReporter.reportError(
           error: err,
           stackTrace: err.stackTrace,
           exceptionClass: 'DioException',
-          message: 'API ${err.requestOptions.method} ${err.requestOptions.uri} failed: ${err.message ?? err.error?.toString()}',
-          url: err.requestOptions.uri.toString(),
+          message: 'API ${err.requestOptions.method} ${err.requestOptions.path} failed: ${err.message ?? err.error?.toString()}',
+          url: err.requestOptions.path,
           method: err.requestOptions.method,
           code: statusCode,
           severity: statusCode >= 500 ? 'critical' : 'warning',
           payload: {
             'status_code': statusCode,
             'response_data': err.response?.data?.toString(),
-            'query_params': err.requestOptions.queryParameters,
+            'query_params': sanitizedQueryParams,
           },
         );
       }
@@ -146,39 +151,28 @@ class _ErrorMappingInterceptor extends Interceptor {
   }
 }
 
-final RegExp _authHeaderPattern = RegExp(
-  r'"?Authorization"?\s*:\s*"[^"]*"',
-  caseSensitive: false,
-);
-
 // Body values for these keys can appear in arbitrary JSON/form encodings
 // that a regex can't safely scrub in place, so any log line naming one of
 // them is dropped entirely rather than partially redacted.
 final RegExp _sensitiveBodyKeyPattern = RegExp(
   r'"?(password|password_confirmation|current_password|new_password|'
-  r'new_password_confirmation|access_token|id_token|reset_token)"?\s*:',
+  r'new_password_confirmation|access_token|id_token|reset_token|token)"?\s*:',
   caseSensitive: false,
 );
 
 PrettyDioLogger _buildLogger() {
   return PrettyDioLogger(
-    requestHeader: true,
-    requestBody: true,
-    responseBody: true,
+    requestHeader: false,
+    requestBody: false,
+    responseBody: false,
     responseHeader: false,
     compact: true,
     logPrint: (Object object) {
       final line = object.toString();
       if (_sensitiveBodyKeyPattern.hasMatch(line)) {
-        _logger.d(
-          '[redacted: request/response body contains a credential field]',
-        );
         return;
       }
       if (line.contains('Authorization')) {
-        _logger.d(
-          line.replaceAll(_authHeaderPattern, 'Authorization: ***REDACTED***'),
-        );
         return;
       }
       _logger.d(line);
@@ -206,7 +200,7 @@ Dio dio(Ref ref) {
     ),
   );
 
-  if (config.enableRequestLogging) {
+  if (!kIsWeb && config.enableRequestLogging) {
     dio.interceptors.add(_buildLogger());
   }
 

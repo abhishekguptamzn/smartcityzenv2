@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,7 +40,7 @@ class AppConfig {
       apiBaseUrl: defaultUrl,
       connectTimeoutMs: 15000,
       receiveTimeoutMs: 20000,
-      enableRequestLogging: kDebugMode,
+      enableRequestLogging: !kIsWeb && kDebugMode,
     );
   }
 
