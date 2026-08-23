@@ -126,8 +126,11 @@ class ClientFacilityApi {
   Future<Response<dynamic>> addGymMember(String gymId, Map<String, dynamic> data) =>
       _dio.post('/client/gyms/$gymId/members', data: data);
 
-  Future<Response<dynamic>> deleteGymMember(String gymId, String memberId) =>
-      _dio.delete('/client/gyms/$gymId/members/$memberId');
+  Future<Response<dynamic>> deleteGymMember(String gymId, String memberId, {String? reason, String? comment}) =>
+      _dio.delete('/client/gyms/$gymId/members/$memberId', data: {
+        if (reason != null) 'reason': reason,
+        if (comment != null) 'comment': comment,
+      });
 
   Future<Response<dynamic>> renewGymMember(String gymId, String memberId, Map<String, dynamic> data) =>
       _dio.post('/client/gyms/$gymId/members/$memberId/renew', data: data);
@@ -170,8 +173,11 @@ class ClientFacilityApi {
   Future<Response<dynamic>> addLibraryMember(String libraryId, Map<String, dynamic> data) =>
       _dio.post('/client/libraries/$libraryId/members', data: data);
 
-  Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId) =>
-      _dio.delete('/client/libraries/$libraryId/members/$memberId');
+  Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId, {String? reason, String? comment}) =>
+      _dio.delete('/client/libraries/$libraryId/members/$memberId', data: {
+        if (reason != null) 'reason': reason,
+        if (comment != null) 'comment': comment,
+      });
 
   // Activities / Facility Centers
   Future<Response<dynamic>> getActivity(String activityId) =>
@@ -202,8 +208,26 @@ class ClientFacilityApi {
   Future<Response<dynamic>> addActivityMember(String activityId, Map<String, dynamic> data) =>
       _dio.post('/activities/$activityId/enrollments', data: data);
 
-  Future<Response<dynamic>> deleteActivityMember(String activityId, String enrollmentId) =>
-      _dio.delete('/activities/$activityId/enrollments/$enrollmentId');
+  Future<Response<dynamic>> deleteActivityMember(String activityId, String enrollmentId, {String? reason, String? comment}) =>
+      _dio.delete('/activities/$activityId/enrollments/$enrollmentId', data: {
+        if (reason != null) 'reason': reason,
+        if (comment != null) 'comment': comment,
+      });
+
+  Future<Response<dynamic>> uploadFacilityLogo(
+    String type,
+    String facilityId, {
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final formData = FormData.fromMap({
+      'logo': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    return _dio.post('/client/$type/$facilityId/logo', data: formData);
+  }
+
+  Future<Response<dynamic>> deleteFacilityLogo(String type, String facilityId) =>
+      _dio.delete('/client/$type/$facilityId/logo');
 
   Future<Response<dynamic>> renewActivityMember(String activityId, String enrollmentId, Map<String, dynamic> data) =>
       _dio.post('/client/activities/$activityId/members/$enrollmentId/renew', data: data);

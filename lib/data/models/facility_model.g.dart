@@ -25,6 +25,8 @@ _FacilityModel _$FacilityModelFromJson(Map<String, dynamic> json) =>
       images: (json['images'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
+      logoUrl: json['logo_url'] as String?,
+      logo: json['logo'] as Map<String, dynamic>?,
       amenities: (json['amenities'] as List<dynamic>?)
           ?.map((e) => AmenityModel.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -58,6 +60,8 @@ Map<String, dynamic> _$FacilityModelToJson(_FacilityModel instance) =>
       'image_url': instance.imageUrl,
       'image': instance.image,
       'images': instance.images,
+      'logo_url': instance.logoUrl,
+      'logo': instance.logo,
       'amenities': instance.amenities,
       'location': instance.location,
       'contact_phone': instance.contactPhone,

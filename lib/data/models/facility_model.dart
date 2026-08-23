@@ -72,6 +72,8 @@ abstract class FacilityModel with _$FacilityModel {
     @JsonKey(name: 'image_url') String? imageUrl,
     Map<String, dynamic>? image,
     List<Map<String, dynamic>>? images,
+    @JsonKey(name: 'logo_url') String? logoUrl,
+    Map<String, dynamic>? logo,
     List<AmenityModel>? amenities,
     Map<String, dynamic>? location,
     @JsonKey(name: 'contact_phone') String? contactPhone,

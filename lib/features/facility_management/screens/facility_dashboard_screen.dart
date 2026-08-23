@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/auth_controller.dart';
+import '../../../core/utils/image_url_resolver.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/facility_analytics_dashboard_widget.dart';
@@ -652,20 +654,34 @@ class _FacilityDashboardScreenState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left Facility Squircle Icon
+          // Left Facility Squircle Icon or Brand Logo
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Icon(
-                isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded,
-                color: const Color(0xFF2563EB),
-                size: 24,
+              border: Border.all(
+                color: isDark ? Colors.white12 : const Color(0xFFDBEAFE),
+                width: 1,
               ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(13),
+              child: (facility.logoUrl != null && facility.logoUrl!.trim().isNotEmpty)
+                  ? AppNetworkImage(
+                      imageUrl: ImageUrlResolver.resolve(facility.logoUrl!.trim()),
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                    )
+                  : Center(
+                      child: Icon(
+                        isGym ? Icons.fitness_center_rounded : Icons.menu_book_rounded,
+                        color: const Color(0xFF2563EB),
+                        size: 24,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 12),

@@ -35,7 +35,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     final session = ref.read(authControllerProvider).value;
-    context.go(session != null ? '/home' : '/login');
+    context.go(session != null ? '/home' : '/onboarding');
   }
 
   Future<void> _pingHealth() async {

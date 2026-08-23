@@ -326,7 +326,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
 
                   const SizedBox(height: 18),
 
-                  // 2. SEARCH BAR with Filter Icon
+                  // 2. SEARCH BAR with Cross-Category Query Support
                   Container(
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -356,9 +356,9 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                           child: TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              hintText: 'Search centers in $cityName...',
+                              hintText: 'Search all facilities & activities in $cityName...',
                               hintStyle: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13.5,
                                 color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                               ),
                               border: InputBorder.none,
@@ -366,17 +366,25 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                               contentPadding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                             onSubmitted: (query) {
-                              if (query.trim().isNotEmpty) {
+                              if (query.trim().isNotEmpty && allCategories.isNotEmpty) {
                                 _openCategory(
                                   context: context,
                                   allCategories: allCategories,
-                                  categorySlug: 'libraries',
+                                  categorySlug: allCategories.first.slug,
                                   initialSearch: query.trim(),
                                 );
                               }
                             },
                           ),
                         ),
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                          ),
                         Container(
                           height: 24,
                           width: 1,
@@ -392,11 +400,13 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                             color: Color(0xFF64748B),
                           ),
                           onPressed: () {
-                            _openCategory(
-                              context: context,
-                              allCategories: allCategories,
-                              categorySlug: 'libraries',
-                            );
+                            if (allCategories.isNotEmpty) {
+                              _openCategory(
+                                context: context,
+                                allCategories: allCategories,
+                                categorySlug: allCategories.first.slug,
+                              );
+                            }
                           },
                         ),
                       ],
@@ -405,200 +415,64 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
 
                   const SizedBox(height: 24),
 
-                  // 3. SECTION 1: 📖 Libraries
-                  _buildSectionHeader('📖 Libraries', isDark),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.menu_book_rounded,
-                          iconColor: const Color(0xFF10B981),
-                          title: 'Public Libraries',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'libraries',
-                            typeSlug: 'public-library',
-                          ),
-                        ),
+                  // 3. DYNAMIC FACILITY & ACTIVITY CATEGORIES
+                  ...allCategories.map((category) {
+                    final types = category.types;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader(category.name, isDark),
+                          const SizedBox(height: 12),
+                          if (types.isNotEmpty)
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 12,
+                              children: types.map((type) {
+                                final cardWidth = (MediaQuery.of(context).size.width - 36 - 30) / 4;
+                                return SizedBox(
+                                  width: cardWidth.clamp(74.0, 95.0),
+                                  child: _buildSquircleServiceCard(
+                                    icon: type.icon,
+                                    iconColor: type.color ?? category.primaryColor,
+                                    title: type.name,
+                                    isDark: isDark,
+                                    onTap: () => _openCategory(
+                                      context: context,
+                                      allCategories: allCategories,
+                                      categorySlug: category.slug,
+                                      typeSlug: type.slug,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildSquircleServiceCard(
+                                    icon: category.icon,
+                                    iconColor: category.primaryColor,
+                                    title: 'Explore ${category.name}',
+                                    isDark: isDark,
+                                    onTap: () => _openCategory(
+                                      context: context,
+                                      allCategories: allCategories,
+                                      categorySlug: category.slug,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.account_balance_rounded,
-                          iconColor: const Color(0xFF2563EB),
-                          title: 'Central Libraries',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'libraries',
-                            typeSlug: 'central-library',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.chair_rounded,
-                          iconColor: const Color(0xFF8B5CF6),
-                          title: 'Study Lounges',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'libraries',
-                            typeSlug: 'study-lounge',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  }),
 
-                  const SizedBox(height: 24),
-
-                  // 4. SECTION 2: 💪 Fitness & Wellness
-                  _buildSectionHeader('💪 Fitness & Wellness', isDark),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.fitness_center_rounded,
-                          iconColor: const Color(0xFFF97316),
-                          title: 'Gyms',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'gyms',
-                            typeSlug: 'gym',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.directions_run_rounded,
-                          iconColor: const Color(0xFFE11D48),
-                          title: 'Fitness Centers',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'gyms',
-                            typeSlug: 'fitness-center',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.self_improvement_rounded,
-                          iconColor: const Color(0xFF059669),
-                          title: 'Yoga Studios',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'gyms',
-                            typeSlug: 'yoga',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.spa_rounded,
-                          iconColor: const Color(0xFF0891B2),
-                          title: 'Wellness Centers',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'gyms',
-                            typeSlug: 'wellness',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 5. SECTION 3: 🎓 Education
-                  _buildSectionHeader('🎓 Education', isDark),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.school_rounded,
-                          iconColor: const Color(0xFF10B981),
-                          title: 'Coaching Institutes',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'coaching',
-                            typeSlug: 'coaching',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.auto_stories_rounded,
-                          iconColor: const Color(0xFF3B82F6),
-                          title: 'Tutoring Centers',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'coaching',
-                            typeSlug: 'tuition',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.palette_rounded,
-                          iconColor: const Color(0xFF8B5CF6),
-                          title: 'Dance Classes',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'dance',
-                            typeSlug: 'dance',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildSquircleServiceCard(
-                          icon: Icons.laptop_chromebook_rounded,
-                          iconColor: const Color(0xFFEA580C),
-                          title: 'Skill Development',
-                          isDark: isDark,
-                          onTap: () => _openCategory(
-                            context: context,
-                            allCategories: allCategories,
-                            categorySlug: 'coaching',
-                            typeSlug: 'skills',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 6. SECTION 4: 🏙️ More Services
-                  _buildSectionHeader('🏙️ More Services', isDark),
+                  // 4. CIVIC & EMERGENCY SERVICES
+                  _buildSectionHeader('🏙️ Civic & Emergency Services', isDark),
                   const SizedBox(height: 12),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -608,7 +482,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                         SizedBox(
                           width: 86,
                           child: _buildSquircleServiceCard(
-                            icon: Icons.add_box_rounded,
+                            icon: Icons.local_hospital_rounded,
                             iconColor: const Color(0xFFE11D48),
                             title: 'Hospitals & Clinics',
                             isDark: isDark,
@@ -625,39 +499,13 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                           child: _buildSquircleServiceCard(
                             icon: Icons.restaurant_rounded,
                             iconColor: const Color(0xFFF97316),
-                            title: 'Restaurants & Cafes',
+                            title: 'Dining & Cafes',
                             isDark: isDark,
                             onTap: () => _openCategory(
                               context: context,
                               allCategories: allCategories,
                               categorySlug: 'attractions',
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          width: 86,
-                          child: _buildSquircleServiceCard(
-                            icon: Icons.shopping_bag_rounded,
-                            iconColor: const Color(0xFF10B981),
-                            title: 'Local Businesses',
-                            isDark: isDark,
-                            onTap: () => _openCategory(
-                              context: context,
-                              allCategories: allCategories,
-                              categorySlug: 'attractions',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          width: 86,
-                          child: _buildSquircleServiceCard(
-                            icon: Icons.calendar_month_rounded,
-                            iconColor: const Color(0xFF2563EB),
-                            title: 'Events & Activities',
-                            isDark: isDark,
-                            onTap: () => context.push('/activities'),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -666,7 +514,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                           child: _buildSquircleServiceCard(
                             icon: Icons.shield_rounded,
                             iconColor: const Color(0xFF059669),
-                            title: 'Emergency Services',
+                            title: 'Emergency Helpline',
                             isDark: isDark,
                             onTap: () => _openCategory(
                               context: context,
@@ -675,11 +523,20 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                             ),
                           ),
                         ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          width: 86,
+                          child: _buildSquircleServiceCard(
+                            icon: Icons.confirmation_num_rounded,
+                            iconColor: const Color(0xFF2563EB),
+                            title: 'Citizen Support',
+                            isDark: isDark,
+                            onTap: () => context.push('/support'),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-
-                  // Stop strictly at More Services (no feed below)
                   const SizedBox(height: 16),
                 ],
               ),

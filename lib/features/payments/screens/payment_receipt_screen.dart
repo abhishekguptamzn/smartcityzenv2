@@ -154,25 +154,49 @@ class PaymentReceiptScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: scheme.secondary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.mail_rounded, color: scheme.secondary),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          l10n.invoiceEmailedNotice,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+                if (payment.status.toLowerCase() == 'refunded')
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
                       ),
-                    ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.replay_circle_filled_rounded, color: Color(0xFFF59E0B), size: 24),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This payment was refunded. A refund confirmation has been sent to your registered email and the tax invoice has been cancelled.',
+                            style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFD97706), fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: scheme.secondary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.mail_rounded, color: scheme.secondary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.invoiceEmailedNotice,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             );
           },

@@ -53,6 +53,8 @@ class _EditFacilityDetailsScreenState
   bool _submitting = false;
   bool _isLoadingAmenities = true;
   bool _uploadingPhoto = false;
+  bool _uploadingLogo = false;
+  String? _currentLogoUrl;
 
   String? _selectedCityId;
   String? _selectedCityName;
@@ -68,6 +70,7 @@ class _EditFacilityDetailsScreenState
     _descController.text = widget.facility?.description ?? '';
     _selectedCityId = widget.facility?.cityId ?? widget.facility?.city?.id;
     _selectedCityName = widget.facility?.city?.name;
+    _currentLogoUrl = widget.facility?.logoUrl ?? widget.facility?.logo?['url']?.toString();
     _openingTime = _parseTimeString(widget.facility?.openingTime) ??
         const TimeOfDay(hour: 6, minute: 0);
     _closingTime = _parseTimeString(widget.facility?.closingTime) ??
@@ -369,6 +372,173 @@ class _EditFacilityDetailsScreenState
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }
+  }
+
+  Future<void> _pickAndUploadLogo(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final filename = picked.name.isNotEmpty ? picked.name : 'facility_logo.png';
+
+      final validationError = FileValidator.validateImageBytes(
+        bytes,
+        filename: filename,
+      );
+      if (validationError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validationError),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _uploadingLogo = true);
+
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      final uploadedUrl = await repo.uploadFacilityLogo(
+        widget.kind,
+        widget.facilityId,
+        bytes: bytes,
+        filename: filename,
+      );
+
+      setState(() => _currentLogoUrl = uploadedUrl);
+      _invalidateAllFacilityData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Facility logo updated successfully!'),
+            ],
+          ),
+          backgroundColor: Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload logo: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+  }
+
+  Future<void> _deleteLogo() async {
+    try {
+      setState(() => _uploadingLogo = true);
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      await repo.deleteFacilityLogo(widget.kind, widget.facilityId);
+      setState(() => _currentLogoUrl = null);
+      _invalidateAllFacilityData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Facility logo removed successfully.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove logo: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+  }
+
+  void _showLogoOptionsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Facility Brand Logo',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Upload a high-resolution logo for receipts, digital passes & email notices.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0D9488)),
+                title: const Text('Take Photo with Camera'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickAndUploadLogo(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB)),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickAndUploadLogo(ImageSource.gallery);
+                },
+              ),
+              if (_currentLogoUrl != null && _currentLogoUrl!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626)),
+                  title: const Text('Remove Current Logo', style: TextStyle(color: Color(0xFFDC2626))),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _deleteLogo();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _handleSetPrimary(FacilityMediaModel photo) async {
@@ -1774,6 +1944,9 @@ class _EditFacilityDetailsScreenState
                 end: Alignment.bottomRight,
               ));
 
+    final hasLogo = _currentLogoUrl != null && _currentLogoUrl!.trim().isNotEmpty;
+    final resolvedLogo = hasLogo ? ImageUrlResolver.resolve(_currentLogoUrl!.trim()) : null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1788,137 +1961,189 @@ class _EditFacilityDetailsScreenState
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  gradient: themeGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isGym
-                              ? const Color(0xFFF97316)
-                              : (isActivity
-                                  ? const Color(0xFF0D9488)
-                                  : const Color(0xFF2563EB)))
-                          .withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
+              GestureDetector(
+                onTap: () => _showLogoOptionsSheet(context),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        gradient: resolvedLogo == null ? themeGradient : null,
+                        color: resolvedLogo != null ? (isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9)) : null,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: (isGym
+                                  ? const Color(0xFFF97316)
+                                  : (isActivity ? const Color(0xFF0D9488) : const Color(0xFF2563EB)))
+                              .withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isGym
+                                    ? const Color(0xFFF97316)
+                                    : (isActivity
+                                        ? const Color(0xFF0D9488)
+                                        : const Color(0xFF2563EB)))
+                                .withValues(alpha: 0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: _uploadingLogo
+                            ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)))
+                            : (resolvedLogo != null
+                                ? AppNetworkImage(
+                                    imageUrl: resolvedLogo,
+                                    fit: BoxFit.cover,
+                                    width: 68,
+                                    height: 68,
+                                  )
+                                : Center(
+                                    child: Icon(
+                                      heroIcon,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
+                                  )),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: cardBorder, width: 1.5),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black12, blurRadius: 4),
+                          ],
+                        ),
+                        child: Center(
+                          child: Icon(
+                            hasLogo ? Icons.edit_rounded : Icons.camera_alt_rounded,
+                            size: 13,
+                            color: isGym
+                                ? const Color(0xFFF97316)
+                                : (isActivity
+                                    ? const Color(0xFF0D9488)
+                                    : const Color(0xFF2563EB)),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Icon(
-                    heroIcon,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
               ),
-              Positioned(
-                bottom: -2,
-                right: -2,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border:
-                        Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 4),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(Icons.edit_rounded,
-                        size: 12,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
                         color: isGym
                             ? const Color(0xFFF97316)
                             : (isActivity
                                 ? const Color(0xFF0D9488)
-                                : const Color(0xFF2563EB))),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  categoryLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: isGym
-                        ? const Color(0xFFF97316)
-                        : (isActivity
-                            ? const Color(0xFF0D9488)
-                            : const Color(0xFF2563EB)),
-                    letterSpacing: 0.6,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  facilityName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.public_rounded,
-                              size: 12, color: Color(0xFF059669)),
-                          SizedBox(width: 4),
-                          Text(
-                            'Public Profile',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF059669),
-                            ),
-                          ),
-                        ],
+                                : const Color(0xFF2563EB)),
+                        letterSpacing: 0.6,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'This information is visible to users',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 4),
+                    Text(
+                      facilityName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: -0.3,
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _showLogoOptionsSheet(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              hasLogo ? Icons.check_circle_rounded : Icons.add_photo_alternate_rounded,
+                              size: 14,
+                              color: hasLogo ? const Color(0xFF10B981) : brandBlue,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              hasLogo ? 'Brand Logo Uploaded' : 'Upload Facility Logo',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: hasLogo ? const Color(0xFF10B981) : brandBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.public_rounded, size: 12, color: Color(0xFF059669)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Public Profile',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Visible on digital passes & receipts',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark ? Colors.white54 : Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

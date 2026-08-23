@@ -10,6 +10,7 @@ import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/payment_detail_modal.dart';
+import '../widgets/remove_member_sheet.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
 import 'facility_members_screen.dart';
@@ -272,59 +273,31 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
   }
 
   Future<void> _confirmRemoveMember(BuildContext context, Map<String, dynamic> member) async {
-    final name = member['name'] ?? 'this member';
-    final email = member['email'] ?? '';
+    final name = member['name'] ?? member['user']?['name'] ?? 'Citizen Member';
+    final email = member['email'] ?? member['user']?['email'];
 
-    final confirmed = await showDialog<bool>(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text('Remove Member?'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to remove $name ($email) from ${widget.facility?.name ?? "this facility"}?\n\nThis will disable their check-in access and send them a membership cancellation email.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(dialogCtx).pop(true),
-            child: const Text('Yes, Remove Member'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => RemoveMemberSheet(
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        memberId: widget.memberId,
+        memberName: name,
+        memberEmail: email,
+        facilityName: widget.facility?.name,
+        onSuccess: () {
+          ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+          ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+          ref.invalidate(memberDetailsProvider((widget.kind, widget.facilityId, widget.memberId)));
+          ref.invalidate(myOwnedFacilitiesProvider);
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
       ),
     );
-
-    if (confirmed == true) {
-      try {
-        await ref.read(clientFacilityRepositoryProvider).deleteMember(
-              widget.kind,
-              widget.facilityId,
-              widget.memberId,
-            );
-        ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
-        ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
-        ref.invalidate(myOwnedFacilitiesProvider);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name was removed and notified via email.')),
-        );
-        Navigator.of(context).pop();
-      } catch (e) {
-        final err = AppException.from(e);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err?.message ?? 'Failed to remove member.')),
-        );
-      }
-    }
   }
 
   @override
@@ -573,6 +546,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
   Widget _buildAttendanceTab(BuildContext context, Color primaryColor) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     final reportAsync = ref.watch(memberAttendanceReportProvider((widget.kind, widget.facilityId, widget.memberId, _selectedAttendancePeriod)));
 
@@ -603,13 +577,25 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
           reportAsync.when(
             data: (data) {
               final summary = (data['summary'] as Map<String, dynamic>?) ?? {};
-              final totalVisits = (summary['total_visits'] as num?)?.toInt() ?? 0;
-              final totalMinutes = (summary['total_duration_minutes'] as num?)?.toInt() ?? 0;
-              final avgDailyMinutes = (summary['avg_session_minutes'] as num?)?.toInt() ?? 0;
+              final totalVisits = (summary['total_visits'] as num?)?.toInt() ??
+                  (summary['total_sessions'] as num?)?.toInt() ??
+                  (summary['total_visits_count'] as num?)?.toInt() ??
+                  0;
+              final totalMinutes = (summary['total_duration_minutes'] as num?)?.toInt() ??
+                  (summary['total_minutes'] as num?)?.toInt() ??
+                  (summary['total_minutes_inside'] as num?)?.toInt() ??
+                  0;
+              final avgDailyMinutes = (summary['avg_session_minutes'] as num?)?.toInt() ??
+                  (summary['avg_duration_minutes'] as num?)?.toInt() ??
+                  0;
               final totalHours = (totalMinutes / 60).toStringAsFixed(1);
 
               final chartData = (data['chart_data'] as List? ?? []).cast<Map<String, dynamic>>();
               final records = (data['records'] as List? ?? []).cast<Map<String, dynamic>>();
+
+              final maxMinutes = chartData
+                  .map((d) => (d['duration_minutes'] as num?)?.toDouble() ?? (d['minutes'] as num?)?.toDouble() ?? 0.0)
+                  .fold(60.0, (prev, elem) => elem > prev ? elem : prev);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,50 +681,64 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                               Text('Minutes inside per visit', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 16),
                               SizedBox(
-                                height: 130,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: chartData.map((item) {
-                                    final minutes = (item['duration_minutes'] as num?)?.toDouble() ?? 0.0;
-                                    final label = item['day_label']?.toString() ?? '';
-                                    const maxScale = 180.0; // 3 hours max scale
-                                    final heightFactor = (minutes / maxScale).clamp(0.08, 1.0);
+                                height: 135,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: chartData.map((item) {
+                                      final minutes = (item['duration_minutes'] as num?)?.toDouble() ??
+                                          (item['minutes'] as num?)?.toDouble() ??
+                                          0.0;
+                                      final label = item['short_label']?.toString() ?? item['day_label']?.toString() ?? '';
+                                      final heightFactor = minutes > 0 ? (minutes / maxMinutes).clamp(0.12, 1.0) : 0.05;
+                                      final itemWidth = chartData.length > 10 ? 38.0 : (MediaQuery.of(context).size.width - 70) / chartData.length;
 
-                                    return Expanded(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            '${minutes.toInt()}m',
-                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Container(
-                                            height: 80 * heightFactor,
-                                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.bottomCenter,
-                                                end: Alignment.topCenter,
-                                                colors: [
-                                                  primaryColor.withValues(alpha: 0.7),
-                                                  primaryColor,
-                                                ],
+                                      return SizedBox(
+                                        width: itemWidth.clamp(32.0, 64.0),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              minutes > 0 ? '${minutes.toInt()}m' : '0',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: minutes > 0 ? (isDark ? Colors.white70 : const Color(0xFF334155)) : (isDark ? Colors.white24 : Colors.black26),
                                               ),
-                                              borderRadius: BorderRadius.circular(6),
                                             ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            label,
-                                            style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              height: 80 * heightFactor,
+                                              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                              decoration: BoxDecoration(
+                                                gradient: minutes > 0
+                                                    ? LinearGradient(
+                                                        begin: Alignment.bottomCenter,
+                                                        end: Alignment.topCenter,
+                                                        colors: [
+                                                          primaryColor.withValues(alpha: 0.7),
+                                                          primaryColor,
+                                                        ],
+                                                      )
+                                                    : null,
+                                                color: minutes <= 0 ? (isDark ? Colors.white10 : const Color(0xFFE2E8F0)) : null,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              label,
+                                              style: TextStyle(fontSize: 9.5, color: scheme.onSurfaceVariant),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
                                 ),
                               ),
                             ],

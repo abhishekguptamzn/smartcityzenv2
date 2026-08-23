@@ -120,35 +120,121 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final p = payments[i];
-                        final accent = p.isPaid
-                            ? scheme.secondary
-                            : scheme.error;
+                        final isRefunded = p.status.toLowerCase() == 'refunded';
+                        final isPaid = p.isPaid;
+                        final accent = isRefunded
+                            ? const Color(0xFFF59E0B)
+                            : (isPaid ? scheme.secondary : scheme.error);
+
+                        final facilityName = (p.facilityName != null && p.facilityName!.isNotEmpty)
+                            ? p.facilityName!
+                            : (p.notes != null && p.notes!.isNotEmpty && !p.notes!.startsWith('http')
+                                ? p.notes!
+                                : (p.payableType ?? 'Civic Facility'));
+
+                        final timestamp = p.paidAt ?? p.createdAt;
+
                         return Card(
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: accent.withValues(alpha: 0.14),
-                              child: Icon(
-                                p.isPaid
-                                    ? Icons.check_rounded
-                                    : Icons.schedule_rounded,
-                                color: accent,
-                                size: 18,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: isRefunded
+                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => context.push('/payments/${p.id}'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: accent.withValues(alpha: 0.14),
+                                    child: Icon(
+                                      isRefunded
+                                          ? Icons.replay_rounded
+                                          : (isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded),
+                                      color: accent,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          facilityName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time_rounded,
+                                              size: 13,
+                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              timestamp != null
+                                                  ? DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toLocal())
+                                                  : (p.dueDate != null
+                                                      ? DateFormat('dd MMM yyyy').format(p.dueDate!.toLocal())
+                                                      : '—'),
+                                              style: Theme.of(context).textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        NumberFormat.currency(
+                                          name: p.currency.toUpperCase() == 'INR' ? 'INR' : p.currency,
+                                          symbol: p.currency.toUpperCase() == 'INR' || p.currency.isEmpty ? '₹' : p.currency,
+                                          decimalDigits: 0,
+                                        ).format(p.amount),
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: accent.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          p.status.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: accent,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            title: Text(
-                              NumberFormat.currency(
-                                name: p.currency,
-                                decimalDigits: 0,
-                              ).format(p.amount),
-                            ),
-                            subtitle: Text(p.paymentMethod ?? p.status),
-                            trailing: Text(
-                              p.paidAt != null
-                                  ? DateFormat.yMMMd().format(p.paidAt!)
-                                  : p.status,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            onTap: () => context.push('/payments/${p.id}'),
                           ),
                         );
                       },

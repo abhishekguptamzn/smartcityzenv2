@@ -41,7 +41,7 @@ final class AppLockControllerProvider
   }
 }
 
-String _$appLockControllerHash() => r'cb97b33403c509fd7cc72de9bd71ebc090a2911c';
+String _$appLockControllerHash() => r'04dc0f906fd999bdc04e4720c1369931c6498032';
 
 abstract class _$AppLockController extends $Notifier<AppLockState> {
   AppLockState build();

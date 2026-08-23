@@ -62,6 +62,7 @@ import '../../features/security/screens/security_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/support/screens/support_tickets_screen.dart';
 import '../../features/support/screens/ticket_detail_screen.dart';
+import '../../features/auth/screens/onboarding_slides_screen.dart';
 import '../providers/auth_controller.dart';
 import 'app_shell.dart';
 
@@ -69,6 +70,7 @@ part 'app_router.g.dart';
 
 const _publicPaths = {
   '/splash',
+  '/onboarding',
   '/login',
   '/forgot-password',
   '/reset-password',
@@ -98,7 +100,7 @@ GoRouter goRouter(Ref ref) {
       if (!isLoggedIn && !isPublic) {
         return '/login';
       }
-      if (isLoggedIn && (path == '/login' || path == '/splash')) {
+      if (isLoggedIn && (path == '/login' || path == '/splash' || path == '/onboarding')) {
         return '/home';
       }
       return null;
@@ -107,6 +109,10 @@ GoRouter goRouter(Ref ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingSlidesScreen(),
       ),
       GoRoute(
         path: '/login',

@@ -8,6 +8,7 @@ import '../../../core/providers/facilities_providers.dart';
 import '../../../core/providers/facility_member_providers.dart';
 import '../../../core/providers/gym_attendance_providers.dart';
 import '../../../core/providers/payments_providers.dart';
+import '../../../core/utils/image_url_resolver.dart';
 
 import '../../../data/models/facility_member_model.dart';
 import '../../../data/models/facility_model.dart';
@@ -15,6 +16,7 @@ import '../../../data/models/payment_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../data/repositories/gym_attendance_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -443,7 +445,78 @@ class _OverviewTab extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+        _SectionLabel('FACILITY & PROVIDER'),
+        const SizedBox(height: 10),
+        facilityAsync.when(
+          data: (f) {
+            final logoUrl = f.logoUrl;
+            final hasLogo = logoUrl != null && logoUrl.trim().isNotEmpty;
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: isGym ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: hasLogo
+                          ? AppNetworkImage(
+                              imageUrl: ImageUrlResolver.resolve(logoUrl.trim()),
+                              fit: BoxFit.cover,
+                              width: 52,
+                              height: 52,
+                            )
+                          : Center(
+                              child: Icon(
+                                isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                                color: isGym ? const Color(0xFF2563EB) : const Color(0xFF059669),
+                                size: 26,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.name,
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          f.address ?? f.city?.name ?? 'Municipal Facility Center',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+        ),
+        const SizedBox(height: 16),
         _SectionLabel('MEMBER INFORMATION'),
         const SizedBox(height: 10),
         Container(

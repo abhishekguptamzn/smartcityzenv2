@@ -158,13 +158,19 @@ class ClientFacilityRepository {
     return data is Map ? data.cast<String, dynamic>() : {};
   }
 
-  Future<void> deleteMember(FacilityKind kind, String facilityId, String memberId) async {
+  Future<void> deleteMember(
+    FacilityKind kind,
+    String facilityId,
+    String memberId, {
+    String? reason,
+    String? comment,
+  }) async {
     if (kind == FacilityKind.gym) {
-      await _api.deleteGymMember(facilityId, memberId);
+      await _api.deleteGymMember(facilityId, memberId, reason: reason, comment: comment);
     } else if (kind == FacilityKind.activity) {
-      await _api.deleteActivityMember(facilityId, memberId);
+      await _api.deleteActivityMember(facilityId, memberId, reason: reason, comment: comment);
     } else {
-      await _api.deleteLibraryMember(facilityId, memberId);
+      await _api.deleteLibraryMember(facilityId, memberId, reason: reason, comment: comment);
     }
   }
 
@@ -658,6 +664,32 @@ class ClientFacilityRepository {
       return FacilityMediaModel.fromJson(Map<String, dynamic>.from(raw));
     }
     return null;
+  }
+
+  Future<String?> uploadFacilityLogo(
+    FacilityKind kind,
+    String facilityId, {
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final res = await _api.uploadFacilityLogo(
+      kind.pathSegment,
+      facilityId,
+      bytes: bytes,
+      filename: filename,
+    );
+    dynamic raw = res.data;
+    if (raw is Map) {
+      raw = raw['data'] ?? raw;
+    }
+    if (raw is Map) {
+      return raw['logo_url']?.toString();
+    }
+    return null;
+  }
+
+  Future<void> deleteFacilityLogo(FacilityKind kind, String facilityId) async {
+    await _api.deleteFacilityLogo(kind.pathSegment, facilityId);
   }
 
   Future<void> setPrimaryMedia(String mediaId) async {

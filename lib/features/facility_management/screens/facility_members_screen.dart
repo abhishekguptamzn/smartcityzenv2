@@ -8,6 +8,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
+import '../widgets/remove_member_sheet.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
 import 'facility_member_detail_screen.dart';
@@ -87,52 +88,26 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
   }
 
   void _confirmRemoveMember(BuildContext context, Map<String, dynamic> member) {
-    final userName = member['user']?['name']?.toString() ?? 'this member';
+    final userName = member['user']?['name']?.toString() ?? member['name']?.toString() ?? 'Citizen Member';
     final memberId = member['id']?.toString() ?? '';
+    final memberEmail = member['user']?['email']?.toString() ?? member['email']?.toString();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-            SizedBox(width: 8),
-            Text('Remove Member'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to remove $userName from this ${widget.kind == FacilityKind.gym ? "gym" : "library"}? Their active digital pass will be revoked.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              try {
-                await ref.read(clientFacilityRepositoryProvider).deleteMember(widget.kind, widget.facilityId, memberId);
-                ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
-                ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
-                ref.invalidate(myOwnedFacilitiesProvider);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Member $userName removed successfully.')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to remove member: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Remove'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => RemoveMemberSheet(
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        memberId: memberId,
+        memberName: userName,
+        memberEmail: memberEmail,
+        facilityName: widget.facility?.name,
+        onSuccess: () {
+          ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
+          ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
+          ref.invalidate(myOwnedFacilitiesProvider);
+        },
       ),
     );
   }
