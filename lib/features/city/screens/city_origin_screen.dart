@@ -70,19 +70,19 @@ class _OriginBody extends StatelessWidget {
     final origin = info.originAndName;
     final city = info.city;
     final scheme = Theme.of(context).colorScheme;
-    final cityName = city?.name ?? 'Muzaffarnagar';
+    final cityName = city?.name ?? 'Select City';
 
     final names = origin?.historicalNames.isNotEmpty == true
         ? origin!.historicalNames
-        : [info.ancientName ?? 'Sarwat', cityName, '$cityName Nagar'];
+        : [if (info.ancientName != null) info.ancientName!, cityName];
 
     final etymologyText = origin?.etymology ??
-        'The city is named after "Muzaffar Khan", a loyal chief in the service of Emperor Shah Jahan. He was granted the title Muzaffar Khan and the area was later known as Muzaffarnagar.';
+        'Historical etymology and archival naming records for $cityName are maintained as part of municipal heritage archives.';
 
     final meaningText = origin?.meaning ?? 'The city of $cityName';
 
     final didYouKnow = origin?.didYouKnow ??
-        '$cityName was an important stop on the Delhi-Haridwar road during the Mughal period.';
+        'Discover rich milestones, archival landmarks and historic pathways across $cityName.';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),

@@ -70,28 +70,28 @@ class _CultureBody extends StatelessWidget {
     final cultureList = info.cultureAndTraditions;
     final city = info.city;
     final scheme = Theme.of(context).colorScheme;
-    final cityName = city?.name ?? 'Muzaffarnagar';
+    final cityName = city?.name ?? 'Select City';
 
     final defaultCulture = [
       (
         Icons.festival_rounded,
         'Festivals',
-        'Diwali, Holi, Eid, Dussehra, Muharram, Makar Sankranti',
+        'National and regional festivals celebrated with unity and fervor',
       ),
       (
         Icons.theater_comedy_rounded,
         'Traditions',
-        'Hospitality, folk music, folk dance and local fairs',
+        'Local art forms, folk music, dance and civic celebrations',
       ),
       (
         Icons.brush_rounded,
-        'Handicrafts',
-        'Wood carving, sugarcane products, brass items, weaving',
+        'Handicrafts & Arts',
+        'Traditional craftsmanship, textiles and regional artwork',
       ),
       (
         Icons.restaurant_rounded,
-        'Cuisine',
-        'Gajak, Rewari, Chaats, Traditional sweets',
+        'Cuisine & Flavors',
+        'Authentic regional delicacies, specialties and traditional sweets',
       ),
     ];
 

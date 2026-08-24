@@ -75,7 +75,7 @@ class _CityHubBody extends StatelessWidget {
     final colors = context.appColors;
     final scheme = theme.colorScheme;
 
-    final cityName = city?.name ?? 'Muzaffarnagar';
+    final cityName = city?.name ?? 'Select City';
     final tagline = city?.tagline ?? info.nickname ?? 'A city with rich history, culture and heritage';
     final nickname = info.nickname ?? '$cityName Identity';
     final heroImage = info.heroImageUrl ??

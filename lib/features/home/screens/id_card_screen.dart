@@ -332,7 +332,7 @@ class _CardFrontDesign extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cityName = user.city?.name ?? 'Muzaffarnagar';
+    final cityName = user.city?.name ?? 'Select City';
     final initial = user.name.trim().isNotEmpty
         ? user.name.trim()[0].toUpperCase()
         : 'C';

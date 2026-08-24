@@ -279,7 +279,7 @@ class _CitySearchBottomSheetState extends State<_CitySearchBottomSheet> {
               controller: _searchCtrl,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Search city or state (e.g. Muzaffarnagar, Delhi)...',
+                hintText: 'Search city or state (e.g. Mumbai, Delhi, Bengaluru)...',
                 hintStyle: TextStyle(
                   fontSize: 13.5,
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.7),

@@ -250,8 +250,8 @@ class _OnboardFacilityFormScreenState
                         decoration: InputDecoration(
                           labelText: 'Address',
                           hintText: isLibrary
-                              ? '123 Library Road, Muzaffarnagar'
-                              : '456 Fitness Street, Muzaffarnagar',
+                              ? '123 Library Road, Central Square'
+                              : '456 Fitness Street, North Block',
                           prefixIcon: const Icon(Icons.location_on_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),

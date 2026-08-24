@@ -157,7 +157,7 @@ class _FacilityCategoryCentersScreenState
     final selectedCity = ref.watch(selectedCityProvider);
     final user = ref.watch(authControllerProvider).value;
     final effectiveCity = selectedCity ?? user?.city;
-    final cityName = effectiveCity?.name ?? 'Muzaffarnagar';
+    final cityName = effectiveCity?.name ?? 'Select City';
     final userCityId = effectiveCity?.id;
     final types = widget.category.types;
 

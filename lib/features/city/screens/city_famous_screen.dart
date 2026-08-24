@@ -70,28 +70,28 @@ class _FamousBody extends StatelessWidget {
     final famousList = info.famousFor;
     final city = info.city;
     final scheme = Theme.of(context).colorScheme;
-    final cityName = city?.name ?? 'Muzaffarnagar';
+    final cityName = city?.name ?? 'Select City';
 
     final defaultFamous = [
       FamousItemModel(
-        title: 'Sugarcane Production',
-        category: 'Agriculture & Industry',
-        description: 'One of the leading sugarcane producing regions in India.',
+        title: 'Local Commerce & Industry',
+        category: 'Economy & Trade',
+        description: 'Vibrant local markets, manufacturing and commercial enterprises.',
       ),
       FamousItemModel(
-        title: 'Gajak & Rewari',
+        title: 'Culinary Heritage',
         category: 'Cuisine Specialty',
-        description: 'Famous traditional sweets loved nationwide.',
+        description: 'Authentic traditional food culture and popular local dining.',
       ),
       FamousItemModel(
-        title: 'Wood Carving',
+        title: 'Artisanal Craftsmanship',
         category: 'Heritage Craft',
-        description: 'High quality wooden handicrafts and furniture.',
+        description: 'Locally crafted goods, handmade textiles and unique products.',
       ),
       FamousItemModel(
-        title: 'Agriculture',
-        category: 'Economy',
-        description: 'Prosperous agriculture and allied industries.',
+        title: 'Civic Landmarks',
+        category: 'Tourism & Architecture',
+        description: 'Prominent municipal centers, public parks and community hubs.',
       ),
     ];
 

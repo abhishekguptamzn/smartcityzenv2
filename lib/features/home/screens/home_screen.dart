@@ -331,13 +331,16 @@ class _MyCityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final infoAsync = ref.watch(cityInformationProvider());
+    final selectedCity = ref.watch(selectedCityProvider);
+    final user = ref.watch(authControllerProvider).value;
+    final fallbackCityName = selectedCity?.name ?? user?.city?.name ?? 'Select City';
+    final infoAsync = ref.watch(cityInformationProvider(cityId: selectedCity?.id ?? user?.city?.id));
 
     return infoAsync.when(
       loading: () => _buildBanner(
         context: context,
         scheme: scheme,
-        cityName: 'Muzaffarnagar',
+        cityName: fallbackCityName,
         tagline: 'A city with rich history, culture and heritage',
         heroImage:
             'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=1200&q=80',
@@ -345,14 +348,14 @@ class _MyCityCard extends ConsumerWidget {
       error: (_, _) => _buildBanner(
         context: context,
         scheme: scheme,
-        cityName: 'Muzaffarnagar',
+        cityName: fallbackCityName,
         tagline: 'A city with rich history, culture and heritage',
         heroImage:
             'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=1200&q=80',
       ),
       data: (info) {
         final city = info.city;
-        final cityName = city?.name ?? 'Muzaffarnagar';
+        final cityName = city?.name ?? fallbackCityName;
         final tagline = info.nickname ??
             city?.tagline ??
             'A city with rich history, culture and heritage';
@@ -473,7 +476,7 @@ class _CityzenIdHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cityName = user?.city?.name ?? 'Muzaffarnagar';
+    final cityName = user?.city?.name ?? 'Select City';
     final initial = (user?.name != null && user!.name.trim().isNotEmpty)
         ? user!.name.trim()[0].toUpperCase()
         : 'C';
