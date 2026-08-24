@@ -79,11 +79,13 @@ class _FacilityPhysicalPresenceSheetState
     setState(() => _isSaving = true);
     try {
       final repo = ref.read(clientFacilityRepositoryProvider);
+      final newUuid = const Uuid().v4();
+      _bleServiceUuid = newUuid;
       final payload = <String, dynamic>{
         'ble_verification_enabled': _bleEnabled,
         'ble_strict_mode': _bleStrictMode,
         'ble_proximity_sensitivity': _bleSensitivity,
-        'ble_service_uuid': _bleServiceUuid,
+        'ble_service_uuid': newUuid,
         'qr_rotation_interval': _qrInterval,
       };
 
@@ -493,59 +495,6 @@ class _FacilityPhysicalPresenceSheetState
                         ),
                       );
                     }).toList(),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Beacon Service UUID
-                  Text(
-                    'FACILITY BEACON SERVICE UUID',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurfaceVariant,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cardBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SelectableText(
-                            _bleServiceUuid.isNotEmpty
-                                ? _bleServiceUuid
-                                : 'Not assigned',
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.refresh_rounded, size: 18),
-                          tooltip: 'Regenerate UUID',
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            setState(() => _bleServiceUuid = const Uuid().v4());
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.copy_rounded, size: 18),
-                          tooltip: 'Copy UUID',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: _bleServiceUuid));
-                            AppSnackBar.success(context, 'UUID copied to clipboard');
-                          },
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ],

@@ -463,27 +463,7 @@ class _FacilityDashboardScreenState
                             },
                           ),
 
-                          // 2. Fee Plans
-                          _OperationsCard(
-                            icon: Icons.payments_rounded,
-                            iconColor: const Color(0xFF10B981),
-                            iconBg: const Color(0xFFECFDF5),
-                            title: 'Fee Plans',
-                            subtitle: 'Create and manage membership plans',
-                            onTap: () async {
-                              await context.push(
-                                '/client/manage/plans/${activeKind.pathSegment}/${activeFacility.id}',
-                                extra: activeFacility,
-                              );
-                              ref.invalidate(
-                                facilityStatsProvider(
-                                  (activeKind, activeFacility.id),
-                                ),
-                              );
-                            },
-                          ),
-
-                          // 3. Manual Check-in
+                          // 2. Manual Check-in
                           _OperationsCard(
                             icon: Icons.how_to_reg_rounded,
                             iconColor: const Color(0xFF0284C7),
