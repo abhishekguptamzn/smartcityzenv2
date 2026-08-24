@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading/shimmer.dart';
 import '../../../shared/widgets/loading/skeleton_card.dart';
+import '../../../shared/widgets/notification_bell_icon.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/facility_analytics_dashboard_widget.dart';
 import '../widgets/facility_management_skeletons.dart';
@@ -203,36 +204,7 @@ class _FacilityDashboardScreenState
               }
             },
           ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, size: 24),
-                tooltip: 'Notifications',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('All facility operations are normal.'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-              Positioned(
-                top: 14,
-                right: 14,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0284C7),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const NotificationBellIcon(),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 22),
             tooltip: 'Refresh Dashboard',

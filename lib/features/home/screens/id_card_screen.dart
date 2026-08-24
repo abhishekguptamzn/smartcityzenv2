@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/models/user_model.dart';
 import '../widgets/citizen_qr_modal.dart';
+import '../../notifications/widgets/notification_sheet.dart';
 import '../widgets/home_skeleton.dart';
 
 class IdCardScreen extends ConsumerWidget {
@@ -50,12 +51,7 @@ class IdCardScreen extends ConsumerWidget {
                       }
                     },
                     onNotificationTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Your Citizen ID is active and verified.'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      showNotificationBottomSheet(context);
                     },
                   ),
                   const SizedBox(height: 20),

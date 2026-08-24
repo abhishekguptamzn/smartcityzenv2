@@ -217,6 +217,8 @@ RealtimeNotificationService realtimeNotificationService(Ref ref) {
     tokenStorage: tokenStorage,
   );
 
+  service.start();
+
   ref.onDispose(() => service.dispose());
   return service;
 }

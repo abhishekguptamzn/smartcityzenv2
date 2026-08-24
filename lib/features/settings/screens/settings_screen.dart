@@ -12,7 +12,9 @@ import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading/shimmer.dart';
 import '../../../shared/widgets/loading/skeleton_card.dart';
 import '../../../shared/widgets/loading/skeleton_primitives.dart';
+import '../../../shared/widgets/notification_bell_icon.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../../notifications/widgets/notification_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -286,6 +288,10 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.settings),
         automaticallyImplyLeading: false,
+        actions: const [
+          NotificationBellIcon(),
+          SizedBox(width: 4),
+        ],
       ),
       body: AmbientBackground(
         child: ListView(
@@ -329,6 +335,14 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: [
+                  _SettingsMenuTile(
+                    icon: Icons.notifications_active_rounded,
+                    accent: const Color(0xFF6366F1),
+                    title: 'Notifications & Alerts',
+                    subtitle: 'Check-ins, passes, announcements & messages',
+                    onTap: () => showNotificationBottomSheet(context),
+                  ),
+                  _buildDivider(scheme),
                   _SettingsMenuTile(
                     icon: Icons.person_outline_rounded,
                     accent: const Color(0xFF0D9488),

@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/providers/notifications_provider.dart';
+import '../../features/notifications/widgets/notification_sheet.dart';
 
 class NotificationBellIcon extends ConsumerStatefulWidget {
   const NotificationBellIcon({
@@ -90,7 +90,7 @@ class _NotificationBellIconState extends ConsumerState<NotificationBellIcon>
               size: widget.size,
             ),
             onPressed: () {
-              context.push('/notifications');
+              showNotificationBottomSheet(context);
             },
           ),
         ),

@@ -6,6 +6,7 @@ import '../../../core/providers/auth_controller.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
+import '../../../shared/widgets/notification_bell_icon.dart';
 import '../widgets/activity_card.dart';
 import '../widgets/facilities_skeletons.dart';
 
@@ -96,6 +97,8 @@ class _ActivitiesExplorerScreenState extends ConsumerState<ActivitiesExplorerScr
             tooltip: 'Sort Options',
             onPressed: _showSortBottomSheet,
           ),
+          const NotificationBellIcon(),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(

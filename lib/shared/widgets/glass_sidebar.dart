@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/providers/auth_controller.dart';
+import '../../features/notifications/widgets/notification_sheet.dart';
 import '../../l10n/gen/app_localizations.dart';
 import 'glass_container.dart';
 
 enum _SidebarMenuAction {
   profile,
+  notifications,
   faqs,
   privacyPolicy,
   contactUs,
@@ -34,6 +36,10 @@ class GlassSidebar extends ConsumerWidget {
   ) async {
     if (action == _SidebarMenuAction.profile) {
       context.push('/profile');
+      return;
+    }
+    if (action == _SidebarMenuAction.notifications) {
+      showNotificationBottomSheet(context);
       return;
     }
     if (action != _SidebarMenuAction.logout) {
@@ -74,6 +80,11 @@ class GlassSidebar extends ConsumerWidget {
           _SidebarMenuAction.profile,
           Icons.person_outline_rounded,
           l10n.profile,
+        ),
+        _menuItem(
+          _SidebarMenuAction.notifications,
+          Icons.notifications_outlined,
+          'Notifications',
         ),
         _menuItem(
           _SidebarMenuAction.faqs,
