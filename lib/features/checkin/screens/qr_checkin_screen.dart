@@ -76,7 +76,6 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   String? _errorMessage;
   bool _isBluetoothError = false;
   String? _pendingRetryPayload;
-  bool _handledOne = false;
   bool _torchOn = false;
 
   @override
@@ -90,7 +89,7 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
     if (enabled && _pendingRetryPayload != null) {
       final payload = _pendingRetryPayload!;
       _pendingRetryPayload = null;
-      _handledOne = false;
+      setState(() => _status = _ScanStatus.scanning);
       _processPayload(payload);
     } else {
       _retry();
@@ -98,8 +97,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   }
 
   Future<void> _processPayload(String raw) async {
-    if (_handledOne) return;
-    _handledOne = true;
+    if (_status != _ScanStatus.scanning) return;
+    setState(() => _status = _ScanStatus.checkingIn);
     HapticFeedback.mediumImpact();
 
     final trimmed = raw.trim();
@@ -458,7 +457,6 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
       _errorMessage = null;
       _isBluetoothError = false;
       _pendingRetryPayload = null;
-      _handledOne = false;
     });
   }
 

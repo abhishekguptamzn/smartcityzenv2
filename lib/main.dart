@@ -10,6 +10,7 @@ import 'core/providers/theme_mode_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/services/incident_reporter.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/ui_tier.dart';
 import 'core/utils/url_strategy_helper.dart';
 import 'core/widgets/responsive_web_shell.dart';
 import 'features/security/screens/app_lock_screen.dart';
@@ -20,10 +21,13 @@ final Logger appLogger = Logger();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setAppPathUrlStrategy();
+  UiTierDetector.detect();
   await IncidentReporter.initialize();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     final errStr = details.exception.toString();
+    // Known Flutter Web false positives: mouse tracker and device update assertions
+    // that have no user-facing consequence are filtered out to keep incident logs clean.
     if (errStr.contains('mouse_tracker.dart') || errStr.contains('_debugDuringDeviceUpdate')) {
       return;
     }

@@ -91,9 +91,10 @@ GoRouter goRouter(Ref ref) {
       final authState = ref.read(authControllerProvider);
       final isLoggedIn = authState.value != null;
       final isLoading = authState.isLoading && !authState.hasValue;
+      final hasError = authState.hasError && !authState.hasValue;
       final path = state.matchedLocation;
 
-      if (isLoading) {
+      if (isLoading || hasError) {
         return path == '/splash' ? null : '/splash';
       }
       final isPublic = _publicPaths.contains(path) || path.startsWith('/onboard');
@@ -126,9 +127,11 @@ GoRouter goRouter(Ref ref) {
         path: '/reset-password',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
+          final emailQuery = state.uri.queryParameters['email'];
+          final tokenQuery = state.uri.queryParameters['token'];
           return ResetPasswordScreen(
-            initialEmail: extra?['email'] as String?,
-            initialToken: extra?['token'] as String?,
+            initialEmail: extra?['email'] as String? ?? emailQuery,
+            initialToken: extra?['token'] as String? ?? tokenQuery,
           );
         },
       ),
@@ -230,7 +233,7 @@ GoRouter goRouter(Ref ref) {
           ),
           GoRoute(
             path: '/city/history',
-            builder: (context, state) => const CityHistoryScreen(),
+            redirect: (context, state) => '/city/timeline',
           ),
           // Facility Management Dashboard (for Client Users / Facility Owners - retains global bottom nav)
           GoRoute(
@@ -282,7 +285,10 @@ GoRouter goRouter(Ref ref) {
       GoRoute(
         path: '/support/tickets/:id',
         builder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) {
+            return const SupportTicketsScreen();
+          }
           return TicketDetailScreen(ticketId: id);
         },
       ),
@@ -291,7 +297,9 @@ GoRouter goRouter(Ref ref) {
         builder: (context, state) =>
             PaymentReceiptScreen(paymentId: state.pathParameters['id']!),
       ),
-      // Onboarding Module Routes (Gated to authenticated onboarding users only)
+      // Onboarding Module Routes (Gated to authenticated onboarding users only).
+      // NOTE: This secondary redirect is a presentation-layer gate ensuring standard
+      // users are routed to /home, complementing server-side authorization.
       GoRoute(
         path: '/onboard',
         redirect: (context, state) {
@@ -508,9 +516,29 @@ GoRouter goRouter(Ref ref) {
   );
 }
 
+const _navPrefixMap = {
+  '/home': 0,
+  '/services': 1,
+  '/activities': 1,
+  '/checkin': 2,
+  '/id-card': 3,
+  '/settings': 4,
+  '/profile': 4,
+  '/security': 4,
+  '/payments': 4,
+  '/support': 4,
+  '/city': 4,
+  '/client': 4,
+  '/membership': 4,
+};
+
 int _navIndexFor(String path) {
-  final index = _navPaths.indexWhere((p) => path.startsWith(p));
-  return index == -1 ? 0 : index;
+  for (final entry in _navPrefixMap.entries) {
+    if (path.startsWith(entry.key)) {
+      return entry.value;
+    }
+  }
+  return 0;
 }
 
 /// Bridges Riverpod's [authControllerProvider] to go_router's

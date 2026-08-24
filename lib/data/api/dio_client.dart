@@ -211,6 +211,8 @@ Dio dio(Ref ref) {
 
 /// The health endpoint lives outside `/api/v1`, so it needs its own client
 /// with the version segment stripped from the configured base URL.
+/// NOTE: healthDio intentionally omits auth and error mapping interceptors
+/// since /health is a public liveness probe that handles raw responses.
 @Riverpod(keepAlive: true)
 Dio healthDio(Ref ref) {
   final config = ref.watch(appConfigControllerProvider);

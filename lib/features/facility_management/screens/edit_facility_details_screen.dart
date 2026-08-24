@@ -60,8 +60,8 @@ class _EditFacilityDetailsScreenState
   String? _selectedCityId;
   String? _selectedCityName;
 
-  late TimeOfDay? _openingTime;
-  late TimeOfDay? _closingTime;
+  TimeOfDay? _openingTime;
+  TimeOfDay? _closingTime;
   List<AmenityModel> _selectedAmenities = [];
 
   // BLE Physical Presence Verification State

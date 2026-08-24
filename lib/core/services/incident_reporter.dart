@@ -23,6 +23,9 @@ class IncidentReporter {
     ),
   );
 
+  // NOTE: IncidentReporter maintains its own TokenStorage instance so it can
+  // report unhandled exceptions even if the Riverpod provider container is in
+  // an invalid or crashed state. Both instances point to the same secure storage.
   static final TokenStorage _tokenStorage = TokenStorage(const FlutterSecureStorage());
   static final Set<String> _recentIncidentKeys = {};
   static PackageInfo? _packageInfo;
@@ -114,7 +117,7 @@ class IncidentReporter {
         'url': url ?? 'flutter://app',
         'method': method ?? 'CLIENT',
         'severity': severity,
-        'payload': payload,
+        'payload': _sanitizePayload(payload),
         'device_info': deviceInfo,
       };
 
@@ -135,4 +138,37 @@ class IncidentReporter {
       // Never crash the reporting system
     }
   }
+
+  static Map<String, dynamic>? _sanitizePayload(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    const sensitiveKeys = {
+      'password',
+      'password_confirmation',
+      'current_password',
+      'new_password',
+      'token',
+      'access_token',
+      'id_token',
+      'secret',
+      'ble_secret_key',
+      'bleSecretKey',
+      'authorization',
+      'credit_card',
+      'card_number',
+      'cvv',
+    };
+
+    final sanitized = <String, dynamic>{};
+    for (final entry in data.entries) {
+      if (sensitiveKeys.any((k) => entry.key.toLowerCase().contains(k.toLowerCase()))) {
+        sanitized[entry.key] = '[REDACTED]';
+      } else if (entry.value is Map<String, dynamic>) {
+        sanitized[entry.key] = _sanitizePayload(entry.value as Map<String, dynamic>);
+      } else {
+        sanitized[entry.key] = entry.value;
+      }
+    }
+    return sanitized;
+  }
 }
+

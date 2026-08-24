@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BlePresenceHelper {
@@ -181,7 +182,9 @@ class BlePresenceHelper {
       }
 
       return null;
-    } catch (_) {
+    } catch (e, stack) {
+      // Non-fatal, but logged for proximity verification field diagnostics
+      debugPrint('BlePresenceHelper.scanForFacilityBeacon error: $e\n$stack');
       return null;
     }
   }

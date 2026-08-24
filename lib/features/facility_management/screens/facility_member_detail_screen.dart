@@ -36,6 +36,204 @@ final memberPaymentsProvider = FutureProvider.autoDispose.family<Map<String, dyn
   return repo.getMemberPayments(kind, facilityId, memberId);
 });
 
+class _DirectCommunicationSheet extends ConsumerStatefulWidget {
+  const _DirectCommunicationSheet({
+    required this.kind,
+    required this.facilityId,
+    required this.memberId,
+    required this.facility,
+    required this.member,
+  });
+
+  final FacilityKind kind;
+  final String facilityId;
+  final String memberId;
+  final FacilityModel? facility;
+  final Map<String, dynamic> member;
+
+  @override
+  ConsumerState<_DirectCommunicationSheet> createState() => _DirectCommunicationSheetState();
+}
+
+class _DirectCommunicationSheetState extends ConsumerState<_DirectCommunicationSheet> {
+  late final TextEditingController _subjectController;
+  late final TextEditingController _messageController;
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subjectController = TextEditingController(
+      text: 'Regarding Your Membership at ${widget.facility?.name ?? "Facility"}',
+    );
+    _messageController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = widget.member['name'] ?? 'Member';
+    final email = widget.member['email'] ?? '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.mail_outline_rounded, color: Color(0xFF2563EB), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Direct Communication', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('To: $name ($email)', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            children: [
+              ActionChip(
+                label: const Text('Expiring Pass Reminder', style: TextStyle(fontSize: 11)),
+                onPressed: () {
+                  _subjectController.text = 'Membership Renewal Reminder';
+                  _messageController.text = 'Dear $name,\n\nYour membership pass at ${widget.facility?.name ?? "our facility"} is expiring soon. Please renew your pass to ensure uninterrupted access.\n\nThank you!';
+                  setState(() {});
+                },
+              ),
+              ActionChip(
+                label: const Text('Payment Receipt', style: TextStyle(fontSize: 11)),
+                onPressed: () {
+                  _subjectController.text = 'Payment Confirmation & Receipt';
+                  _messageController.text = 'Dear $name,\n\nWe have received your membership fee. Thank you for your continued support.\n\nBest regards,\n${widget.facility?.name ?? "Management"}';
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _subjectController,
+            decoration: InputDecoration(
+              labelText: 'Subject',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.subject_rounded),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _messageController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: 'Message Body',
+              hintText: 'Type your message to this member...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: _isSending
+                  ? null
+                  : () async {
+                      if (_subjectController.text.trim().isEmpty || _messageController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter both subject and message body.')),
+                        );
+                        return;
+                      }
+
+                      final confirm = await showAppConfirmDialog(
+                        context: context,
+                        title: 'Send Direct Email',
+                        message: 'Are you sure you want to dispatch this email to $name?',
+                        confirmLabel: 'Send Email',
+                        details: [
+                          ConfirmDetailRow(label: 'Member', value: name),
+                          ConfirmDetailRow(label: 'Email', value: email),
+                          ConfirmDetailRow(label: 'Subject', value: _subjectController.text.trim()),
+                        ],
+                      );
+                      if (!confirm) return;
+
+                      setState(() => _isSending = true);
+                      try {
+                        await ref.read(clientFacilityRepositoryProvider).sendMemberDirectCommunication(
+                              widget.kind,
+                              widget.facilityId,
+                              widget.memberId,
+                              subject: _subjectController.text.trim(),
+                              message: _messageController.text.trim(),
+                            );
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Email dispatched successfully to $email!')),
+                        );
+                      } catch (e) {
+                        final err = AppException.from(e);
+                        setState(() => _isSending = false);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(err?.message ?? 'Failed to send email.')),
+                        );
+                      }
+                    },
+              icon: _isSending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send_rounded),
+              label: Text(_isSending ? 'Sending Email...' : 'Send Communication Email'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class FacilityMemberDetailScreen extends ConsumerStatefulWidget {
   const FacilityMemberDetailScreen({
     super.key,
@@ -87,167 +285,16 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
   }
 
   Future<void> _openDirectCommunicationSheet(BuildContext context, Map<String, dynamic> member) async {
-    final name = member['name'] ?? 'Member';
-    final email = member['email'] ?? '';
-    final subjectController = TextEditingController(text: 'Regarding Your Membership at ${widget.facility?.name ?? "Facility"}');
-    final messageController = TextEditingController();
-    bool isSending = false;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.mail_outline_rounded, color: Color(0xFF2563EB), size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Direct Communication', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        Text('To: $name ($email)', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ActionChip(
-                    label: const Text('Expiring Pass Reminder', style: TextStyle(fontSize: 11)),
-                    onPressed: () {
-                      subjectController.text = 'Membership Renewal Reminder';
-                      messageController.text = 'Dear $name,\n\nYour membership pass at ${widget.facility?.name ?? "our facility"} is expiring soon. Please renew your pass to ensure uninterrupted access.\n\nThank you!';
-                      setSheetState(() {});
-                    },
-                  ),
-                  ActionChip(
-                    label: const Text('Payment Receipt', style: TextStyle(fontSize: 11)),
-                    onPressed: () {
-                      subjectController.text = 'Payment Confirmation & Receipt';
-                      messageController.text = 'Dear $name,\n\nWe have received your membership fee. Thank you for your continued support.\n\nBest regards,\n${widget.facility?.name ?? "Management"}';
-                      setSheetState(() {});
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: subjectController,
-                decoration: InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.subject_rounded),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Message Body',
-                  hintText: 'Type your message to this member...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: isSending
-                      ? null
-                      : () async {
-                          if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter both subject and message body.')),
-                            );
-                            return;
-                          }
-
-                          final confirm = await showAppConfirmDialog(
-                            context: sheetContext,
-                            title: 'Send Direct Email',
-                            message: 'Are you sure you want to dispatch this email to $name?',
-                            confirmLabel: 'Send Email',
-                            details: [
-                              ConfirmDetailRow(label: 'Member', value: name),
-                              ConfirmDetailRow(label: 'Email', value: email),
-                              ConfirmDetailRow(label: 'Subject', value: subjectController.text.trim()),
-                            ],
-                          );
-                          if (!confirm) return;
-
-                          setSheetState(() => isSending = true);
-                          try {
-                            await ref.read(clientFacilityRepositoryProvider).sendMemberDirectCommunication(
-                                  widget.kind,
-                                  widget.facilityId,
-                                  widget.memberId,
-                                  subject: subjectController.text.trim(),
-                                  message: messageController.text.trim(),
-                                );
-                            if (!context.mounted) return;
-                            Navigator.of(sheetContext).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Email dispatched successfully to $email!')),
-                            );
-                          } catch (e) {
-                            final err = AppException.from(e);
-                            setSheetState(() => isSending = false);
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(err?.message ?? 'Failed to send email.')),
-                            );
-                          }
-                        },
-                  icon: isSending
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.send_rounded),
-                  label: Text(isSending ? 'Sending Email...' : 'Send Communication Email'),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (sheetContext) => _DirectCommunicationSheet(
+        kind: widget.kind,
+        facilityId: widget.facilityId,
+        memberId: widget.memberId,
+        facility: widget.facility,
+        member: member,
       ),
     );
   }

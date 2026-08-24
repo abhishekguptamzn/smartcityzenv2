@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../data/api/app_exception.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -14,8 +15,15 @@ class AuthController extends _$AuthController {
     final repo = ref.watch(authRepositoryProvider);
     try {
       return await repo.me().timeout(const Duration(seconds: 10));
-    } catch (_) {
-      return null;
+    } catch (e) {
+      final appEx = AppException.from(e);
+      if (appEx != null &&
+          (appEx.code == AppExceptionCode.authentication ||
+              appEx.code == AppExceptionCode.authorization)) {
+        return null;
+      }
+      // Re-throw server/network errors so state hasError is true
+      rethrow;
     }
   }
 

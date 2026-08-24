@@ -46,7 +46,7 @@ class _CityHistoryScreenState extends ConsumerState<CityHistoryScreen> {
               AppShareHelper.shareContent(
                 context: context,
                 title: city != null ? '${city.name} History & Timeline' : 'City History & Timeline',
-                path: widget.cityId != null ? '/city/history?city_id=${widget.cityId}' : '/city/history',
+                path: widget.cityId != null ? '/city/timeline?city_id=${widget.cityId}' : '/city/timeline',
                 subtitle: city?.state,
               );
             },

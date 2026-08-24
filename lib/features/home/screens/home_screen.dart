@@ -20,6 +20,10 @@ import '../../../shared/widgets/loading/skeleton_primitives.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../widgets/citizen_qr_modal.dart';
 
+/// Main dashboard screen for Smart Cityzen citizens.
+/// NOTE: Role checks here (isClientUser, isOnboardingUser) are presentation-only
+/// toggles to show/hide relevant dashboard sections. All protected backend actions
+/// remain strictly enforced by Laravel Sanctum middleware and policies.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 

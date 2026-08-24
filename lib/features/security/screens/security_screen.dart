@@ -59,7 +59,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(allDevices ? l10n.logoutAllDevices : l10n.logout),
-        content: Text(allDevices ? l10n.logoutAllDevices : l10n.logout),
+        content: Text(
+          allDevices
+              ? 'Are you sure you want to log out from all active devices and sessions?'
+              : 'Are you sure you want to log out of your account on this device?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),

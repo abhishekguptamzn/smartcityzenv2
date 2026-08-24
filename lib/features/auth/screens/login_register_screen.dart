@@ -25,6 +25,8 @@ class LoginRegisterScreen extends ConsumerStatefulWidget {
 
 class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     with SingleTickerProviderStateMixin {
+  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   late final TabController _tabController;
   final _loginFormKey = GlobalKey<FormBuilderState>();
   final _registerFormKey = GlobalKey<FormBuilderState>();
@@ -48,7 +50,12 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
           _tabController.index == _activeTab) {
         return;
       }
-      setState(() => _activeTab = _tabController.index);
+      setState(() {
+        _activeTab = _tabController.index;
+        if (_activeTab == 0) {
+          _registerCityId = null;
+        }
+      });
     });
   }
 
@@ -213,10 +220,11 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
   }
 
   Future<void> _handleGoogleSignIn() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
     final l10n = AppLocalizations.of(context);
     try {
-      final googleSignIn = GoogleSignIn();
-      final account = await googleSignIn.signIn();
+      final account = await _googleSignIn.signIn();
       if (account == null) return;
       final auth = await account.authentication;
       await ref
@@ -240,10 +248,14 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     } catch (_) {
       if (!mounted) return;
       _showError(null, l10n);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   Future<void> _handleFacebookSignIn() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
     final l10n = AppLocalizations.of(context);
     try {
       final result = await FacebookAuth.instance.login();
@@ -264,6 +276,8 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     } catch (_) {
       if (!mounted) return;
       _showError(null, l10n);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -352,12 +366,16 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                           Row(
                             children: [
                               Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _submitting
-                                      ? null
-                                      : _handleGoogleSignIn,
-                                  icon: const _GoogleGlyph(),
-                                  label: Text(l10n.continueWithGoogle),
+                                child: Semantics(
+                                  label: l10n.continueWithGoogle,
+                                  button: true,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _submitting
+                                        ? null
+                                        : _handleGoogleSignIn,
+                                    icon: const ExcludeSemantics(child: _GoogleGlyph()),
+                                    label: Text(l10n.continueWithGoogle),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),

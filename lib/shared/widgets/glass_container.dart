@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/ui_tier.dart';
 
 enum GlassLevel { card, largeCard, navigation, floating }
 
@@ -129,13 +130,18 @@ class GlassContainer extends StatelessWidget {
               ]
             : null,
       ),
-      child: ClipRRect(
-        borderRadius: resolved,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: resolvedBlur, sigmaY: resolvedBlur),
-          child: content,
-        ),
-      ),
+      child: UiTierDetector.current == UiTier.full
+          ? ClipRRect(
+              borderRadius: resolved,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: resolvedBlur, sigmaY: resolvedBlur),
+                child: content,
+              ),
+            )
+          : ClipRRect(
+              borderRadius: resolved,
+              child: content,
+            ),
     );
   }
 }

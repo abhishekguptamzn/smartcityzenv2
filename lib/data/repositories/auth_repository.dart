@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../api/app_exception.dart';
 import '../api/auth_api.dart';
 import '../api/token_storage.dart';
 import '../models/login_history_model.dart';
@@ -117,9 +118,16 @@ class AuthRepository {
           (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
       return UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? data);
     } catch (e) {
-      // If token is invalid / unauthorized / expired, clear it and return null
-      await _tokenStorage.clearToken();
-      return null;
+      final appEx = AppException.from(e);
+      if (appEx != null &&
+          (appEx.code == AppExceptionCode.authentication ||
+              appEx.code == AppExceptionCode.authorization)) {
+        // Token is genuinely invalid/expired on backend
+        await _tokenStorage.clearToken();
+        return null;
+      }
+      // Server error, 500, or temporary network outage: do not clear the token
+      rethrow;
     }
   }
 
