@@ -119,6 +119,18 @@ abstract class FacilityModel with _$FacilityModel {
     return ImageUrlResolver.resolve(raw);
   }
 
+  /// Facility logo URL resolved for platform target.
+  String? get resolvedLogoUrl {
+    String? raw;
+    if (logoUrl != null && logoUrl!.trim().isNotEmpty) {
+      raw = logoUrl!.trim();
+    } else if (logo != null && logo!['url'] is String) {
+      final u = logo!['url'] as String;
+      if (u.trim().isNotEmpty) raw = u.trim();
+    }
+    return ImageUrlResolver.resolve(raw);
+  }
+
   /// All gallery image URLs resolved for platform target.
   List<String> get galleryImageUrls {
     if (images == null || images!.isEmpty) {
