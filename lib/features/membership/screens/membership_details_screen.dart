@@ -409,6 +409,7 @@ class _OverviewTab extends ConsumerWidget {
         _SectionLabel('QUICK STATS'),
         const SizedBox(height: 8),
         GridView.count(
+          padding: EdgeInsets.zero,
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
