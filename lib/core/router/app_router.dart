@@ -215,6 +215,14 @@ GoRouter goRouter(Ref ref) {
             builder: (context, state) => const IdCardScreen(),
           ),
           GoRoute(
+            path: '/membership/details',
+            redirect: (context, state) => '/id-card',
+          ),
+          GoRoute(
+            path: '/membership',
+            redirect: (context, state) => '/id-card',
+          ),
+          GoRoute(
             path: '/membership/:kind/:memberId',
             builder: (context, state) => MembershipDetailsScreen(
               kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
