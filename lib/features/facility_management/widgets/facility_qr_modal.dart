@@ -544,40 +544,20 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
               ),
               const SizedBox(height: 16),
 
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text('Copy Payload'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: qrPayload));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Facility QR payload copied to clipboard')),
-                        );
-                      },
-                    ),
+              // Action Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                  label: const Text('Done'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                      label: const Text('Done'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                ],
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
               const SizedBox(height: 10),
             ],

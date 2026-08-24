@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/active_checkin_provider.dart';
 import '../../../core/providers/facilities_providers.dart';
 import '../../../core/utils/ble_presence_helper.dart';
+import '../../../core/utils/duration_formatter.dart';
 import '../../../core/utils/file_validator.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
@@ -202,7 +203,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
                       'Verification': verificationMode == 'qr_totp_fallback'
                           ? 'Live Display QR (Counter Bluetooth Inactive)'
                           : 'Verified via Bluetooth (BLE Proximity)',
-                    if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
+                    if (isCheckOut && durationMinutes != null)
+                      'Session Duration': formatMinutes(durationMinutes),
                     'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
                   },
                 );
@@ -317,7 +319,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
               'Facility': resolvedName,
               'Type': kind.displayName,
               'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
-              if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
+              if (isCheckOut && durationMinutes != null)
+                'Session Duration': formatMinutes(durationMinutes),
               'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
             },
           );

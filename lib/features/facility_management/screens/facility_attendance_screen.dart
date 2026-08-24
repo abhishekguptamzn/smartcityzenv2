@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -137,7 +138,7 @@ class FacilityAttendanceScreen extends ConsumerWidget {
                     ),
                     trailing: duration != null
                         ? Text(
-                            '$duration mins',
+                            formatMinutes(duration),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

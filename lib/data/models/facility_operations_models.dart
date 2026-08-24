@@ -1,3 +1,5 @@
+import '../../core/utils/duration_formatter.dart';
+
 class MonthlyEarningPoint {
   const MonthlyEarningPoint({
     required this.month,
@@ -278,6 +280,13 @@ class DailyCheckinRecord {
   final bool isCurrentlyInside;
 
   factory DailyCheckinRecord.fromJson(Map<String, dynamic> json) {
+    final durMinutes = (json['duration_minutes'] as num?)?.toInt() ?? 0;
+    final isInside = json['is_currently_inside'] as bool? ?? false;
+    final rawDurationText = json['duration_text']?.toString();
+    final durationText = (rawDurationText != null && rawDurationText.isNotEmpty && rawDurationText != '--')
+        ? rawDurationText
+        : (isInside ? 'In Session' : (durMinutes > 0 ? formatMinutes(durMinutes) : '--'));
+
     return DailyCheckinRecord(
       sessionId: json['session_id']?.toString() ?? '',
       memberId: json['member_id']?.toString() ?? '',
@@ -286,9 +295,9 @@ class DailyCheckinRecord {
       planName: json['plan_name']?.toString() ?? 'Standard',
       checkInTime: json['check_in_time']?.toString() ?? '--',
       checkOutTime: json['check_out_time']?.toString() ?? '--',
-      durationText: json['duration_text']?.toString() ?? '--',
-      durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 0,
-      isCurrentlyInside: json['is_currently_inside'] as bool? ?? false,
+      durationText: durationText,
+      durationMinutes: durMinutes,
+      isCurrentlyInside: isInside,
     );
   }
 }

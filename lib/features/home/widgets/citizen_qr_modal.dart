@@ -126,40 +126,19 @@ class _CitizenQrModalContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      size: 220.0,
-                      gapless: true,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Color(0xFF0F172A),
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'RAW ID: ${user.id}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 220.0,
+                  gapless: true,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Color(0xFF0F172A),
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
               ),
               const SizedBox(height: 18),

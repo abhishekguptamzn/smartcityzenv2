@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -319,7 +320,7 @@ class _FacilityCurrentStatusScreenState extends ConsumerState<FacilityCurrentSta
                                 ),
                                 title: Text(mem.userName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                                 subtitle: Text(
-                                  'Check-in: ${mem.checkInTime} (${mem.elapsedMinutes}m ago)',
+                                  'Check-in: ${mem.checkInTime} (${formatMinutes(mem.elapsedMinutes)} ago)',
                                   style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
                                 ),
                                 trailing: Row(

@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../core/utils/duration_formatter.dart';
 import 'facility_member_model.dart';
 import 'facility_model.dart';
 
@@ -28,12 +29,5 @@ abstract class GymAttendanceModel with _$GymAttendanceModel {
   bool get isOpenSession => checkInAt != null && checkOutAt == null;
 
   /// `duration` is stored in seconds by the API.
-  String? get formattedDuration {
-    final int? seconds = duration;
-    if (seconds == null || seconds <= 0) return null;
-    final int hours = seconds ~/ 3600;
-    final int minutes = (seconds % 3600) ~/ 60;
-    if (hours == 0) return '${minutes}m';
-    return '${hours}h ${minutes}m';
-  }
+  String? get formattedDuration => formatSeconds(duration);
 }

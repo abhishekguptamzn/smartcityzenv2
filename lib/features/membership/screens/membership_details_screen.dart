@@ -8,6 +8,7 @@ import '../../../core/providers/facilities_providers.dart';
 import '../../../core/providers/facility_member_providers.dart';
 import '../../../core/providers/gym_attendance_providers.dart';
 import '../../../core/providers/payments_providers.dart';
+import '../../../core/utils/duration_formatter.dart';
 import '../../../core/utils/image_url_resolver.dart';
 
 import '../../../data/models/facility_member_model.dart';
@@ -1022,7 +1023,7 @@ class _CheckInTab extends ConsumerWidget {
               final checkInTime = r['check_in_time'] ?? '--';
               final checkOutTime = r['check_out_time'] ?? '--';
               final dateFormatted = r['date_formatted'] ?? r['date'] ?? 'Session';
-              final durText = r['duration_text'] ?? (isInside ? 'In Session' : 'Recorded');
+              final durText = r['duration_text'] ?? (isInside ? 'In Session' : (r['duration_minutes'] != null ? formatMinutes(r['duration_minutes']) : 'Recorded'));
 
               return Container(
                 margin: EdgeInsets.only(top: i == 0 ? 0 : 10),

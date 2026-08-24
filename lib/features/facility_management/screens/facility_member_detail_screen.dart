@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/duration_formatter.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -704,7 +705,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                             children: [
                               Text('Avg Session', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 4),
-                              Text('$avgDailyMinutes m', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
+                              Text(formatMinutes(avgDailyMinutes), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                             ],
                           ),
                         ),
@@ -751,7 +752,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                           mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
                                             Text(
-                                              minutes > 0 ? '${minutes.toInt()}m' : '0',
+                                              minutes > 0 ? formatMinutes(minutes) : '0',
                                               style: TextStyle(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.bold,
@@ -864,7 +865,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                isCurrentlyInside ? 'INSIDE' : (duration != null ? '${duration}m' : '--'),
+                                isCurrentlyInside ? 'INSIDE' : formatMinutes(duration),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
