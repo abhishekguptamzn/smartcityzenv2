@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/active_checkin_provider.dart';
+import '../services/realtime_notification_service.dart';
+import '../../data/models/notification_model.dart';
 import '../../shared/widgets/glass_bottom_nav.dart';
 import '../../shared/widgets/glass_sidebar.dart';
+import '../../shared/widgets/in_app_notification_toast.dart';
 import '../../shared/widgets/no_connection_banner.dart';
 
 const double kWideBreakpoint = 800;
@@ -11,8 +15,9 @@ const double kWideBreakpoint = 800;
 /// The persistent authenticated-area scaffold: a left [GlassSidebar] on wide
 /// viewports, a [GlassBottomNav] below the breakpoint, and a centered
 /// max-width column for [body] so cards don't stretch edge-to-edge on very
-/// wide screens. Also displays a persistent Checked-In indicator across all pages.
-class AppShell extends ConsumerWidget {
+/// wide screens. Also displays a persistent Checked-In indicator across all pages
+/// and listens for incoming real-time notifications to show animated toasts.
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({
     super.key,
     required this.body,
@@ -25,7 +30,33 @@ class AppShell extends ConsumerWidget {
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  StreamSubscription<NotificationModel>? _notificationSub;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final realtimeService = ref.read(realtimeNotificationServiceProvider);
+      _notificationSub = realtimeService.notificationStream.listen((notification) {
+        if (mounted) {
+          InAppNotificationToast.show(context, ref, notification);
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= kWideBreakpoint;
     final activeCheckinAsync = ref.watch(activeCheckinProvider);
 
@@ -154,7 +185,7 @@ class AppShell extends ConsumerWidget {
             child: Column(
               children: [
                 if (activeSessionBanner != null) activeSessionBanner!,
-                Expanded(child: body),
+                Expanded(child: widget.body),
               ],
             ),
           ),
@@ -167,7 +198,7 @@ class AppShell extends ConsumerWidget {
         child: isWide
             ? Row(
                 children: [
-                  GlassSidebar(currentIndex: currentIndex, onTap: onTap),
+                  GlassSidebar(currentIndex: widget.currentIndex, onTap: widget.onTap),
                   Expanded(child: content),
                 ],
               )
@@ -175,7 +206,7 @@ class AppShell extends ConsumerWidget {
       ),
       bottomNavigationBar: isWide
           ? null
-          : GlassBottomNav(currentIndex: currentIndex, onTap: onTap),
+          : GlassBottomNav(currentIndex: widget.currentIndex, onTap: widget.onTap),
     );
   }
 }

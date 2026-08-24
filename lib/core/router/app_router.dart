@@ -49,6 +49,7 @@ import '../../features/facility_management/screens/manage_fee_plans_screen.dart'
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/id_card_screen.dart';
 import '../../features/membership/screens/membership_details_screen.dart';
+import '../../features/notifications/screens/notification_center_screen.dart';
 import '../../features/onboard/screens/onboard_complete_screen.dart';
 import '../../features/onboard/screens/onboard_email_sent_screen.dart';
 import '../../features/onboard/screens/onboard_facility_form_screen.dart';
@@ -233,6 +234,10 @@ GoRouter goRouter(Ref ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const NotificationCenterScreen(),
           ),
           GoRoute(
             path: '/support',

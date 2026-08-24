@@ -17,6 +17,7 @@ import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading/shimmer.dart';
 import '../../../shared/widgets/loading/skeleton_card.dart';
 import '../../../shared/widgets/loading/skeleton_primitives.dart';
+import '../../../shared/widgets/notification_bell_icon.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../widgets/citizen_qr_modal.dart';
 
@@ -119,16 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onPressed: () => context.push('/onboard'),
             ),
           const SizedBox(width: 2),
-          IconButton(
-            tooltip: l10n.comingSoon,
-            icon: Icon(
-              Icons.notifications_none_rounded,
-              color: scheme.onSurfaceVariant,
-            ),
-            onPressed: () => ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(l10n.comingSoon))),
-          ),
+          const NotificationBellIcon(),
           IconButton(
             tooltip: l10n.comingSoon,
             icon: Icon(

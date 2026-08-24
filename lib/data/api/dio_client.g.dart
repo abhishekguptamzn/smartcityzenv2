@@ -51,17 +51,23 @@ String _$dioHash() => r'1844db3a2abe3c23eef601267cb10c9057f124b8';
 
 /// The health endpoint lives outside `/api/v1`, so it needs its own client
 /// with the version segment stripped from the configured base URL.
+/// NOTE: healthDio intentionally omits auth and error mapping interceptors
+/// since /health is a public liveness probe that handles raw responses.
 
 @ProviderFor(healthDio)
 const healthDioProvider = HealthDioProvider._();
 
 /// The health endpoint lives outside `/api/v1`, so it needs its own client
 /// with the version segment stripped from the configured base URL.
+/// NOTE: healthDio intentionally omits auth and error mapping interceptors
+/// since /health is a public liveness probe that handles raw responses.
 
 final class HealthDioProvider extends $FunctionalProvider<Dio, Dio, Dio>
     with $Provider<Dio> {
   /// The health endpoint lives outside `/api/v1`, so it needs its own client
   /// with the version segment stripped from the configured base URL.
+  /// NOTE: healthDio intentionally omits auth and error mapping interceptors
+  /// since /health is a public liveness probe that handles raw responses.
   const HealthDioProvider._()
     : super(
         from: null,
