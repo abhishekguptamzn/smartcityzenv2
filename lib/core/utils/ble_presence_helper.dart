@@ -59,6 +59,24 @@ class BlePresenceHelper {
     }
   }
 
+  /// Request system to turn ON Bluetooth (shows system popup dialog on Android)
+  static Future<bool> requestEnableBluetooth() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterBluePlus.turnOn();
+        // Wait up to 3 seconds for state to change to ON
+        final state = await FlutterBluePlus.adapterState
+            .where((s) => s == BluetoothAdapterState.on)
+            .first
+            .timeout(const Duration(seconds: 3), onTimeout: () => BluetoothAdapterState.off);
+        return state == BluetoothAdapterState.on;
+      }
+      return await isBluetoothEnabled();
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Scan for nearby BLE beacon matching the facility's service UUID
   static Future<Map<String, dynamic>?> scanForFacilityBeacon({
     required String targetUuid,

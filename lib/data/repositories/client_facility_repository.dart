@@ -394,6 +394,21 @@ class ClientFacilityRepository {
   }
 
   // Activities / Facility Centers (Unified)
+  Future<FacilityModel> getFacilityDetails(FacilityKind kind, String facilityId) async {
+    if (kind == FacilityKind.gym) {
+      final data = await getGymDetails(facilityId);
+      return data['facility'] as FacilityModel;
+    } else if (kind == FacilityKind.activity) {
+      final res = await _api.getActivity(facilityId);
+      final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+      final actData = data is Map && data.containsKey('activity') ? data['activity'] : data;
+      return FacilityModel.fromJson(actData as Map<String, dynamic>).copyWith(kind: FacilityKind.activity);
+    } else {
+      final data = await getLibraryDetails(facilityId);
+      return data['facility'] as FacilityModel;
+    }
+  }
+
   Future<FacilityModel> updateFacilityDetails(FacilityKind kind, String facilityId, Map<String, dynamic> payload) async {
     if (kind == FacilityKind.gym) {
       return updateGymDetails(facilityId, payload);

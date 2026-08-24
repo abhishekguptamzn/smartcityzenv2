@@ -74,6 +74,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   _ScanStatus _status = _ScanStatus.scanning;
   _DecodedQrInfo? _decodedInfo;
   String? _errorMessage;
+  bool _isBluetoothError = false;
+  String? _pendingRetryPayload;
   bool _handledOne = false;
   bool _torchOn = false;
 
@@ -81,6 +83,18 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleEnableBluetooth() async {
+    final enabled = await BlePresenceHelper.requestEnableBluetooth();
+    if (enabled && _pendingRetryPayload != null) {
+      final payload = _pendingRetryPayload!;
+      _pendingRetryPayload = null;
+      _handledOne = false;
+      _processPayload(payload);
+    } else {
+      _retry();
+    }
   }
 
   Future<void> _processPayload(String raw) async {
@@ -119,12 +133,19 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
             int? detectedRssi;
 
             if (bleRequired) {
-              final isBtOn = await BlePresenceHelper.isBluetoothEnabled();
+              bool isBtOn = await BlePresenceHelper.isBluetoothEnabled();
+              if (!isBtOn) {
+                // Prompt system popup dialog to turn on Bluetooth
+                isBtOn = await BlePresenceHelper.requestEnableBluetooth();
+              }
+
               if (!isBtOn) {
                 if (!mounted) return;
                 setState(() {
                   _status = _ScanStatus.error;
-                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your device and stay near the counter to verify your physical presence.';
+                  _isBluetoothError = true;
+                  _pendingRetryPayload = trimmed;
+                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your phone and stay near the counter to verify your physical presence.';
                 });
                 return;
               }
@@ -139,6 +160,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
                   if (!mounted) return;
                   setState(() {
                     _status = _ScanStatus.error;
+                    _isBluetoothError = false;
+                    _pendingRetryPayload = trimmed;
                     _errorMessage = 'Facility Bluetooth beacon not detected. Please stand closer to the counter display with Bluetooth turned ON.';
                   });
                   return;
@@ -437,6 +460,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
       _status = _ScanStatus.scanning;
       _decodedInfo = null;
       _errorMessage = null;
+      _isBluetoothError = false;
+      _pendingRetryPayload = null;
       _handledOne = false;
     });
   }
@@ -472,6 +497,8 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
           _ScanStatus.error => _ErrorView(
             message: _errorMessage ?? l10n.errorGeneric,
             retryLabel: l10n.retry,
+            isBluetoothError: _isBluetoothError,
+            onEnableBluetooth: _handleEnableBluetooth,
             onRetry: _retry,
           ),
           _ScanStatus.permissionDenied => _PermissionDeniedView(l10n: l10n),
@@ -1010,14 +1037,20 @@ class _ErrorView extends StatelessWidget {
     required this.message,
     required this.retryLabel,
     required this.onRetry,
+    this.isBluetoothError = false,
+    this.onEnableBluetooth,
   });
 
   final String message;
   final String retryLabel;
   final VoidCallback onRetry;
+  final bool isBluetoothError;
+  final VoidCallback? onEnableBluetooth;
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = isBluetoothError ? const Color(0xFF0284C7) : Colors.redAccent;
+
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Center(
@@ -1029,18 +1062,18 @@ class _ErrorView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.12),
+                  color: primaryColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.cancel_rounded,
+                child: Icon(
+                  isBluetoothError ? Icons.bluetooth_searching_rounded : Icons.cancel_rounded,
                   size: 64,
-                  color: Colors.redAccent,
+                  color: primaryColor,
                 ),
               ),
               const SizedBox(height: 20),
               Text(
-                'Check-In Failed',
+                isBluetoothError ? 'Bluetooth Required' : 'Check-In Failed',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -1048,7 +1081,9 @@ class _ErrorView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'The system could not verify or complete your check-in.',
+                isBluetoothError
+                    ? 'Physical presence check-in requires active Bluetooth.'
+                    : 'The system could not verify or complete your check-in.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey[600],
@@ -1060,21 +1095,25 @@ class _ErrorView extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.06),
+                  color: primaryColor.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
+                        Icon(
+                          isBluetoothError ? Icons.bluetooth_rounded : Icons.info_outline_rounded,
+                          color: primaryColor,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          'Reason for Failure',
+                          isBluetoothError ? 'Counter Presence Notice' : 'Reason for Failure',
                           style: TextStyle(
-                            color: Colors.red.shade800,
+                            color: isBluetoothError ? const Color(0xFF0369A1) : Colors.red.shade800,
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                           ),
@@ -1094,20 +1133,43 @@ class _ErrorView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.qr_code_scanner_rounded),
-                  label: Text(retryLabel),
+              if (isBluetoothError && onEnableBluetooth != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton.icon(
+                    onPressed: onEnableBluetooth,
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+                    icon: const Icon(Icons.bluetooth_rounded),
+                    label: const Text('Turn ON Bluetooth & Retry'),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    label: Text(retryLabel),
+                  ),
+                ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    label: Text(retryLabel),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 height: 44,
-                child: OutlinedButton(
+                child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Back to Home'),
                 ),

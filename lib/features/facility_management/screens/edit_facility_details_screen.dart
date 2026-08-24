@@ -90,6 +90,7 @@ class _EditFacilityDetailsScreenState
     _qrInterval = widget.facility?.qrRotationInterval ?? 15;
 
     _loadFacilityAmenities();
+    _loadFacilityDetails();
   }
 
   @override
@@ -97,6 +98,23 @@ class _EditFacilityDetailsScreenState
     _tabController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFacilityDetails() async {
+    try {
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      final facility = await repo.getFacilityDetails(widget.kind, widget.facilityId);
+      if (mounted) {
+        setState(() {
+          _bleEnabled = facility.bleVerificationEnabled;
+          _bleSensitivity = facility.bleProximitySensitivity;
+          if (facility.bleServiceUuid != null && facility.bleServiceUuid!.isNotEmpty) {
+            _bleServiceUuid = facility.bleServiceUuid;
+          }
+          _qrInterval = facility.qrRotationInterval;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadFacilityAmenities() async {
