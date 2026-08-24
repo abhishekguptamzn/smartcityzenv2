@@ -623,7 +623,7 @@ class _CityzenIdHeroCard extends StatelessWidget {
                                   child: Text(
                                     initial,
                                     style: const TextStyle(
-                                      fontSize: 28,
+                                      fontSize: 22,
                                       fontWeight: FontWeight.w900,
                                       color: Color(0xFF1E40AF),
                                     ),
@@ -634,7 +634,7 @@ class _CityzenIdHeroCard extends StatelessWidget {
                                 child: Text(
                                   initial,
                                   style: const TextStyle(
-                                    fontSize: 28,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w900,
                                     color: Color(0xFF1E40AF),
                                   ),
@@ -658,12 +658,12 @@ class _CityzenIdHeroCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            user?.name ?? 'Abhui',
+                            user?.name ?? 'Citizen',
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                              letterSpacing: -0.3,
+                              letterSpacing: -0.2,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

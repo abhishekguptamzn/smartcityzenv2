@@ -325,8 +325,8 @@ class _ReportKpiCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-                    Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(title, style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                    Text(value, style: const TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -342,10 +342,10 @@ class _ReportKpiCard extends StatelessWidget {
                   ),
                   child: Icon(icon, color: iconColor, size: 20),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(title, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
     );

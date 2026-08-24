@@ -86,7 +86,7 @@ class _FacilityDashboardScreenState
             const SizedBox(height: 16),
             const Text(
               'Quick Shortcuts',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             ListTile(
@@ -171,7 +171,7 @@ class _FacilityDashboardScreenState
         ),
         title: const Text(
           'Facility Management',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
           IconButton(

@@ -702,7 +702,7 @@ class _EditFacilityDetailsScreenState
         backgroundColor: cardBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0.5,
-        toolbarHeight: 62,
+        toolbarHeight: 58,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
@@ -720,9 +720,9 @@ class _EditFacilityDetailsScreenState
             Text(
               'Edit $facilityTitle',
               style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 17,
-                letterSpacing: -0.3,
+                fontWeight: FontWeight.w700,
+                fontSize: 16.5,
+                letterSpacing: -0.2,
               ),
             ),
             const SizedBox(height: 2),

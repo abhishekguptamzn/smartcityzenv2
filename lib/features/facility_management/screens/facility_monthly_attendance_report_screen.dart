@@ -131,9 +131,9 @@ class _FacilityMonthlyAttendanceReportScreenState extends ConsumerState<Facility
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Total Check-ins', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                                Text('Total Check-ins', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
                                 const SizedBox(height: 4),
-                                Text('$totalCheckins', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                Text('$totalCheckins', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
@@ -150,9 +150,9 @@ class _FacilityMonthlyAttendanceReportScreenState extends ConsumerState<Facility
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Unique Visitors', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                                Text('Unique Visitors', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
                                 const SizedBox(height: 4),
-                                Text('$uniqueUsers', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                                Text('$uniqueUsers', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),

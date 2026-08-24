@@ -133,10 +133,10 @@ class _FacilityCollectionReportScreenState extends ConsumerState<FacilityCollect
                         Text(
                           '₹${total.toStringAsFixed(0)}',
                           style: const TextStyle(
-                            fontSize: 28,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F172A),
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.3,
                           ),
                         ),
                       ],

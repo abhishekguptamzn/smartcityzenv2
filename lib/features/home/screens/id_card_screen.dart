@@ -111,9 +111,9 @@ class _IdentityHeader extends StatelessWidget {
                   text: const TextSpan(
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 24,
+                      fontSize: 19,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                       color: Color(0xFF1E3A8A), // Deep Royal Blue
                     ),
                     children: [
@@ -546,10 +546,10 @@ class _CardFrontDesign extends StatelessWidget {
                           Text(
                             user.name,
                             style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                              letterSpacing: -0.4,
+                              letterSpacing: -0.3,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

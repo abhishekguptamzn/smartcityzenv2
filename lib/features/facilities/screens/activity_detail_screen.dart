@@ -212,8 +212,8 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                           activity.name,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
                             shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
                           ),
                         ),
@@ -676,10 +676,10 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                   Text(
                     '₹${fp.amount.toStringAsFixed(0)}',
                     style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
                       color: ActivityDetailScreen._primary,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   Text(

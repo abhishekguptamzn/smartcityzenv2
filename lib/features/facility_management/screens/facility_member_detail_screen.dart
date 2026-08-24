@@ -421,7 +421,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                               backgroundColor: primaryColor.withValues(alpha: 0.15),
                               child: Text(
                                 name.isNotEmpty ? name[0].toUpperCase() : 'M',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -667,7 +667,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                             children: [
                               Text('Total Visits', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 4),
-                              Text('$totalVisits', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              Text('$totalVisits', style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -686,7 +686,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                             children: [
                               Text('Time Spent', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 4),
-                              Text('$totalHours hrs', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                              Text('$totalHours hrs', style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                             ],
                           ),
                         ),
@@ -705,7 +705,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                             children: [
                               Text('Avg Session', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                               const SizedBox(height: 4),
-                              Text(formatMinutes(avgDailyMinutes), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
+                              Text(formatMinutes(avgDailyMinutes), style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                             ],
                           ),
                         ),
@@ -949,8 +949,8 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Total Revenue Collected', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        Text('₹${totalCollected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                        const Text('Total Revenue Collected', style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                        Text('₹${totalCollected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],

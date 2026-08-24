@@ -867,10 +867,10 @@ class _GenericSuccessViewState extends State<_GenericSuccessView>
                 info.title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 18.5,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF0F172A),
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 4),

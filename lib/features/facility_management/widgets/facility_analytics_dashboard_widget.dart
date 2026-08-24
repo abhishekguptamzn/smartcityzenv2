@@ -144,9 +144,9 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
                 _currencyFormat.format(_showAllTimeRevenue ? stats.totalEarningsAllTime : stats.totalEarningsThisMonth),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
               ),
               const SizedBox(height: 14),

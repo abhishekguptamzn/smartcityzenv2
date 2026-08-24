@@ -88,9 +88,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen>
             const Text(
               'Ticket Registered!',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.3,
+                letterSpacing: -0.2,
               ),
             ),
             const SizedBox(height: 8),

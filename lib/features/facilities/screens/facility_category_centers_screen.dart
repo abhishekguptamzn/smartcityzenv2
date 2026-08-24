@@ -168,7 +168,7 @@ class _FacilityCategoryCentersScreenState
         elevation: 0,
         scrolledUnderElevation: 1.5,
         titleSpacing: 8,
-        toolbarHeight: 64,
+        toolbarHeight: 58,
         leadingWidth: 54,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),

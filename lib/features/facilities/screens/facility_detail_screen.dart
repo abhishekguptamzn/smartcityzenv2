@@ -192,9 +192,9 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                               Text(
                                 facility.name,
                                 style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.3,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                               const SizedBox(height: 4),

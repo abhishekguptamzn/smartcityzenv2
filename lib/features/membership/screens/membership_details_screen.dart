@@ -260,14 +260,15 @@ class _HeroCard extends StatelessWidget {
     final String defaultTypeName = isGym ? 'GYM' : (isActivity ? 'ACTIVITY ACADEMY' : 'LIBRARY');
     final String tierFormatted = (member.membershipType != null && member.membershipType!.toLowerCase() != 'none' && member.membershipType!.trim().isNotEmpty) ? member.membershipType!.toUpperCase() : defaultTypeName;
     final String headingText = isGym ? 'Gym Membership' : (isActivity ? 'Activity Academy Pass' : 'Library Membership');
+    final topMargin = MediaQuery.paddingOf(context).top + kToolbarHeight + 8;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 100, 16, 0),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.fromLTRB(16, topMargin, 16, 0),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: gradientColors),
-        boxShadow: [BoxShadow(color: shadowColor.withValues(alpha: 0.4), blurRadius: 32, offset: const Offset(0, 14))],
+        boxShadow: [BoxShadow(color: shadowColor.withValues(alpha: 0.35), blurRadius: 28, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,34 +277,34 @@ class _HeroCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999), border: Border.all(color: Colors.white.withValues(alpha: 0.3))),
                 child: Row(
                   children: [
-                    Container(width: 7, height: 7, decoration: BoxDecoration(shape: BoxShape.circle, color: isActive ? const Color(0xFF34D399) : const Color(0xFFF87171))),
-                    const SizedBox(width: 6),
-                    Text(isActive ? 'ACTIVE' : 'EXPIRED', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.8)),
+                    Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: isActive ? const Color(0xFF34D399) : const Color(0xFFF87171))),
+                    const SizedBox(width: 5),
+                    Text(isActive ? 'ACTIVE' : 'EXPIRED', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 10.5, letterSpacing: 0.6)),
                   ],
                 ),
               ),
               Container(
-                width: 46, height: 46,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withValues(alpha: 0.25))),
-                child: Icon(headerIcon, color: Colors.white, size: 22),
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.25))),
+                child: Icon(headerIcon, color: Colors.white, size: 20),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Text(tierFormatted, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.4)),
+          const SizedBox(height: 14),
+          Text(tierFormatted, style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+          const SizedBox(height: 2),
+          Text(headingText, style: const TextStyle(color: Colors.white, fontSize: 18.5, fontWeight: FontWeight.w800, letterSpacing: -0.2)),
           const SizedBox(height: 4),
-          Text(headingText, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
           Text('Member ID: ${member.id}', style: const TextStyle(color: Colors.white60, fontSize: 11)),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(child: _HeroStat(label: 'Valid Until', value: endDateStr, icon: Icons.calendar_today_rounded)),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(child: _HeroStat(label: daysLeft != null && daysLeft >= 0 ? 'Days Left' : 'Expired', value: daysLeft != null ? (daysLeft >= 0 ? '$daysLeft days' : '${daysLeft.abs()} days ago') : 'N/A', icon: Icons.hourglass_bottom_rounded, valueColor: daysLeft != null && daysLeft < 7 && daysLeft >= 0 ? const Color(0xFFFBBF24) : null)),
             ],
           ),
@@ -323,19 +324,19 @@ class _HeroStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.15))),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withValues(alpha: 0.15))),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70, size: 18),
-          const SizedBox(width: 10),
+          Icon(icon, color: Colors.white70, size: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500)),
+                Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(value, style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(value, style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.w700, fontSize: 12.5)),
               ],
             ),
           ),
@@ -404,7 +405,7 @@ class _OverviewTab extends ConsumerWidget {
     final facilityAsync = ref.watch(facilityDetailProvider(kind, facilityId));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       children: [
         _SectionLabel('QUICK STATS'),
         const SizedBox(height: 8),
@@ -415,7 +416,7 @@ class _OverviewTab extends ConsumerWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 2.1,
+          childAspectRatio: 2.2,
           children: [
             _StatCard(
               icon: Icons.payments_rounded,
@@ -661,26 +662,34 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Text(text, style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.2, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)));
+  Widget build(BuildContext context) => Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w600,
+              fontSize: 10.5,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+      );
 }
 
 class _DetailRow extends StatelessWidget {
   const _DetailRow({required this.icon, required this.label, this.value, this.customValue, required this.accent});
   final IconData icon; final String label; final String? value; final Widget? customValue; final Color accent;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), child: Row(children: [Container(width: 36, height: 36, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: accent)), const SizedBox(width: 14), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65), fontWeight: FontWeight.w500))), const SizedBox(width: 8), if (customValue != null) customValue! else if (value != null) Flexible(child: Text(value!, textAlign: TextAlign.end, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 2))]));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(children: [Container(width: 34, height: 34, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: accent)), const SizedBox(width: 12), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65), fontWeight: FontWeight.w500, fontSize: 13))), const SizedBox(width: 8), if (customValue != null) customValue! else if (value != null) Flexible(child: Text(value!, textAlign: TextAlign.end, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 2))]));
 }
 
 class _BenefitRow extends StatelessWidget {
   const _BenefitRow({required this.icon, required this.label, required this.accent});
   final IconData icon; final String label; final Color accent;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: Row(children: [Container(width: 34, height: 34, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: accent)), const SizedBox(width: 14), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium)), const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18)]));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11), child: Row(children: [Container(width: 32, height: 32, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)), child: Icon(icon, size: 16, color: accent)), const SizedBox(width: 12), Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13))), const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 17)]));
 }
 
 class _RowDivider extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Divider(height: 1, indent: 64, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4));
+  Widget build(BuildContext context) => Divider(height: 1, indent: 60, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4));
 }
 
 class _StatCard extends StatelessWidget {
@@ -700,16 +709,16 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -718,27 +727,28 @@ class _StatCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 16),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -747,6 +757,7 @@ class _StatCard extends StatelessWidget {
                           .onSurface
                           .withValues(alpha: 0.55),
                       fontWeight: FontWeight.w500,
+                      fontSize: 11,
                     ),
               ),
             ],
@@ -1241,7 +1252,7 @@ class _PaymentsTab extends ConsumerWidget {
                         '₹${totalPaid.toStringAsFixed(0)}',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1571,7 +1582,7 @@ class _CheckInSheetState extends ConsumerState<_CheckInSheet> {
             const SizedBox(height: 20),
             const Text(
               'Quick Gym Check-In',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
