@@ -40,6 +40,7 @@ import '../../features/facility_management/screens/facility_members_screen.dart'
 import '../../features/facility_management/screens/facility_monthly_attendance_report_screen.dart';
 import '../../features/facility_management/screens/facility_plan_distribution_screen.dart';
 import '../../features/facility_management/screens/facility_reports_screen.dart';
+import '../../features/facility_management/screens/facility_settings_screen.dart';
 import '../../features/facility_management/screens/facility_unpaid_members_screen.dart';
 import '../../features/facility_management/screens/manage_fee_plans_screen.dart';
 import '../../features/home/screens/home_screen.dart';
@@ -311,6 +312,14 @@ GoRouter goRouter(Ref ref) {
         builder: (context, state) => const OnboardHomeScreen(),
       ),
       // Facility Management Sub-Routes
+      GoRoute(
+        path: '/client/manage/settings/:kind/:id',
+        builder: (context, state) => FacilitySettingsScreen(
+          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+          facilityId: state.pathParameters['id']!,
+          facility: state.extra as FacilityModel?,
+        ),
+      ),
       GoRoute(
         path: '/client/manage/edit/:kind/:id',
         builder: (context, state) => EditFacilityDetailsScreen(

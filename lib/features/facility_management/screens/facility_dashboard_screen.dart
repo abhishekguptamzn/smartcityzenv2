@@ -108,12 +108,12 @@ class _FacilityDashboardScreenState
               },
             ),
             ListTile(
-              leading: const Icon(Icons.edit_rounded, color: Color(0xFF0284C7)),
-              title: const Text('Edit Facility Details'),
+              leading: const Icon(Icons.settings_rounded, color: Color(0xFF475569)),
+              title: const Text('Facility Settings & BLE Security'),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
                 Navigator.of(ctx).pop();
-                await context.push('/client/manage/edit/${kind.pathSegment}/${facility.id}', extra: facility);
+                await context.push('/client/manage/settings/${kind.pathSegment}/${facility.id}', extra: facility);
                 ref.invalidate(myOwnedFacilitiesProvider);
                 ref.invalidate(facilityStatsProvider((kind, facility.id)));
               },
@@ -582,6 +582,27 @@ class _FacilityDashboardScreenState
                               );
                             },
                           ),
+
+                          // 8. Settings
+                          _OperationsCard(
+                            icon: Icons.settings_rounded,
+                            iconColor: const Color(0xFF475569),
+                            iconBg: const Color(0xFFF1F5F9),
+                            title: 'Settings',
+                            subtitle: 'Edit facility & BLE security',
+                            onTap: () async {
+                              await context.push(
+                                '/client/manage/settings/${activeKind.pathSegment}/${activeFacility.id}',
+                                extra: activeFacility,
+                              );
+                              ref.invalidate(myOwnedFacilitiesProvider);
+                              ref.invalidate(
+                                facilityStatsProvider(
+                                  (activeKind, activeFacility.id),
+                                ),
+                              );
+                            },
+                          ),
                         ],
                       );
                     },
@@ -775,55 +796,6 @@ class _FacilityDashboardScreenState
                   const SizedBox(height: 4),
                   const Text(
                     'Add Member',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Second Action: "Edit"
-          InkWell(
-            onTap: () async {
-              HapticFeedback.lightImpact();
-              await context.push(
-                '/client/manage/edit/${kind.pathSegment}/${facility.id}',
-                extra: facility,
-              );
-              ref.invalidate(myOwnedFacilitiesProvider);
-              ref.invalidate(
-                facilityStatsProvider(
-                  (kind, facility.id),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.edit_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Edit',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
