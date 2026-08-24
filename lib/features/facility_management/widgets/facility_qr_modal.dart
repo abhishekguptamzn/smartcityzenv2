@@ -145,9 +145,8 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
       final serviceUuid = widget.bleServiceUuid ?? '0000aaaa-0000-1000-8000-00805f9b34fb';
       final advertiseData = AdvertiseData(
         serviceUuid: serviceUuid,
-        localName: 'SC-${widget.facilityId.substring(0, widget.facilityId.length > 6 ? 6 : widget.facilityId.length)}',
         serviceData: utf8.encode(bleNonce),
-        includeDeviceName: true,
+        includeDeviceName: false,
       );
 
       final isSupported = await _blePeripheral.isSupported;
@@ -373,54 +372,6 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
                         dataModuleShape: QrDataModuleShape.square,
                         color: Color(0xFF0F172A),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'ID: ${widget.facilityId}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF475569),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        if (widget.bleVerificationEnabled && _currentQrNonce.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF93C5FD)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.security_rounded, size: 12, color: Color(0xFF2563EB)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'NONCE: $_currentQrNonce',
-                                  style: const TextStyle(
-                                    fontSize: 10.5,
-                                    fontFamily: 'monospace',
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF2563EB),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
                     ),
                   ],
                 ),

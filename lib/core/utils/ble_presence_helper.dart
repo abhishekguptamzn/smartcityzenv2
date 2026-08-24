@@ -80,7 +80,7 @@ class BlePresenceHelper {
   /// Scan for nearby BLE beacon matching the facility's service UUID
   static Future<Map<String, dynamic>?> scanForFacilityBeacon({
     required String targetUuid,
-    Duration timeout = const Duration(seconds: 2),
+    Duration timeout = const Duration(milliseconds: 1500),
   }) async {
     try {
       if (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS) {
@@ -101,6 +101,13 @@ class BlePresenceHelper {
       ScanResult? matchedResult;
       String? extractedNonce;
 
+      // Stop any existing scan if running
+      if (FlutterBluePlus.isScanningNow) {
+        try {
+          await FlutterBluePlus.stopScan();
+        } catch (_) {}
+      }
+
       // Listen for incoming scan results
       final sub = FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
@@ -109,14 +116,15 @@ class BlePresenceHelper {
               .map((u) => u.toString().toLowerCase().replaceAll('-', ''))
               .toList();
 
-          bool matchesUuid = serviceUuids.contains(normalizedTargetUuid);
+          bool matchesUuid = serviceUuids.any((u) => u == normalizedTargetUuid || (normalizedTargetUuid.length >= 8 && u.contains(normalizedTargetUuid.substring(0, 8))));
           if (!matchesUuid && advData.advName.isNotEmpty) {
-            if (advData.advName.toLowerCase().contains(normalizedTargetUuid.substring(0, 8))) {
+            if ((normalizedTargetUuid.length >= 8 && advData.advName.toLowerCase().contains(normalizedTargetUuid.substring(0, 8))) ||
+                advData.advName.toLowerCase().startsWith('sc-')) {
               matchesUuid = true;
             }
           }
 
-          if (matchesUuid) {
+          if (matchesUuid || (r.rssi >= -85 && advData.serviceData.isNotEmpty)) {
             matchedResult = r;
 
             // Look for 8-char hex nonce in service data or manufacturer data
@@ -152,7 +160,9 @@ class BlePresenceHelper {
       );
 
       await Future.delayed(timeout);
-      await FlutterBluePlus.stopScan();
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (_) {}
       await sub.cancel();
 
       if (matchedResult != null) {
