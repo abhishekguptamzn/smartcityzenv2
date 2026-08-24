@@ -51,19 +51,15 @@ class BlePresenceHelper {
   static Future<bool> isBluetoothEnabled() async {
     try {
       if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-        final state = await FlutterBluePlus.adapterState.first.timeout(
-          const Duration(milliseconds: 600),
-          onTimeout: () => FlutterBluePlus.adapterStateNow,
-        );
-        return state == BluetoothAdapterState.on;
+        final state = FlutterBluePlus.adapterStateNow;
+        if (state == BluetoothAdapterState.off || state == BluetoothAdapterState.turningOff) {
+          return false;
+        }
+        return true;
       }
       return true;
     } catch (_) {
-      try {
-        return FlutterBluePlus.adapterStateNow == BluetoothAdapterState.on;
-      } catch (_) {
-        return true;
-      }
+      return true;
     }
   }
 

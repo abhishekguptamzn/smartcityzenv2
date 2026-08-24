@@ -133,48 +133,34 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
             String? detectedBleNonce;
             int? detectedRssi;
 
-            if (bleRequired) {
-              bool isBtOn = await BlePresenceHelper.isBluetoothEnabled();
-              if (!isBtOn) {
-                // Prompt system popup dialog to turn on Bluetooth
-                isBtOn = await BlePresenceHelper.requestEnableBluetooth();
-              }
+            if (bleRequired && serviceUuid != null && serviceUuid.isNotEmpty) {
+              final beacon = await BlePresenceHelper.scanForFacilityBeacon(
+                targetUuid: serviceUuid,
+                timeout: const Duration(milliseconds: 2500),
+              );
 
-              if (!isBtOn) {
+              if (beacon != null) {
+                detectedBleNonce = beacon['ble_nonce']?.toString() ?? qrNonce;
+                detectedRssi = beacon['rssi'] as int?;
+              } else if (bleStrictMode) {
+                // In Strict Mode: reject checkin if beacon not detected over the air
+                final isBtOn = await BlePresenceHelper.isBluetoothEnabled();
+                if (!isBtOn) {
+                  await BlePresenceHelper.requestEnableBluetooth();
+                }
+
                 if (!mounted) return;
                 setState(() {
                   _status = _ScanStatus.error;
-                  _isBluetoothError = true;
+                  _isBluetoothError = !isBtOn;
                   _pendingRetryPayload = trimmed;
-                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your phone to verify your presence.';
+                  _errorMessage = 'Facility Bluetooth beacon not detected. Please stand closer to the counter display with Bluetooth turned ON.';
                 });
                 return;
-              }
-
-              if (serviceUuid != null && serviceUuid.isNotEmpty) {
-                final beacon = await BlePresenceHelper.scanForFacilityBeacon(
-                  targetUuid: serviceUuid,
-                  timeout: const Duration(milliseconds: 2500),
-                );
-
-                if (beacon != null) {
-                  detectedBleNonce = beacon['ble_nonce']?.toString() ?? qrNonce;
-                  detectedRssi = beacon['rssi'] as int?;
-                } else if (bleStrictMode) {
-                  // In Strict Mode: reject checkin if beacon not detected over the air
-                  if (!mounted) return;
-                  setState(() {
-                    _status = _ScanStatus.error;
-                    _isBluetoothError = false;
-                    _pendingRetryPayload = trimmed;
-                    _errorMessage = 'Facility Bluetooth beacon not detected. Please stand closer to the counter display with Bluetooth turned ON.';
-                  });
-                  return;
-                } else {
-                  // In Hybrid Mode: Fallback using live rolling TOTP token
-                  detectedBleNonce = qrNonce;
-                  detectedRssi = -65;
-                }
+              } else {
+                // In Hybrid Mode: Seamless fallback using live rotating screen QR token
+                detectedBleNonce = qrNonce;
+                detectedRssi = -65;
               }
             }
 
