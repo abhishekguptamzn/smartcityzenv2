@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
+import '../widgets/citizen_manual_checkin_qr_modal.dart';
 import '../widgets/facility_management_skeletons.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
@@ -61,7 +61,6 @@ class _FacilityManualCheckinScreenState
   String _searchQuery = '';
   Timer? _debounceTimer;
   CheckinFilter _activeFilter = CheckinFilter.all;
-  final Set<String> _loadingMemberIds = {};
   final Set<String> _selectedMemberIds = {};
   final Set<String> _recentlyCheckedInIds = {};
   final Set<String> _recentlyCheckedOutIds = {};
@@ -113,192 +112,6 @@ class _FacilityManualCheckinScreenState
   void _clearSelection() {
     HapticFeedback.lightImpact();
     setState(() => _selectedMemberIds.clear());
-  }
-
-  Future<void> _handleCheckin(Map<String, dynamic> member,
-      {bool allowOverride = false}) async {
-    final memberId = member['id']?.toString() ?? '';
-    if (memberId.isEmpty) return;
-
-    final userName = member['user']?['name'] ?? member['name'] ?? 'Member';
-    final endStr = member['end_date']?.toString();
-    DateTime? endDate;
-    if (endStr != null && endStr.isNotEmpty) {
-      endDate = DateTime.tryParse(endStr);
-    }
-    final now = DateTime.now();
-    final isExpired = endDate != null && endDate.isBefore(now);
-
-    if (isExpired && !allowOverride) {
-      final formattedEnd = DateFormat('d MMM yyyy').format(endDate);
-      final proceed = await showAppConfirmDialog(
-        context: context,
-        title: 'Membership Expired',
-        message:
-            '$userName\'s membership pass expired on $formattedEnd. Log desk check-in anyway as manager override?',
-        confirmLabel: 'Allow Check-in',
-        cancelLabel: 'Cancel',
-        type: ConfirmDialogType.warning,
-        details: [
-          ConfirmDetailRow(label: 'Member', value: userName),
-          ConfirmDetailRow(
-              label: 'Expired On', value: formattedEnd, isHighlighted: true),
-        ],
-      );
-      if (!proceed) return;
-      allowOverride = true;
-    }
-
-    setState(() => _loadingMemberIds.add(memberId));
-
-    try {
-      HapticFeedback.lightImpact();
-      final res = await ref.read(clientFacilityRepositoryProvider).checkIn(
-            widget.kind,
-            widget.facilityId,
-            memberId: memberId,
-            allowOverride: allowOverride,
-          );
-
-      final already = res['already_checked_in'] == true;
-
-      setState(() {
-        _recentlyCheckedInIds.add(memberId);
-        _recentlyCheckedOutIds.remove(memberId);
-      });
-
-      _refreshAll();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                already
-                    ? Icons.info_outline_rounded
-                    : Icons.check_circle_rounded,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  already
-                      ? '$userName is already checked in.'
-                      : '✅ $userName checked in successfully!',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor:
-              already ? const Color(0xFFD97706) : const Color(0xFF059669),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to check in: $e'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _loadingMemberIds.remove(memberId));
-      }
-    }
-  }
-
-  Future<void> _handleCheckout(
-      Map<String, dynamic> member, String? sessionId) async {
-    final memberId = member['id']?.toString() ?? '';
-    if (memberId.isEmpty) return;
-
-    final userName = member['user']?['name'] ?? member['name'] ?? 'Member';
-
-    final confirmed = await showAppConfirmDialog(
-      context: context,
-      title: 'Confirm Check-Out',
-      message: 'Log manual check-out for $userName?',
-      confirmLabel: 'Check Out',
-      cancelLabel: 'Cancel',
-      type: ConfirmDialogType.warning,
-      details: [
-        ConfirmDetailRow(label: 'Member', value: userName),
-        ConfirmDetailRow(
-            label: 'Action',
-            value: 'Check-Out Session',
-            isHighlighted: true),
-      ],
-    );
-    if (!confirmed) return;
-
-    setState(() => _loadingMemberIds.add(memberId));
-
-    try {
-      HapticFeedback.lightImpact();
-      final res = await ref.read(clientFacilityRepositoryProvider).checkOut(
-            widget.kind,
-            widget.facilityId,
-            memberId: memberId,
-            sessionId: sessionId,
-          );
-
-      final duration = res['duration_minutes'] ?? res['duration'] ?? 0;
-
-      setState(() {
-        _recentlyCheckedInIds.remove(memberId);
-        _recentlyCheckedOutIds.add(memberId);
-      });
-
-      _refreshAll();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '✅ $userName checked out successfully! (Session: $duration mins)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0284C7),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to check out: $e'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _loadingMemberIds.remove(memberId));
-      }
-    }
   }
 
   Future<void> _handleBulkCheckin(
@@ -531,108 +344,17 @@ class _FacilityManualCheckinScreenState
   }
 
   void _openQrScanner() {
-    showModalBottomSheet(
+    CitizenManualCheckinQrModal.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.black,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Scan Citizen QR',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: MobileScanner(
-                onDetect: (capture) {
-                  final barcodes = capture.barcodes;
-                  if (barcodes.isNotEmpty) {
-                    final raw = barcodes.first.rawValue;
-                    if (raw != null && raw.isNotEmpty) {
-                      Navigator.pop(ctx);
-                      _quickCodeController.text = raw;
-                      _showQuickActionSheet(raw);
-                    }
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showQuickActionSheet(String code) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Scanned Code: $code',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _handleQuickDeskAction(true);
-                      },
-                      icon: const Icon(Icons.login_rounded),
-                      label: const Text('Check In'),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF059669)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _handleQuickDeskAction(false);
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text('Check Out'),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      kind: widget.kind,
+      facilityId: widget.facilityId,
+      facility: widget.facility,
+      onCodeScanned: (code) {
+        _quickCodeController.text = code;
+      },
+      onScanComplete: () {
+        _refreshAll();
+      },
     );
   }
 
@@ -1203,8 +925,6 @@ class _FacilityManualCheckinScreenState
 
                       final isSelected =
                           _selectedMemberIds.contains(memberId);
-                      final isLoading =
-                          _loadingMemberIds.contains(memberId);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -1232,73 +952,113 @@ class _FacilityManualCheckinScreenState
                             ),
                           ],
                         ),
-                        child: Column(
-                          children: [
-                            // Member Profile Header & Checkbox
-                            InkWell(
-                              onTap: () => _toggleMemberSelection(memberId),
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(15)),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    12, 12, 12, 8),
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.center,
-                                  children: [
-                                    // Selection Checkbox
-                                    Checkbox(
-                                      value: isSelected,
-                                      activeColor: primaryColor,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(5)),
-                                      onChanged: (_) =>
-                                          _toggleMemberSelection(memberId),
-                                    ),
-                                    const SizedBox(width: 4),
+                        child: InkWell(
+                          onTap: () => _toggleMemberSelection(memberId),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Selection Checkbox
+                                Checkbox(
+                                  value: isSelected,
+                                  activeColor: primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5)),
+                                  onChanged: (_) =>
+                                      _toggleMemberSelection(memberId),
+                                ),
+                                const SizedBox(width: 4),
 
-                                    // Avatar
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: isCheckedIn
-                                          ? const Color(0xFFECFDF5)
-                                          : const Color(0xFFEFF6FF),
-                                      child: Icon(
-                                        isCheckedIn
-                                            ? Icons.person_pin_circle_rounded
-                                            : Icons.person_outline_rounded,
-                                        color: isCheckedIn
-                                            ? const Color(0xFF059669)
-                                            : primaryColor,
-                                        size: 22,
+                                // Avatar (tap to view profile)
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            FacilityMemberDetailScreen(
+                                          kind: widget.kind,
+                                          facilityId: widget.facilityId,
+                                          memberId: memberId,
+                                          facility: widget.facility,
+                                        ),
                                       ),
+                                    );
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: isCheckedIn
+                                        ? const Color(0xFFECFDF5)
+                                        : const Color(0xFFEFF6FF),
+                                    child: Icon(
+                                      isCheckedIn
+                                          ? Icons.person_pin_circle_rounded
+                                          : Icons.person_outline_rounded,
+                                      color: isCheckedIn
+                                          ? const Color(0xFF059669)
+                                          : primaryColor,
+                                      size: 22,
                                     ),
-                                    const SizedBox(width: 12),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
 
-                                    // Name, Plan, Validity
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                // Name, Plan, Validity
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  userName,
-                                                  style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    fontSize: 14.5,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
+                                          Expanded(
+                                            child: Text(
+                                              userName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14.5,
                                               ),
-                                              // Live Status Badge
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          // Live Status Badge & Optional Renew
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (isExpired || isExpiringSoon)
+                                                GestureDetector(
+                                                  onTap: () => _openRenewModal(member),
+                                                  child: Container(
+                                                    margin: const EdgeInsets.only(right: 6),
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6, vertical: 2.5),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(
+                                                          color: const Color(0xFF0D9488), width: 0.8),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.autorenew_rounded,
+                                                            size: 10, color: Color(0xFF0D9488)),
+                                                        SizedBox(width: 2),
+                                                        Text(
+                                                          'Renew',
+                                                          style: TextStyle(
+                                                            fontSize: 9.5,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Color(0xFF0D9488),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
                                               if (isCheckedIn)
                                                 Container(
                                                   padding: const EdgeInsets
@@ -1369,195 +1129,45 @@ class _FacilityManualCheckinScreenState
                                                 ),
                                             ],
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '#$memberId • $planName ${userPhone.isNotEmpty ? "• $userPhone" : ""}',
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: scheme.onSurfaceVariant,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          if (endDate != null) ...[
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              isExpired
-                                                  ? 'Expired ${DateFormat("d MMM yyyy").format(endDate)}'
-                                                  : 'Valid till ${DateFormat("d MMM yyyy").format(endDate)}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: isExpired ||
-                                                        isExpiringSoon
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                                color: isExpired
-                                                    ? const Color(0xFFEF4444)
-                                                    : isExpiringSoon
-                                                        ? const Color(
-                                                            0xFFD97706)
-                                                        : scheme
-                                                            .onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
                                         ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            const Divider(height: 1),
-
-                            // Unmistakable Action Buttons Below Each Member
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              child: Row(
-                                children: [
-                                  // View Details Icon Button
-                                  IconButton(
-                                    icon: const Icon(
-                                        Icons.person_outline_rounded,
-                                        size: 18),
-                                    tooltip: 'View Profile',
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              FacilityMemberDetailScreen(
-                                            kind: widget.kind,
-                                            facilityId: widget.facilityId,
-                                            memberId: memberId,
-                                            facility: widget.facility,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '#$memberId • $planName ${userPhone.isNotEmpty ? "• $userPhone" : ""}',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (endDate != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          isExpired
+                                              ? 'Expired ${DateFormat("d MMM yyyy").format(endDate)}'
+                                              : 'Valid till ${DateFormat("d MMM yyyy").format(endDate)}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: isExpired ||
+                                                    isExpiringSoon
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isExpired
+                                                ? const Color(0xFFEF4444)
+                                                : isExpiringSoon
+                                                    ? const Color(
+                                                        0xFFD97706)
+                                                    : scheme
+                                                        .onSurfaceVariant,
                                           ),
                                         ),
-                                      );
-                                    },
+                                      ],
+                                    ],
                                   ),
-
-                                  if (isExpired || isExpiringSoon) ...[
-                                    OutlinedButton.icon(
-                                      onPressed: () => _openRenewModal(member),
-                                      icon: const Icon(Icons.autorenew_rounded,
-                                          size: 14, color: Color(0xFF0D9488)),
-                                      label: const Text('Renew',
-                                          style: TextStyle(
-                                              color: Color(0xFF0D9488),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold)),
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(
-                                            color: Color(0xFF0D9488)),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-
-                                  const Spacer(),
-
-                                  // Check In Button (Active only when outside)
-                                  FilledButton.icon(
-                                    onPressed: (isLoading || isCheckedIn)
-                                        ? null
-                                        : () => _handleCheckin(member),
-                                    icon: isLoading
-                                        ? const SizedBox(
-                                            width: 12,
-                                            height: 12,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white),
-                                          )
-                                        : Icon(
-                                            isCheckedIn
-                                                ? Icons.check_circle_rounded
-                                                : Icons.login_rounded,
-                                            size: 15),
-                                    label: Text(
-                                        isCheckedIn ? 'INSIDE' : 'CHECK IN',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11)),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: isCheckedIn
-                                          ? (isDark
-                                              ? const Color(0xFF334155)
-                                              : const Color(0xFFE2E8F0))
-                                          : const Color(0xFF059669),
-                                      foregroundColor: isCheckedIn
-                                          ? (isDark
-                                              ? Colors.white38
-                                              : const Color(0xFF94A3B8))
-                                          : Colors.white,
-                                      disabledBackgroundColor: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : const Color(0xFFE2E8F0),
-                                      disabledForegroundColor: isDark
-                                          ? Colors.white38
-                                          : const Color(0xFF94A3B8),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // Check Out Button (Active only when inside)
-                                  FilledButton.icon(
-                                    onPressed: (isLoading || !isCheckedIn)
-                                        ? null
-                                        : () => _handleCheckout(
-                                            member,
-                                            liveSession?['session_id']
-                                                ?.toString()),
-                                    icon: const Icon(Icons.logout_rounded,
-                                        size: 15),
-                                    label: Text(
-                                        isCheckedIn ? 'CHECK OUT' : 'OUTSIDE',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11)),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: isCheckedIn
-                                          ? const Color(0xFFDC2626)
-                                          : (isDark
-                                              ? const Color(0xFF334155)
-                                              : const Color(0xFFE2E8F0)),
-                                      foregroundColor: isCheckedIn
-                                          ? Colors.white
-                                          : (isDark
-                                              ? Colors.white38
-                                              : const Color(0xFF94A3B8)),
-                                      disabledBackgroundColor: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : const Color(0xFFE2E8F0),
-                                      disabledForegroundColor: isDark
-                                          ? Colors.white38
-                                          : const Color(0xFF94A3B8),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       );
                     },
