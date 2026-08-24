@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/activities_providers.dart';
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/utils/share_helper.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -65,12 +65,12 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
   }
 
   void _shareFacility(FacilityModel facility) {
-    Clipboard.setData(ClipboardData(text: 'Check out ${facility.name} on Smart CityZen!'));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Facility details copied to clipboard!'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    final kindPath = widget.kind.name;
+    AppShareHelper.shareContent(
+      context: context,
+      title: facility.name,
+      path: '/services/$kindPath/${facility.id}',
+      subtitle: facility.address,
     );
   }
 
@@ -317,13 +317,13 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                 onSendEnquiry: () => _openEnquirySheet(facility),
                 onPrimaryAction: widget.kind == FacilityKind.gym
                     ? () => context.push('/checkin')
-                    : () => _openEnquirySheet(facility),
+                    : null,
                 primaryActionLabel: widget.kind == FacilityKind.gym
                     ? 'Quick QR Check-in'
-                    : 'Enroll / Join',
+                    : null,
                 primaryActionIcon: widget.kind == FacilityKind.gym
                     ? Icons.qr_code_scanner_rounded
-                    : Icons.how_to_reg_rounded,
+                    : null,
               ),
             ],
           );

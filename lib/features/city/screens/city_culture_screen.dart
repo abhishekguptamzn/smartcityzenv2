@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/cities_providers.dart';
+import '../../../core/utils/share_helper.dart';
 import '../../../data/models/city_information_model.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -34,8 +35,12 @@ class CityCultureScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sharing culture & living traditions...')),
+              final city = infoAsync.value?.city;
+              AppShareHelper.shareContent(
+                context: context,
+                title: city != null ? '${city.name} Culture & Traditions' : 'Culture & Traditions',
+                path: cityId != null ? '/city/culture?city_id=$cityId' : '/city/culture',
+                subtitle: city?.state,
               );
             },
           ),

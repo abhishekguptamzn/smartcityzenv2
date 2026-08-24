@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/cities_providers.dart';
+import '../../../core/utils/share_helper.dart';
 import '../../../data/models/city_information_model.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -34,8 +35,12 @@ class CityAboutScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sharing city details...')),
+              final city = infoAsync.value?.city;
+              AppShareHelper.shareContent(
+                context: context,
+                title: city != null ? 'About ${city.name}' : 'About the City',
+                path: cityId != null ? '/city/about?city_id=$cityId' : '/city/about',
+                subtitle: city?.state,
               );
             },
           ),
@@ -181,6 +186,7 @@ class _AboutCityBodyState extends State<_AboutCityBody> {
               for (var i = 0; i < details.length; i++) ...[
                 if (i > 0) const Divider(height: 20, indent: 48),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       width: 40,
@@ -192,19 +198,23 @@ class _AboutCityBodyState extends State<_AboutCityBody> {
                       child: Icon(details[i].$1, color: scheme.primary, size: 20),
                     ),
                     const SizedBox(width: 14),
+                    Text(
+                      details[i].$2,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        details[i].$2,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: scheme.onSurfaceVariant,
+                        details[i].$3,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
                             ),
                       ),
-                    ),
-                    Text(
-                      details[i].$3,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
                     ),
                   ],
                 ),

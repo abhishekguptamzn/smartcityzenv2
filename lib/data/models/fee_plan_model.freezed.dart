@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$FeePlanModel {
 
- String get id;@JsonKey(name: 'facility_type') String? get facilityType;@JsonKey(name: 'facility_id') String? get facilityId; String get name; String get interval;@JsonKey(name: 'interval_count') int get intervalCount;@JsonKey(fromJson: _toDouble) double get amount; String get currency;@JsonKey(name: 'is_active') bool get isActive; String? get description;
+ String get id;@JsonKey(name: 'facility_type') String? get facilityType;@JsonKey(name: 'facility_id') String? get facilityId; String get name; String get interval;@JsonKey(name: 'interval_count') int get intervalCount;@JsonKey(fromJson: _toDouble) double get amount; String get currency;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'show_to_citizen') bool get showToCitizen; String? get description;
 /// Create a copy of FeePlanModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $FeePlanModelCopyWith<FeePlanModel> get copyWith => _$FeePlanModelCopyWithImpl<F
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FeePlanModel&&(identical(other.id, id) || other.id == id)&&(identical(other.facilityType, facilityType) || other.facilityType == facilityType)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.name, name) || other.name == name)&&(identical(other.interval, interval) || other.interval == interval)&&(identical(other.intervalCount, intervalCount) || other.intervalCount == intervalCount)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.description, description) || other.description == description));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FeePlanModel&&(identical(other.id, id) || other.id == id)&&(identical(other.facilityType, facilityType) || other.facilityType == facilityType)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.name, name) || other.name == name)&&(identical(other.interval, interval) || other.interval == interval)&&(identical(other.intervalCount, intervalCount) || other.intervalCount == intervalCount)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.showToCitizen, showToCitizen) || other.showToCitizen == showToCitizen)&&(identical(other.description, description) || other.description == description));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,facilityType,facilityId,name,interval,intervalCount,amount,currency,isActive,description);
+int get hashCode => Object.hash(runtimeType,id,facilityType,facilityId,name,interval,intervalCount,amount,currency,isActive,showToCitizen,description);
 
 @override
 String toString() {
-  return 'FeePlanModel(id: $id, facilityType: $facilityType, facilityId: $facilityId, name: $name, interval: $interval, intervalCount: $intervalCount, amount: $amount, currency: $currency, isActive: $isActive, description: $description)';
+  return 'FeePlanModel(id: $id, facilityType: $facilityType, facilityId: $facilityId, name: $name, interval: $interval, intervalCount: $intervalCount, amount: $amount, currency: $currency, isActive: $isActive, showToCitizen: $showToCitizen, description: $description)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $FeePlanModelCopyWith<$Res>  {
   factory $FeePlanModelCopyWith(FeePlanModel value, $Res Function(FeePlanModel) _then) = _$FeePlanModelCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'facility_type') String? facilityType,@JsonKey(name: 'facility_id') String? facilityId, String name, String interval,@JsonKey(name: 'interval_count') int intervalCount,@JsonKey(fromJson: _toDouble) double amount, String currency,@JsonKey(name: 'is_active') bool isActive, String? description
+ String id,@JsonKey(name: 'facility_type') String? facilityType,@JsonKey(name: 'facility_id') String? facilityId, String name, String interval,@JsonKey(name: 'interval_count') int intervalCount,@JsonKey(fromJson: _toDouble) double amount, String currency,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'show_to_citizen') bool showToCitizen, String? description
 });
 
 
@@ -65,7 +65,7 @@ class _$FeePlanModelCopyWithImpl<$Res>
 
 /// Create a copy of FeePlanModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? facilityType = freezed,Object? facilityId = freezed,Object? name = null,Object? interval = null,Object? intervalCount = null,Object? amount = null,Object? currency = null,Object? isActive = null,Object? description = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? facilityType = freezed,Object? facilityId = freezed,Object? name = null,Object? interval = null,Object? intervalCount = null,Object? amount = null,Object? currency = null,Object? isActive = null,Object? showToCitizen = null,Object? description = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,facilityType: freezed == facilityType ? _self.facilityType : facilityType // ignore: cast_nullable_to_non_nullable
@@ -76,6 +76,7 @@ as String,intervalCount: null == intervalCount ? _self.intervalCount : intervalC
 as int,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,showToCitizen: null == showToCitizen ? _self.showToCitizen : showToCitizen // ignore: cast_nullable_to_non_nullable
 as bool,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -162,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive,  String? description)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'show_to_citizen')  bool showToCitizen,  String? description)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FeePlanModel() when $default != null:
-return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.description);case _:
+return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.showToCitizen,_that.description);case _:
   return orElse();
 
 }
@@ -183,10 +184,10 @@ return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.in
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive,  String? description)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'show_to_citizen')  bool showToCitizen,  String? description)  $default,) {final _that = this;
 switch (_that) {
 case _FeePlanModel():
-return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.description);case _:
+return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.showToCitizen,_that.description);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +204,10 @@ return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.in
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive,  String? description)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'facility_type')  String? facilityType, @JsonKey(name: 'facility_id')  String? facilityId,  String name,  String interval, @JsonKey(name: 'interval_count')  int intervalCount, @JsonKey(fromJson: _toDouble)  double amount,  String currency, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'show_to_citizen')  bool showToCitizen,  String? description)?  $default,) {final _that = this;
 switch (_that) {
 case _FeePlanModel() when $default != null:
-return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.description);case _:
+return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.interval,_that.intervalCount,_that.amount,_that.currency,_that.isActive,_that.showToCitizen,_that.description);case _:
   return null;
 
 }
@@ -218,7 +219,7 @@ return $default(_that.id,_that.facilityType,_that.facilityId,_that.name,_that.in
 @JsonSerializable()
 
 class _FeePlanModel implements FeePlanModel {
-  const _FeePlanModel({required this.id, @JsonKey(name: 'facility_type') this.facilityType, @JsonKey(name: 'facility_id') this.facilityId, required this.name, this.interval = 'month', @JsonKey(name: 'interval_count') this.intervalCount = 1, @JsonKey(fromJson: _toDouble) this.amount = 0, this.currency = 'INR', @JsonKey(name: 'is_active') this.isActive = true, this.description});
+  const _FeePlanModel({required this.id, @JsonKey(name: 'facility_type') this.facilityType, @JsonKey(name: 'facility_id') this.facilityId, required this.name, this.interval = 'month', @JsonKey(name: 'interval_count') this.intervalCount = 1, @JsonKey(fromJson: _toDouble) this.amount = 0, this.currency = 'INR', @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'show_to_citizen') this.showToCitizen = true, this.description});
   factory _FeePlanModel.fromJson(Map<String, dynamic> json) => _$FeePlanModelFromJson(json);
 
 @override final  String id;
@@ -230,6 +231,7 @@ class _FeePlanModel implements FeePlanModel {
 @override@JsonKey(fromJson: _toDouble) final  double amount;
 @override@JsonKey() final  String currency;
 @override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'show_to_citizen') final  bool showToCitizen;
 @override final  String? description;
 
 /// Create a copy of FeePlanModel
@@ -245,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FeePlanModel&&(identical(other.id, id) || other.id == id)&&(identical(other.facilityType, facilityType) || other.facilityType == facilityType)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.name, name) || other.name == name)&&(identical(other.interval, interval) || other.interval == interval)&&(identical(other.intervalCount, intervalCount) || other.intervalCount == intervalCount)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.description, description) || other.description == description));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FeePlanModel&&(identical(other.id, id) || other.id == id)&&(identical(other.facilityType, facilityType) || other.facilityType == facilityType)&&(identical(other.facilityId, facilityId) || other.facilityId == facilityId)&&(identical(other.name, name) || other.name == name)&&(identical(other.interval, interval) || other.interval == interval)&&(identical(other.intervalCount, intervalCount) || other.intervalCount == intervalCount)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.showToCitizen, showToCitizen) || other.showToCitizen == showToCitizen)&&(identical(other.description, description) || other.description == description));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,facilityType,facilityId,name,interval,intervalCount,amount,currency,isActive,description);
+int get hashCode => Object.hash(runtimeType,id,facilityType,facilityId,name,interval,intervalCount,amount,currency,isActive,showToCitizen,description);
 
 @override
 String toString() {
-  return 'FeePlanModel(id: $id, facilityType: $facilityType, facilityId: $facilityId, name: $name, interval: $interval, intervalCount: $intervalCount, amount: $amount, currency: $currency, isActive: $isActive, description: $description)';
+  return 'FeePlanModel(id: $id, facilityType: $facilityType, facilityId: $facilityId, name: $name, interval: $interval, intervalCount: $intervalCount, amount: $amount, currency: $currency, isActive: $isActive, showToCitizen: $showToCitizen, description: $description)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$FeePlanModelCopyWith<$Res> implements $FeePlanModelCopyWi
   factory _$FeePlanModelCopyWith(_FeePlanModel value, $Res Function(_FeePlanModel) _then) = __$FeePlanModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'facility_type') String? facilityType,@JsonKey(name: 'facility_id') String? facilityId, String name, String interval,@JsonKey(name: 'interval_count') int intervalCount,@JsonKey(fromJson: _toDouble) double amount, String currency,@JsonKey(name: 'is_active') bool isActive, String? description
+ String id,@JsonKey(name: 'facility_type') String? facilityType,@JsonKey(name: 'facility_id') String? facilityId, String name, String interval,@JsonKey(name: 'interval_count') int intervalCount,@JsonKey(fromJson: _toDouble) double amount, String currency,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'show_to_citizen') bool showToCitizen, String? description
 });
 
 
@@ -282,7 +284,7 @@ class __$FeePlanModelCopyWithImpl<$Res>
 
 /// Create a copy of FeePlanModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? facilityType = freezed,Object? facilityId = freezed,Object? name = null,Object? interval = null,Object? intervalCount = null,Object? amount = null,Object? currency = null,Object? isActive = null,Object? description = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? facilityType = freezed,Object? facilityId = freezed,Object? name = null,Object? interval = null,Object? intervalCount = null,Object? amount = null,Object? currency = null,Object? isActive = null,Object? showToCitizen = null,Object? description = freezed,}) {
   return _then(_FeePlanModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,facilityType: freezed == facilityType ? _self.facilityType : facilityType // ignore: cast_nullable_to_non_nullable
@@ -293,6 +295,7 @@ as String,intervalCount: null == intervalCount ? _self.intervalCount : intervalC
 as int,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,showToCitizen: null == showToCitizen ? _self.showToCitizen : showToCitizen // ignore: cast_nullable_to_non_nullable
 as bool,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,
   ));

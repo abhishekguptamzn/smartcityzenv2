@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/activities_providers.dart';
 import '../../../core/utils/icon_helper.dart';
+import '../../../core/utils/share_helper.dart';
 import '../../../data/models/activity_batch_model.dart';
 import '../../../data/models/activity_instructor_model.dart';
 import '../../../data/models/activity_model.dart';
@@ -13,7 +13,6 @@ import '../../../data/models/fee_plan_model.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/loading_indicator.dart';
-import '../widgets/enroll_activity_sheet.dart';
 import '../widgets/write_activity_review_sheet.dart';
 
 class ActivityDetailScreen extends ConsumerStatefulWidget {
@@ -101,9 +100,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.share_rounded, color: Colors.white, size: 19),
                   onPressed: () {
-                    Clipboard.setData(ClipboardData(text: 'Check out ${activity.name} on Smart CityZen!'));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Link copied to clipboard!')),
+                    AppShareHelper.shareContent(
+                      context: context,
+                      title: activity.name,
+                      path: '/activities/${activity.id}',
+                      subtitle: activity.address,
                     );
                   },
                 ),
@@ -310,61 +311,6 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             ),
           ),
         ],
-      ),
-
-      // Sticky Bottom Bar
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF181B26) : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('MEMBERSHIP / PASS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  Text(
-                    activity.feePlans.isNotEmpty
-                        ? '₹${activity.feePlans.first.amount.toStringAsFixed(0)} / ${activity.feePlans.first.interval}'
-                        : 'Enroll Today',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: ActivityDetailScreen._primary),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => EnrollActivitySheet.show(context, activity: activity),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ActivityDetailScreen._primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.how_to_reg_rounded, size: 20),
-                      SizedBox(width: 8),
-                      Text('Enroll & Get Pass', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -652,44 +598,119 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
 
   Widget _buildFeePlanCard(ActivityModel activity, FeePlanModel fp, bool isDark) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181B26) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? const Color(0xFF2A2E3D) : const Color(0xFFE2E8F0)),
+        color: isDark ? const Color(0xFF1E2433) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2E364A) : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(fp.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                const SizedBox(height: 2),
-                Text(
-                  '${fp.intervalCount} ${fp.interval} access pass',
-                  style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: ActivityDetailScreen._primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                child: const Icon(
+                  Icons.card_membership_rounded,
+                  color: ActivityDetailScreen._primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fp.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15.5,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: ActivityDetailScreen._primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${fp.intervalCount > 1 ? '${fp.intervalCount} ' : ''}${fp.interval.toUpperCase()} PASS',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: ActivityDetailScreen._primary,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${fp.amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: ActivityDetailScreen._primary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    '/${fp.interval}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (fp.description != null && fp.description!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF141824) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                fp.description!,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                ),
+              ),
             ),
-          ),
-          Text(
-            '₹${fp.amount.toStringAsFixed(0)}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: ActivityDetailScreen._primary),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: () => EnrollActivitySheet.show(context, activity: activity, initialFeePlan: fp),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ActivityDetailScreen._primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              visualDensity: VisualDensity.compact,
-            ),
-            child: const Text('Enroll', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          ),
+          ],
         ],
       ),
     );

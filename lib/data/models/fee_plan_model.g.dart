@@ -17,6 +17,7 @@ _FeePlanModel _$FeePlanModelFromJson(Map<String, dynamic> json) =>
       amount: json['amount'] == null ? 0 : _toDouble(json['amount']),
       currency: json['currency'] as String? ?? 'INR',
       isActive: json['is_active'] as bool? ?? true,
+      showToCitizen: json['show_to_citizen'] as bool? ?? true,
       description: json['description'] as String?,
     );
 
@@ -31,5 +32,6 @@ Map<String, dynamic> _$FeePlanModelToJson(_FeePlanModel instance) =>
       'amount': instance.amount,
       'currency': instance.currency,
       'is_active': instance.isActive,
+      'show_to_citizen': instance.showToCitizen,
       'description': instance.description,
     };

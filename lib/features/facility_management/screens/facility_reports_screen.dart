@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/share_helper.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -55,7 +56,17 @@ class FacilityReportsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
+            onPressed: () {
+              final stats = statsAsync.value;
+              final totalCheckins = stats?['total_checkins'] ?? 0;
+              final totalCollection = stats?['total_collection'] ?? 0;
+              final dateRange = stats?['date_range'] ?? 'This Month';
+              AppShareHelper.shareText(
+                context: context,
+                text: '📊 Monthly Report for $facilityName ($dateRange):\n• Total Check-ins: $totalCheckins\n• Total Revenue: ₹$totalCollection\nShared via Smart CityZen Admin Hub',
+                subject: '$facilityName - Performance Report',
+              );
+            },
           ),
         ],
       ),

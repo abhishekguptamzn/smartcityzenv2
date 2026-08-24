@@ -47,7 +47,8 @@ class FacilityFeePlansCard extends StatelessWidget {
         final desc = plan['description']?.toString();
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -86,7 +87,7 @@ class FacilityFeePlansCard extends StatelessWidget {
                     Text(
                       name,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -98,7 +99,7 @@ class FacilityFeePlansCard extends StatelessWidget {
                           fontSize: 11.5,
                           color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],

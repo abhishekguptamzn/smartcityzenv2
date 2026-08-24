@@ -47,7 +47,7 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$dioHash() => r'02b871e8db83e65755ea07209cc4120a62bcaf49';
+String _$dioHash() => r'1844db3a2abe3c23eef601267cb10c9057f124b8';
 
 /// The health endpoint lives outside `/api/v1`, so it needs its own client
 /// with the version segment stripped from the configured base URL.

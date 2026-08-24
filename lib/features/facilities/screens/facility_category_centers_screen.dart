@@ -150,107 +150,6 @@ class _FacilityCategoryCentersScreenState
     }
   }
 
-  void _showCityPicker(BuildContext context, String currentCity) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Switch City',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Browse centers in other cities across India',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 16),
-              Consumer(
-                builder: (context, ref, _) {
-                  final citiesAsync = ref.watch(citiesListProvider);
-                  return citiesAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: LoadingIndicator(),
-                      ),
-                    ),
-                    error: (e, s) => Text('Current city: $currentCity'),
-                    data: (cities) {
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: cities.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final c = cities[i];
-                          final isSelected = c.name.toLowerCase() == currentCity.toLowerCase();
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF0D9488).withValues(alpha: 0.15)
-                                    : Colors.grey.shade100,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.location_city_rounded,
-                                size: 18,
-                                color: isSelected ? const Color(0xFF0D9488) : Colors.grey,
-                              ),
-                            ),
-                            title: Text(
-                              c.name,
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? const Color(0xFF0D9488) : null,
-                              ),
-                            ),
-                            trailing: isSelected
-                                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488))
-                                : null,
-                            onTap: () {
-                              ref.read(selectedCityProvider.notifier).setCity(c);
-                              Navigator.of(ctx).pop();
-                            },
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -322,50 +221,16 @@ class _FacilityCategoryCentersScreenState
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.category.name,
-                    style: TextStyle(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  GestureDetector(
-                    onTap: () => _showCityPicker(context, cityName),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFF0D9488)),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            cityName,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: isDark ? Colors.white70 : const Color(0xFF0D9488),
-                              fontWeight: FontWeight.w700,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 14,
-                          color: isDark ? Colors.white60 : const Color(0xFF0D9488),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              child: Text(
+                widget.category.name,
+                style: TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -527,7 +392,7 @@ class _FacilityCategoryCentersScreenState
                             Text(
                               _search.isNotEmpty
                                   ? 'Try adjusting your search "$_search"'
-                                  : 'Explore all ${_selectedType?.name ?? widget.category.name} or switch to another city.',
+                                  : 'Explore all ${_selectedType?.name ?? widget.category.name}',
                               style: const TextStyle(fontSize: 13, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
@@ -552,16 +417,6 @@ class _FacilityCategoryCentersScreenState
                                     icon: const Icon(Icons.grid_view_rounded, size: 16),
                                     label: Text('All ${widget.category.name}'),
                                   ),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: () => _showCityPicker(context, cityName),
-                                  icon: const Icon(Icons.location_city_rounded, size: 16),
-                                  label: const Text('Switch City'),
-                                ),
                                 if (_search.isNotEmpty)
                                   TextButton.icon(
                                     onPressed: () {

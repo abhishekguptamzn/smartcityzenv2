@@ -158,24 +158,92 @@ class ManageFeePlansScreen extends ConsumerWidget {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Duration: ${p.interval.toUpperCase()}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: scheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: scheme.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          p.interval.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: scheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: p.isActive
+                                              ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                              : Colors.grey.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 3.5,
+                                              backgroundColor: p.isActive ? const Color(0xFF10B981) : Colors.grey,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              p.isActive ? 'Active' : 'Inactive',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: p.isActive ? const Color(0xFF059669) : Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: p.showToCitizen
+                                              ? const Color(0xFF0D9488).withValues(alpha: 0.12)
+                                              : const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              p.showToCitizen ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                                              size: 11,
+                                              color: p.showToCitizen ? const Color(0xFF0D9488) : const Color(0xFFD97706),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              p.showToCitizen ? 'Public' : 'Hidden',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: p.showToCitizen ? const Color(0xFF0D9488) : const Color(0xFFD97706),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
                             Text(
                               '₹${price.toStringAsFixed(0)}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF0D9488),
+                                color: Color(0xFF0D9488),
                               ),
                             ),
                           ],
@@ -192,17 +260,71 @@ class ManageFeePlansScreen extends ConsumerWidget {
                         ],
                         const SizedBox(height: 12),
                         const Divider(height: 1),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            TextButton.icon(
-                              onPressed: () => _openPlanDialog(context, ref, p),
-                              icon: const Icon(Icons.edit_outlined, size: 16),
-                              label: const Text('Edit'),
+                            // Quick Toggle: Active
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 24,
+                                  width: 38,
+                                  child: Switch(
+                                    value: p.isActive,
+                                    activeThumbColor: const Color(0xFF10B981),
+                                    onChanged: (val) async {
+                                      final repo = ref.read(clientFacilityRepositoryProvider);
+                                      await repo.updateFacilityPlan(kind, facilityId, p.id, {
+                                        'is_active': val,
+                                      });
+                                      ref.invalidate(facilityPlansFamilyProvider((kind, facilityId)));
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Active',
+                                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            TextButton.icon(
+                            const SizedBox(width: 14),
+                            // Quick Toggle: Show to Citizen
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 24,
+                                  width: 38,
+                                  child: Switch(
+                                    value: p.showToCitizen,
+                                    activeThumbColor: const Color(0xFF0D9488),
+                                    onChanged: (val) async {
+                                      final repo = ref.read(clientFacilityRepositoryProvider);
+                                      await repo.updateFacilityPlan(kind, facilityId, p.id, {
+                                        'show_to_citizen': val,
+                                      });
+                                      ref.invalidate(facilityPlansFamilyProvider((kind, facilityId)));
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Citizen View',
+                                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              tooltip: 'Edit',
+                              onPressed: () => _openPlanDialog(context, ref, p),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                              tooltip: 'Delete',
                               onPressed: () async {
                                 final confirm = await showDialog<bool>(
                                   context: context,
@@ -232,8 +354,6 @@ class ManageFeePlansScreen extends ConsumerWidget {
                                   ref.invalidate(myOwnedFacilitiesProvider);
                                 }
                               },
-                              icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFDC2626)),
-                              label: const Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
                             ),
                           ],
                         ),
@@ -279,6 +399,8 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
   final _priceCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   String _selectedDuration = 'Monthly';
+  bool _isActive = true;
+  bool _showToCitizen = true;
   bool _submitting = false;
 
   final _durations = ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Annual'];
@@ -291,6 +413,8 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
       _nameCtrl.text = p.name;
       _priceCtrl.text = p.amount.toStringAsFixed(0);
       _descCtrl.text = p.description ?? '';
+      _isActive = p.isActive;
+      _showToCitizen = p.showToCitizen;
       _selectedDuration = _durations.firstWhere(
         (d) => d.toLowerCase() == p.interval.toLowerCase(),
         orElse: () => 'Monthly',
@@ -328,7 +452,8 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
         'price': price,
         'duration': _selectedDuration,
         'description': _descCtrl.text.trim(),
-        'is_active': true,
+        'is_active': _isActive,
+        'show_to_citizen': _showToCitizen,
       };
 
       if (widget.existingPlan != null) {
@@ -455,11 +580,40 @@ class _PlanEditorSheetState extends ConsumerState<_PlanEditorSheet> {
             const SizedBox(height: 14),
             TextField(
               controller: _descCtrl,
-              maxLines: 3,
+              maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Description & Included Features',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile.adaptive(
+                    title: const Text('Active Plan', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: const Text('Enable plan for facility operations and renewals', style: TextStyle(fontSize: 11.5)),
+                    value: _isActive,
+                    activeThumbColor: const Color(0xFF10B981),
+                    onChanged: (val) => setState(() => _isActive = val),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  SwitchListTile.adaptive(
+                    title: const Text('Show to Citizens (Public View)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: const Text('Display this plan on the public facility & activity details screen', style: TextStyle(fontSize: 11.5)),
+                    value: _showToCitizen,
+                    activeThumbColor: const Color(0xFF0D9488),
+                    onChanged: (val) => setState(() => _showToCitizen = val),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),

@@ -15,6 +15,7 @@ abstract class FeePlanModel with _$FeePlanModel {
     @JsonKey(fromJson: _toDouble) @Default(0) double amount,
     @Default('INR') String currency,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'show_to_citizen') @Default(true) bool showToCitizen,
     String? description,
   }) = _FeePlanModel;
 

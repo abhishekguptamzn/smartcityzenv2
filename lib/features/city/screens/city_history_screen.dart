@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/cities_providers.dart';
+import '../../../core/utils/share_helper.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -41,8 +42,12 @@ class _CityHistoryScreenState extends ConsumerState<CityHistoryScreen> {
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sharing history & timeline...')),
+              final city = infoAsync.value?.city;
+              AppShareHelper.shareContent(
+                context: context,
+                title: city != null ? '${city.name} History & Timeline' : 'City History & Timeline',
+                path: widget.cityId != null ? '/city/history?city_id=${widget.cityId}' : '/city/history',
+                subtitle: city?.state,
               );
             },
           ),
