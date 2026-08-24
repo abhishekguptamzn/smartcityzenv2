@@ -14,7 +14,8 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 import 'set_app_pin_screen.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
@@ -257,9 +258,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             ),
             const SizedBox(height: 8),
             historyAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: LoadingIndicator(),
+              loading: () => const Shimmer(
+                child: Column(
+                  children: [
+                    SkeletonListItem(lines: 2),
+                    SkeletonListItem(lines: 2),
+                  ],
+                ),
               ),
               error: (error, _) => ErrorStateView(
                 error: error,

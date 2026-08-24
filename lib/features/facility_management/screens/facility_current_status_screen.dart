@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_management_skeletons.dart';
 
 final facilityCurrentStatusProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -382,7 +383,7 @@ class _FacilityCurrentStatusScreenState extends ConsumerState<FacilityCurrentSta
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const FacilityStatusSkeleton(),
           error: (err, _) => Center(child: Text('Error loading status: $err')),
         ),
       ),

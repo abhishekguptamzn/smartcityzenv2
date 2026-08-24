@@ -7,7 +7,7 @@ import '../../../core/utils/share_helper.dart';
 import '../../../data/models/city_information_model.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../widgets/city_skeletons.dart';
 
 class CityCultureScreen extends ConsumerWidget {
   const CityCultureScreen({super.key, this.cityId});
@@ -48,7 +48,7 @@ class CityCultureScreen extends ConsumerWidget {
       ),
       body: AmbientBackground(
         child: infoAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const CityGallerySkeleton(),
           error: (err, _) => EmptyStateView(
             icon: Icons.error_outline_rounded,
             message: 'Unable to load culture details: $err',

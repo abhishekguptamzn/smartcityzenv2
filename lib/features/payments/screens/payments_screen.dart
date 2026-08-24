@@ -8,7 +8,7 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../profile/widgets/profile_payment_support_skeletons.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({super.key});
@@ -96,7 +96,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             ),
             Expanded(
               child: paymentsAsync.when(
-                loading: () => const LoadingIndicator(),
+                loading: () => const PaymentsSkeleton(),
                 error: (error, _) => ErrorStateView(
                   error: error,
                   onRetry: () => ref.invalidate(paymentListProvider(params)),

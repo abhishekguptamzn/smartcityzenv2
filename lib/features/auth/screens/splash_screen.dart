@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:logger/logger.dart';
 
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/api/health_api.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/auth_skeletons.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -49,45 +49,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: AmbientBackground(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/logo_mark.png',
-                width: 112,
-                height: 112,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                l10n.appName,
-                style: GoogleFonts.sora(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.appTagline,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: scheme.secondary,
-                ),
-              ),
-            ],
-          ),
+        child: SplashStartupAnimation(
+          appName: l10n.appName,
+          tagline: l10n.appTagline,
         ),
       ),
     );
   }
 }
+

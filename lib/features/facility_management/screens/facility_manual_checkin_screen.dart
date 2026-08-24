@@ -11,6 +11,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
+import '../widgets/facility_management_skeletons.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
@@ -1562,12 +1563,7 @@ class _FacilityManualCheckinScreenState
                     },
                   );
                 },
-                loading: () => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
+                loading: () => const FacilityManualCheckinSkeleton(),
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),

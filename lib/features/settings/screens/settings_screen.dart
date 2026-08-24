@@ -9,6 +9,9 @@ import '../../../core/providers/theme_mode_controller.dart';
 import '../../../data/models/user_model.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
+import '../../../shared/widgets/loading/skeleton_primitives.dart';
 import '../../../shared/widgets/user_avatar.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -290,7 +293,30 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             // 1. User Profile Card
             if (user != null)
-              _buildUserProfileCard(context, user, scheme, l10n),
+              _buildUserProfileCard(context, user, scheme, l10n)
+            else
+              const Shimmer(
+                child: SkeletonCard(
+                  height: 90,
+                  child: Row(
+                    children: [
+                      SkeletonCircle(size: 56),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SkeletonText(width: 140, height: 16),
+                            SizedBox(height: 6),
+                            SkeletonText(width: 180, height: 12),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             const SizedBox(height: 20),
 

@@ -8,6 +8,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
+import '../widgets/facility_management_skeletons.dart';
 import '../widgets/remove_member_sheet.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
@@ -533,7 +534,7 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const FacilityMembersSkeleton(),
                 error: (err, _) => Center(
                   child: Text('Error loading members: $err', style: TextStyle(color: scheme.error)),
                 ),

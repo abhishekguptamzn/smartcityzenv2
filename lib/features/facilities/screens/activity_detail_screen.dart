@@ -12,7 +12,9 @@ import '../../../data/models/activity_review_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
+import '../widgets/facilities_skeletons.dart';
 import '../widgets/write_activity_review_sheet.dart';
 
 class ActivityDetailScreen extends ConsumerStatefulWidget {
@@ -42,7 +44,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       loading: () => Scaffold(
         backgroundColor: isDark ? const Color(0xFF0F1117) : const Color(0xFFF8FAFC),
         appBar: AppBar(elevation: 0),
-        body: const Center(child: LoadingIndicator()),
+        body: const ActivityDetailSkeleton(),
       ),
       error: (error, _) => Scaffold(
         backgroundColor: isDark ? const Color(0xFF0F1117) : const Color(0xFFF8FAFC),
@@ -763,7 +765,14 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
               children: reviews.map((r) => _buildReviewTile(r, isDark)).toList(),
             );
           },
-          loading: () => const Center(child: LoadingIndicator()),
+          loading: () => const Shimmer(
+            child: Column(
+              children: [
+                SkeletonListItem(leadingSize: 36, lines: 2, hasTrailing: false),
+                SkeletonListItem(leadingSize: 36, lines: 2, hasTrailing: false),
+              ],
+            ),
+          ),
           error: (_, _) => const SizedBox.shrink(),
         ),
       ],

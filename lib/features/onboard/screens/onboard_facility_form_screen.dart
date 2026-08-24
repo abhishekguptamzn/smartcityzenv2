@@ -8,6 +8,8 @@ import '../../../core/providers/onboard_providers.dart';
 import '../../../data/models/city_model.dart';
 import '../../../data/models/onboard_model.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_primitives.dart';
 
 class OnboardFacilityFormScreen extends ConsumerStatefulWidget {
   const OnboardFacilityFormScreen({
@@ -263,11 +265,8 @@ class _OnboardFacilityFormScreenState
 
                       // City Dropdown
                       citiesAsync.when(
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator.adaptive(),
-                          ),
+                        loading: () => const Shimmer(
+                          child: SkeletonInput(height: 56),
                         ),
                         error: (_, _) => TextFormField(
                           decoration: InputDecoration(

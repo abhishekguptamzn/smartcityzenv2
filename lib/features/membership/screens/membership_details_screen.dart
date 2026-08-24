@@ -19,8 +19,10 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 import '../../checkin/gym_checkin_qr_payload.dart';
+import '../widgets/membership_skeletons.dart';
 
 final memberCheckInHistoryProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, (FacilityKind, String, String)>((ref, args) async {
@@ -112,7 +114,7 @@ class _MembershipDetailsScreenState
                   ),
                 );
                 return memberAsync.when(
-                  loading: () => const LoadingIndicator(),
+                  loading: () => const MembershipDetailsSkeleton(),
                   error: (err, _) => ErrorStateView(
                     error: err,
                     onRetry: () => ref.invalidate(
@@ -775,7 +777,15 @@ class _CheckInTab extends ConsumerWidget {
           ref.watch(memberAttendanceHistoryProvider(facilityId, memberId));
 
       return attendanceAsync.when(
-        loading: () => const LoadingIndicator(),
+        loading: () => const Shimmer(
+          child: Column(
+            children: [
+              SkeletonListItem(lines: 2),
+              SkeletonListItem(lines: 2),
+              SkeletonListItem(lines: 2),
+            ],
+          ),
+        ),
         error: (error, _) => ErrorStateView(
           error: error,
           onRetry: () =>
@@ -940,7 +950,15 @@ class _CheckInTab extends ConsumerWidget {
     final historyAsync = ref.watch(memberCheckInHistoryProvider((kind, facilityId, memberId)));
 
     return historyAsync.when(
-      loading: () => const LoadingIndicator(),
+      loading: () => const Shimmer(
+        child: Column(
+          children: [
+            SkeletonListItem(lines: 2),
+            SkeletonListItem(lines: 2),
+            SkeletonListItem(lines: 2),
+          ],
+        ),
+      ),
       error: (error, _) => ErrorStateView(
         error: error,
         onRetry: () =>
@@ -1170,7 +1188,14 @@ class _PaymentsTab extends ConsumerWidget {
         ref.watch(paymentListProvider(const PaymentListParams()));
 
     return paymentsAsync.when(
-      loading: () => const LoadingIndicator(),
+      loading: () => const Shimmer(
+        child: Column(
+          children: [
+            SkeletonListItem(lines: 2),
+            SkeletonListItem(lines: 2),
+          ],
+        ),
+      ),
       error: (error, _) => ErrorStateView(error: error),
       data: (payments) {
         final filtered =
@@ -1360,7 +1385,14 @@ class _RenewalsTab extends ConsumerWidget {
         ref.watch(memberRenewalsProvider(kind, facilityId, memberId));
 
     return renewalsAsync.when(
-      loading: () => const LoadingIndicator(),
+      loading: () => const Shimmer(
+        child: Column(
+          children: [
+            SkeletonListItem(lines: 2),
+            SkeletonListItem(lines: 2),
+          ],
+        ),
+      ),
       error: (error, _) => ErrorStateView(
         error: error,
         onRetry: () =>

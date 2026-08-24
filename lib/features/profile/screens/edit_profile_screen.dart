@@ -12,9 +12,10 @@ import '../../../data/models/user_model.dart';
 import '../../../data/repositories/users_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/loading_button.dart';
 import '../../../shared/widgets/searchable_city_picker.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../widgets/profile_payment_support_skeletons.dart';
 
 enum ProfileTab {
   personal('Personal', Icons.person_outline_rounded, Icons.person_rounded),
@@ -552,33 +553,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: FilledButton(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border(top: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+          ),
+          child: LoadingButton.filled(
+            isLoading: _submitting,
+            loadingText: 'Saving Changes...',
             onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
+            child: const Text(
+              'Save Changes',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            child: _submitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text(
-                    'Save Changes',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
           ),
         ),
       ),
       body: AmbientBackground(
         child: userAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const EditProfileSkeleton(),
           error: (_, _) => Center(child: Text(l10n.errorGeneric)),
           data: (user) {
             if (user == null) return const SizedBox.shrink();

@@ -6,6 +6,8 @@ import '../../../core/utils/share_helper.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
 
 final reportsHubStatsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -172,7 +174,21 @@ class FacilityReportsScreen extends ConsumerWidget {
                   ],
                 );
               },
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
+              loading: () => const Shimmer(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: SkeletonMetricCard(height: 90)),
+                        SizedBox(width: 12),
+                        Expanded(child: SkeletonMetricCard(height: 90)),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    SkeletonMetricCard(height: 90),
+                  ],
+                ),
+              ),
               error: (_, _) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 24),

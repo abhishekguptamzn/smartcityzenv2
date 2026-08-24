@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_report_skeletons.dart';
 
 final monthlyReportProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String?)>((ref, args) async {
   final (kind, facilityId, month) = args;
@@ -236,7 +237,7 @@ class _FacilityMonthlyAttendanceReportScreenState extends ConsumerState<Facility
                   ],
                 );
               },
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+              loading: () => const MonthlyAttendanceReportSkeleton(),
               error: (err, _) => Center(child: Text('Error loading report: $err', style: TextStyle(color: scheme.error))),
             ),
           ],

@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers/onboard_providers.dart';
 import '../../../data/models/onboard_model.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 
 class OnboardSelectOwnerScreen extends ConsumerStatefulWidget {
   const OnboardSelectOwnerScreen({
@@ -205,10 +207,13 @@ class _OnboardSelectOwnerScreenState
                     const SizedBox(height: 12),
 
                     ownersAsync.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator.adaptive(),
+                      loading: () => const Shimmer(
+                        child: Column(
+                          children: [
+                            SkeletonListItem(leadingSize: 40, lines: 2),
+                            SkeletonListItem(leadingSize: 40, lines: 2),
+                            SkeletonListItem(leadingSize: 40, lines: 2),
+                          ],
                         ),
                       ),
                       error: (err, _) => Center(

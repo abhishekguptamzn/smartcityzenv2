@@ -7,7 +7,7 @@ import '../../../core/providers/payments_providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../profile/widgets/profile_payment_support_skeletons.dart';
 
 class PaymentReceiptScreen extends ConsumerWidget {
   const PaymentReceiptScreen({super.key, required this.paymentId});
@@ -36,7 +36,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
       ),
       body: AmbientBackground(
         child: paymentAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const PaymentReceiptSkeleton(),
           error: (error, _) => ErrorStateView(
             error: error,
             onRetry: () => ref.invalidate(paymentDetailProvider(paymentId)),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/tickets_providers.dart';
 import '../../../data/repositories/tickets_repository.dart';
+import '../../facility_management/widgets/facility_management_skeletons.dart';
 
 class TicketDetailScreen extends ConsumerStatefulWidget {
   const TicketDetailScreen({super.key, required this.ticketId});
@@ -85,9 +86,9 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
       loading: () => Scaffold(
         appBar: AppBar(
           leading: _buildBackButton(context),
-          title: const Text('Loading Ticket…'),
+          title: const Text('Support Ticket'),
         ),
-        body: const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+        body: const ConversationChatSkeleton(),
       ),
       error: (err, _) => Scaffold(
         appBar: AppBar(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_management_skeletons.dart';
 
 final gymAttendanceLogsProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, gymId) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -156,7 +157,7 @@ class FacilityAttendanceScreen extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const FacilityAttendanceSkeleton(),
           error: (err, _) => Center(
             child: Text('Error loading attendance logs: $err', style: TextStyle(color: scheme.error)),
           ),

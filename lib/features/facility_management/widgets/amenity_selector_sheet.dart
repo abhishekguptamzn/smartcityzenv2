@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/amenity_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 
 final globalAmenitiesProvider = FutureProvider.autoDispose<List<AmenityModel>>((ref) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -423,7 +424,15 @@ class _AmenitySelectorSheetState extends ConsumerState<AmenitySelectorSheet> {
                   ],
                 );
               },
-              loading: () => const Center(child: LoadingIndicator()),
+              loading: () => const Shimmer(
+                child: Column(
+                  children: [
+                    SkeletonListItem(leadingSize: 32, lines: 1, hasTrailing: false),
+                    SkeletonListItem(leadingSize: 32, lines: 1, hasTrailing: false),
+                    SkeletonListItem(leadingSize: 32, lines: 1, hasTrailing: false),
+                  ],
+                ),
+              ),
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),

@@ -8,7 +8,10 @@ import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
+import '../widgets/facility_management_skeletons.dart';
 import '../widgets/payment_detail_modal.dart';
 import '../widgets/remove_member_sheet.dart';
 import '../widgets/renew_member_modal.dart';
@@ -522,7 +525,7 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const FacilityMemberDetailSkeleton(),
           error: (err, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -829,7 +832,17 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
                 ],
               );
             },
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+            loading: () => const Shimmer(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    SkeletonListItem(lines: 2),
+                    SkeletonListItem(lines: 2),
+                  ],
+                ),
+              ),
+            ),
             error: (err, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Failed to load attendance report: $err'))),
           ),
         ],
@@ -1089,7 +1102,17 @@ class _FacilityMemberDetailScreenState extends ConsumerState<FacilityMemberDetai
             ],
           );
         },
-        loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+        loading: () => const Shimmer(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                SkeletonListItem(lines: 2),
+                SkeletonListItem(lines: 2),
+              ],
+            ),
+          ),
+        ),
         error: (err, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text('Failed to load payments: $err'))),
       ),
     );

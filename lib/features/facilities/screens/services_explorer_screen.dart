@@ -7,9 +7,11 @@ import '../../../core/providers/auth_controller.dart';
 import '../../../core/providers/cities_providers.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_list_item.dart';
 import '../models/facility_hierarchy_models.dart';
 import 'facility_category_centers_screen.dart';
+import '../widgets/facilities_skeletons.dart';
 
 class ServicesExplorerScreen extends ConsumerStatefulWidget {
   const ServicesExplorerScreen({
@@ -126,10 +128,18 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                 builder: (context, ref, _) {
                   final citiesAsync = ref.watch(citiesListProvider);
                   return citiesAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: LoadingIndicator(),
+                    loading: () => Shimmer(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(3, (index) {
+                          return const SkeletonListItem(
+                            leadingSize: 36,
+                            lines: 1,
+                            hasTrailing: false,
+                            margin: EdgeInsets.only(bottom: 8),
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                          );
+                        }),
                       ),
                     ),
                     error: (error, stackTrace) => Padding(
@@ -224,7 +234,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
       backgroundColor: isDark ? const Color(0xFF0B1120) : const Color(0xFFF8FAFC),
       body: SafeArea(
         child: categoriesAsync.when(
-          loading: () => const Center(child: LoadingIndicator()),
+          loading: () => const ServicesExplorerSkeleton(),
           error: (error, _) => ErrorStateView(
             error: error,
             onRetry: () => ref.invalidate(unifiedFacilityCategoriesProvider),

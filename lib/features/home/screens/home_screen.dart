@@ -14,7 +14,9 @@ import '../../../data/models/user_model.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
+import '../../../shared/widgets/loading/skeleton_primitives.dart';
 import '../../../shared/widgets/user_avatar.dart';
 import '../widgets/citizen_qr_modal.dart';
 
@@ -217,8 +219,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 4),
               membershipsAsync.when(
-                loading: () =>
-                    const SizedBox(height: 96, child: LoadingIndicator()),
+                loading: () => Shimmer(
+                  child: SkeletonCard(
+                    height: 96,
+                    margin: EdgeInsets.zero,
+                    child: Row(
+                      children: [
+                        const SkeletonBox(
+                          width: 60,
+                          height: 60,
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              SkeletonText(width: 140, height: 14),
+                              SizedBox(height: 6),
+                              SkeletonText(width: 90, height: 11),
+                              SizedBox(height: 6),
+                              SkeletonChip(width: 70, height: 16),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 error: (_, _) => EmptyStateView(
                   icon: Icons.error_outline_rounded,
                   message: l10n.errorGeneric,

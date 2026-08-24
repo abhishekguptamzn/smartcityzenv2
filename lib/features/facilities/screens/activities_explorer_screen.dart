@@ -6,8 +6,8 @@ import '../../../core/providers/auth_controller.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
 import '../widgets/activity_card.dart';
+import '../widgets/facilities_skeletons.dart';
 
 class ActivitiesExplorerScreen extends ConsumerStatefulWidget {
   const ActivitiesExplorerScreen({
@@ -308,10 +308,7 @@ class _ActivitiesExplorerScreenState extends ConsumerState<ActivitiesExplorerScr
                       if (index == activities.length) {
                         final notifier = ref.watch(activityListProvider(params).notifier);
                         if (notifier.isLoadingMore) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          );
+                          return const BottomPaginationSkeleton();
                         }
                         return const SizedBox(height: 24);
                       }
@@ -321,7 +318,7 @@ class _ActivitiesExplorerScreenState extends ConsumerState<ActivitiesExplorerScr
                     },
                   );
                 },
-                loading: () => const Center(child: LoadingIndicator()),
+                loading: () => const ActivitiesExplorerSkeleton(),
                 error: (error, _) => ListView(
                   children: [
                     const SizedBox(height: 60),

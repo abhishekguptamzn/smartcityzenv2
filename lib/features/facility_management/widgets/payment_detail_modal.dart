@@ -7,8 +7,8 @@ import '../../../core/config/app_config.dart';
 import '../../../data/api/token_storage.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
-import '../../../shared/widgets/loading_indicator.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../../profile/widgets/profile_payment_support_skeletons.dart';
 import '../screens/facility_dashboard_screen.dart';
 
 final singlePaymentDetailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
@@ -466,7 +466,12 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                 if (widget.initialData != null) {
                   return _buildDetailContent(context, widget.initialData!, primaryColor, isDark);
                 }
-                return const Center(child: Padding(padding: EdgeInsets.all(40), child: LoadingIndicator()));
+                return const SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: PaymentReceiptSkeleton(),
+                  ),
+                );
               },
               error: (err, _) {
                 if (widget.initialData != null) {

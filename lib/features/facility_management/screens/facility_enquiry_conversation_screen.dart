@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_management_skeletons.dart';
 import 'facility_dashboard_screen.dart';
 
 final enquiryDetailsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String)>((ref, args) async {
@@ -181,7 +182,7 @@ class _FacilityEnquiryConversationScreenState extends ConsumerState<FacilityEnqu
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const ConversationChatSkeleton(),
                 error: (err, _) => Center(child: Text('Error: $err')),
               ),
             ),

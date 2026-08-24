@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/image_url_resolver.dart';
+import 'loading/shimmer.dart';
+import 'loading/skeleton_primitives.dart';
 
 /// Resilient, high-performance network image widget with graceful shimmer loading,
-/// automatic URL resolution for Android emulator & Web, and customizable fallback icons/placeholders.
+/// smooth fade-in on load, automatic URL resolution for Android emulator & Web, and customizable fallback icons/placeholders.
 class AppNetworkImage extends StatelessWidget {
   const AppNetworkImage({
     super.key,
@@ -61,29 +63,33 @@ class AppNetworkImage extends StatelessWidget {
       return fallback();
     }
 
+    final defaultPlaceholder = Shimmer(
+      child: SkeletonBox(
+        width: width,
+        height: height,
+        borderRadius: borderRadius ?? BorderRadius.zero,
+      ),
+    );
+
     final imageWidget = Image.network(
       resolvedUrl,
       width: width,
       height: height,
       fit: fit,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) {
+          return AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        }
+        return placeholder ?? defaultPlaceholder;
+      },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        if (placeholder != null) return placeholder!;
-        return Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          ),
-          child: const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-        );
+        return placeholder ?? defaultPlaceholder;
       },
       errorBuilder: (context, error, stackTrace) {
         return fallback();
@@ -100,3 +106,4 @@ class AppNetworkImage extends StatelessWidget {
     return imageWidget;
   }
 }
+

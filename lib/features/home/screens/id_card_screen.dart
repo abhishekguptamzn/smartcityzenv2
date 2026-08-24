@@ -8,8 +8,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/models/user_model.dart';
-import '../../../shared/widgets/loading_indicator.dart';
 import '../widgets/citizen_qr_modal.dart';
+import '../widgets/home_skeleton.dart';
 
 class IdCardScreen extends ConsumerWidget {
   const IdCardScreen({super.key});
@@ -22,7 +22,7 @@ class IdCardScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: userAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const IdCardSkeleton(),
           error: (_, _) => const Center(
             child: Text(
               'Unable to load Citizen Identity. Please check your connection.',

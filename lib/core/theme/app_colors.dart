@@ -37,6 +37,9 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.warning,
     required this.warningContainer,
     required this.onWarningContainer,
+    required this.shimmerBase,
+    required this.shimmerHighlight,
+    required this.shimmerBorder,
   });
 
   final Color primaryFixed;
@@ -79,6 +82,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color warningContainer;
   final Color onWarningContainer;
 
+  final Color shimmerBase;
+  final Color shimmerHighlight;
+  final Color shimmerBorder;
+
   // Brand palette — "Civic Blue" (primary), "Growth Green" (secondary),
   // "Sunrise Amber" (tertiary) — echoing the app's blue-to-green shield
   // logo. Fixed* tones stay legible against both light and dark surfaces,
@@ -118,6 +125,9 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: Color(0xFF7A5000),
     warningContainer: Color(0xFFFFE3B8),
     onWarningContainer: Color(0xFF3D2600),
+    shimmerBase: Color(0xFFE2E8F0),
+    shimmerHighlight: Color(0xFFF8FAFC),
+    shimmerBorder: Color(0x99CBD5E1),
   );
 
   static const AppColors dark = AppColors(
@@ -155,6 +165,9 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: Color(0xFFFFC876),
     warningContainer: Color(0xFF5C3D00),
     onWarningContainer: Color(0xFFFFE3B8),
+    shimmerBase: Color(0xFF1E293B),
+    shimmerHighlight: Color(0xFF334155),
+    shimmerBorder: Color(0x80334155),
   );
 
   @override
@@ -193,6 +206,9 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? warning,
     Color? warningContainer,
     Color? onWarningContainer,
+    Color? shimmerBase,
+    Color? shimmerHighlight,
+    Color? shimmerBorder,
   }) {
     return AppColors(
       primaryFixed: primaryFixed ?? this.primaryFixed,
@@ -234,6 +250,9 @@ class AppColors extends ThemeExtension<AppColors> {
       warning: warning ?? this.warning,
       warningContainer: warningContainer ?? this.warningContainer,
       onWarningContainer: onWarningContainer ?? this.onWarningContainer,
+      shimmerBase: shimmerBase ?? this.shimmerBase,
+      shimmerHighlight: shimmerHighlight ?? this.shimmerHighlight,
+      shimmerBorder: shimmerBorder ?? this.shimmerBorder,
     );
   }
 
@@ -343,6 +362,9 @@ class AppColors extends ThemeExtension<AppColors> {
         other.onWarningContainer,
         t,
       )!,
+      shimmerBase: Color.lerp(shimmerBase, other.shimmerBase, t)!,
+      shimmerHighlight: Color.lerp(shimmerHighlight, other.shimmerHighlight, t)!,
+      shimmerBorder: Color.lerp(shimmerBorder, other.shimmerBorder, t)!,
     );
   }
 }

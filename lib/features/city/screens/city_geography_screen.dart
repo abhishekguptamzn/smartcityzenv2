@@ -6,7 +6,7 @@ import '../../../core/providers/cities_providers.dart';
 import '../../../data/models/city_information_model.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../widgets/city_skeletons.dart';
 
 class CityGeographyScreen extends ConsumerWidget {
   const CityGeographyScreen({super.key, this.cityId});
@@ -29,9 +29,10 @@ class CityGeographyScreen extends ConsumerWidget {
             }
           },
         ),
-        title: const Text('Geography'),
+        title: const Text('Geography & Climate'),
         actions: [
           IconButton(
+            tooltip: 'View City Coordinates',
             icon: const Icon(Icons.map_rounded),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -43,7 +44,7 @@ class CityGeographyScreen extends ConsumerWidget {
       ),
       body: AmbientBackground(
         child: infoAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const CityGeographySkeleton(),
           error: (err, _) => EmptyStateView(
             icon: Icons.error_outline_rounded,
             message: 'Unable to load geography information: $err',

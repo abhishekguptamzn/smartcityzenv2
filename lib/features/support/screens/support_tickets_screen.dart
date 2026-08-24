@@ -7,6 +7,7 @@ import '../../../core/providers/tickets_providers.dart';
 import '../../../data/models/ticket_model.dart';
 import '../../../data/repositories/tickets_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../profile/widgets/profile_payment_support_skeletons.dart';
 
 class SupportTicketsScreen extends ConsumerStatefulWidget {
   const SupportTicketsScreen({super.key});
@@ -349,9 +350,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen>
           // 4. Ticket List View
           Expanded(
             child: ticketsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              ),
+              loading: () => const SupportTicketsSkeleton(),
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),

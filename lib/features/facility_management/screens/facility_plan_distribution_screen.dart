@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_report_skeletons.dart';
 
 final planDistributionProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String)>((ref, args) async {
   final (kind, facilityId) = args;
@@ -213,7 +214,7 @@ class FacilityPlanDistributionScreen extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const PlanDistributionReportSkeleton(),
           error: (err, _) => Center(
             child: Text('Error loading plan distribution: $err', style: TextStyle(color: scheme.error)),
           ),

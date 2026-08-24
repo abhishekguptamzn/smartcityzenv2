@@ -6,8 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/providers/auth_controller.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
 import '../../../shared/widgets/user_avatar.dart';
+import '../widgets/profile_payment_support_skeletons.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -34,7 +34,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: AmbientBackground(
         child: userAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const ProfileSkeleton(),
           error: (_, _) => Center(child: Text(l10n.errorGeneric)),
           data: (user) {
             if (user == null) return const SizedBox.shrink();

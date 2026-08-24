@@ -6,6 +6,7 @@ import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_management_skeletons.dart';
 
 final facilityEnquiriesProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, String, String)>((ref, args) async {
   final repo = ref.watch(clientFacilityRepositoryProvider);
@@ -266,7 +267,7 @@ class _FacilityEnquiriesScreenState extends ConsumerState<FacilityEnquiriesScree
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const FacilityEnquiriesSkeleton(),
                 error: (err, _) => Center(child: Text('Error loading enquiries: $err')),
               ),
             ),

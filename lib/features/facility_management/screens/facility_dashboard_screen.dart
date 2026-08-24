@@ -10,8 +10,11 @@ import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/facility_analytics_dashboard_widget.dart';
+import '../widgets/facility_management_skeletons.dart';
 import '../widgets/facility_qr_modal.dart';
 
 final myOwnedFacilitiesProvider =
@@ -592,10 +595,13 @@ class _FacilityDashboardScreenState
                       facility: activeFacility,
                       stats: stats,
                     ),
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: CircularProgressIndicator(),
+                    loading: () => const Shimmer(
+                      child: Column(
+                        children: [
+                          SkeletonMetricCard(),
+                          SizedBox(height: 12),
+                          SkeletonCard(height: 160),
+                        ],
                       ),
                     ),
                     error: (err, _) => Center(
@@ -612,7 +618,7 @@ class _FacilityDashboardScreenState
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const FacilityDashboardSkeleton(),
           error: (err, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),

@@ -12,6 +12,7 @@ import '../../../core/providers/auth_controller.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/loading_button.dart';
 import '../../../shared/widgets/searchable_city_picker.dart';
 
 class LoginRegisterScreen extends ConsumerStatefulWidget {
@@ -428,26 +429,19 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () => GoRouter.of(context).push('/forgot-password'),
+              onPressed: _submitting
+                  ? null
+                  : () => GoRouter.of(context).push('/forgot-password'),
               child: Text(l10n.forgotPassword),
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
+          LoadingButton.filled(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: (_submitting || _isCoolingDown) ? null : _submitLogin,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(l10n.accessPortal),
-            ),
+            isLoading: _submitting,
+            loadingText: 'Signing in...',
+            onPressed: (_submitting || _isCoolingDown) ? null : _submitLogin,
+            child: Text(l10n.accessPortal),
           ),
         ],
       ),
@@ -550,21 +544,12 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
             },
           ),
           const SizedBox(height: 8),
-          SizedBox(
+          LoadingButton.filled(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: _submitting ? null : _submitRegister,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(l10n.createIdentity),
-            ),
+            isLoading: _submitting,
+            loadingText: 'Creating Identity...',
+            onPressed: _submitting ? null : _submitRegister,
+            child: Text(l10n.createIdentity),
           ),
         ],
       ),

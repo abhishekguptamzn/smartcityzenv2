@@ -8,7 +8,8 @@ import '../../../core/providers/facilities_providers.dart';
 import '../../../core/utils/share_helper.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
 import '../widgets/details/facility_amenities_grid.dart';
 import '../widgets/details/facility_fee_plans_card.dart';
 import '../widgets/details/facility_hero_gallery.dart';
@@ -16,6 +17,7 @@ import '../widgets/details/facility_location_map_card.dart';
 import '../widgets/details/facility_quick_actions_row.dart';
 import '../widgets/details/facility_sticky_cta_bar.dart';
 import '../widgets/details/facility_timings_card.dart';
+import '../widgets/facilities_skeletons.dart';
 import '../widgets/send_enquiry_sheet.dart';
 
 class FacilityDetailScreen extends ConsumerStatefulWidget {
@@ -147,7 +149,7 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
         ],
       ),
       body: detailAsync.when(
-        loading: () => const Center(child: LoadingIndicator()),
+        loading: () => const FacilityDetailSkeleton(),
         error: (error, _) => ErrorStateView(
           error: error,
           onRetry: () {
@@ -287,7 +289,12 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                     ),
                     const SizedBox(height: 10),
                     feePlansAsync.when(
-                      loading: () => const Center(child: LoadingIndicator()),
+                      loading: () => const Shimmer(
+                        child: SkeletonCard(
+                          height: 90,
+                          margin: EdgeInsets.only(bottom: 8),
+                        ),
+                      ),
                       error: (_, _) => const SizedBox.shrink(),
                       data: (plans) => FacilityFeePlansCard(
                         feePlans: plans,

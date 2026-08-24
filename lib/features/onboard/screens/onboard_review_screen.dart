@@ -6,6 +6,7 @@ import '../../../core/providers/onboard_providers.dart';
 import '../../../data/models/onboard_model.dart';
 import '../../../data/repositories/onboard_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/loading_button.dart';
 
 class OnboardReviewScreen extends ConsumerStatefulWidget {
   const OnboardReviewScreen({super.key});
@@ -276,31 +277,19 @@ class _OnboardReviewScreenState extends ConsumerState<OnboardReviewScreen> {
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
-                      height: 52,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: accent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                      height: 54,
+                      child: LoadingButton.filled(
+                        backgroundColor: accent,
+                        isLoading: _isSubmitting,
+                        loadingText: 'Submitting Application...',
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: const Text(
+                          'Submit',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        onPressed: _isSubmitting ? null : _submit,
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                'Submit',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                       ),
                     ),
                   ],

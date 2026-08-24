@@ -7,6 +7,8 @@ import '../../../core/providers/onboard_providers.dart';
 import '../../../data/models/onboard_model.dart';
 import '../../../data/repositories/onboard_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/loading_button.dart';
+import '../widgets/onboard_skeletons.dart';
 
 class OnboardCompleteScreen extends ConsumerStatefulWidget {
   const OnboardCompleteScreen({
@@ -174,12 +176,7 @@ class _OnboardCompleteScreenState extends ConsumerState<OnboardCompleteScreen> {
       body: AmbientBackground(
         child: SafeArea(
           child: verificationAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator.adaptive(),
-              ),
-            ),
+            loading: () => const OnboardVerificationState(),
             error: (err, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
@@ -574,37 +571,24 @@ class _OnboardCompleteScreenState extends ConsumerState<OnboardCompleteScreen> {
 
                     // Bottom Submit Button
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 20),
+                      padding: const EdgeInsets.only(top: 8),
                       child: SizedBox(
                         width: double.infinity,
                         height: 52,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: accent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
+                        child: LoadingButton.filled(
+                          backgroundColor: accent,
+                          isLoading: _isSubmitting,
+                          loadingText: 'Activating Profile...',
                           onPressed: _isSubmitting
                               ? null
                               : () => _submit(verification),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Complete & Activate Profile',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                          child: const Text(
+                            'Complete & Activate Profile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),

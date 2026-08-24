@@ -10,7 +10,8 @@ import '../../../core/providers/facility_explorer_providers.dart';
 import '../../../core/services/location_service.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/loading/shimmer.dart';
+import '../../../shared/widgets/loading/skeleton_card.dart';
 import '../models/civic_service_item.dart';
 import '../models/facility_hierarchy_models.dart';
 import '../widgets/categories/facility_type_chips.dart';
@@ -323,7 +324,17 @@ class _FacilityCategoryCentersScreenState
     final facilitiesAsync = ref.watch(facilityExplorerListProvider(query));
 
     return facilitiesAsync.when(
-      loading: () => const Center(child: LoadingIndicator()),
+      loading: () => const Shimmer(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            children: [
+              SkeletonHeroCard(height: 220, imageHeight: 130),
+              SkeletonHeroCard(height: 220, imageHeight: 130),
+            ],
+          ),
+        ),
+      ),
       error: (error, _) => ErrorStateView(
         error: error,
         onRetry: () => ref.invalidate(facilityExplorerListProvider(query)),

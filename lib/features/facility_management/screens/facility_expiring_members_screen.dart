@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../widgets/facility_report_skeletons.dart';
 import '../widgets/renew_member_modal.dart';
 
 final expiringMembersProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, (FacilityKind, String, int)>((ref, args) async {
@@ -258,7 +259,7 @@ class _FacilityExpiringMembersScreenState extends ConsumerState<FacilityExpiring
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const MembersReportListSkeleton(),
                 error: (err, _) => Center(
                   child: Text('Error loading report: $err', style: TextStyle(color: scheme.error)),
                 ),

@@ -6,7 +6,7 @@ import '../../../core/providers/cities_providers.dart';
 import '../../../core/utils/share_helper.dart';
 import '../../../shared/widgets/empty_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../widgets/city_skeletons.dart';
 
 class CityHistoryScreen extends ConsumerStatefulWidget {
   const CityHistoryScreen({super.key, this.cityId});
@@ -55,7 +55,7 @@ class _CityHistoryScreenState extends ConsumerState<CityHistoryScreen> {
       ),
       body: AmbientBackground(
         child: infoAsync.when(
-          loading: () => const LoadingIndicator(),
+          loading: () => const CityTimelineSkeleton(),
           error: (err, _) => EmptyStateView(
             icon: Icons.error_outline_rounded,
             message: 'Unable to load timeline: $err',

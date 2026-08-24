@@ -8,6 +8,7 @@ import '../../../data/api/app_exception.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/loading/loading_button.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -125,21 +126,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ]),
           ),
           const SizedBox(height: 24),
-          SizedBox(
+          LoadingButton.filled(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(l10n.sendResetCode),
-            ),
+            isLoading: _submitting,
+            loadingText: 'Sending Reset Code...',
+            onPressed: _submitting ? null : _submit,
+            child: Text(l10n.sendResetCode),
           ),
           TextButton(
             onPressed: () => context.go('/login'),
