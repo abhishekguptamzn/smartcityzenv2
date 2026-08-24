@@ -76,6 +76,7 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
   int _remainingSeconds = 15;
   int _totalInterval = 15;
   bool _isBroadcasting = false;
+  bool _isBluetoothOn = true;
 
   @override
   void initState() {
@@ -95,8 +96,14 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
   Future<void> _checkAndPromptBluetooth() async {
     try {
       final isEnabled = await BlePresenceHelper.isBluetoothEnabled();
+      if (mounted) {
+        setState(() => _isBluetoothOn = isEnabled);
+      }
       if (!isEnabled) {
         final turnedOn = await BlePresenceHelper.requestEnableBluetooth();
+        if (mounted) {
+          setState(() => _isBluetoothOn = turnedOn);
+        }
         if (turnedOn) {
           _updateNoncesAndBroadcast();
         }
@@ -307,7 +314,7 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
 
               // BLE Presence Active Indicator Banner
               if (widget.bleVerificationEnabled) ...[
-                if (_isBroadcasting)
+                if (_isBluetoothOn)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
@@ -367,6 +374,9 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
                     onTap: () async {
                       HapticFeedback.lightImpact();
                       final turnedOn = await BlePresenceHelper.requestEnableBluetooth();
+                      if (mounted) {
+                        setState(() => _isBluetoothOn = turnedOn);
+                      }
                       if (turnedOn) {
                         _updateNoncesAndBroadcast();
                       }
