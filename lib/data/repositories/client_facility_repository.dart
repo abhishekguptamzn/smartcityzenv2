@@ -152,8 +152,20 @@ class ClientFacilityRepository {
     return data is Map ? data.cast<String, dynamic>() : {};
   }
 
-  Future<Map<String, dynamic>> citizenScanAttendance(FacilityKind kind, String facilityId) async {
-    final res = await _api.citizenScanAttendance(kind.pathSegment, facilityId);
+  Future<Map<String, dynamic>> citizenScanAttendance(
+    FacilityKind kind,
+    String facilityId, {
+    String? qrNonce,
+    String? bleNonce,
+    int? rssi,
+  }) async {
+    final res = await _api.citizenScanAttendance(
+      kind.pathSegment,
+      facilityId,
+      qrNonce: qrNonce,
+      bleNonce: bleNonce,
+      rssi: rssi,
+    );
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};
   }

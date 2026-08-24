@@ -198,6 +198,7 @@ class _FacilityDashboardScreenState
                   kind: current.$1,
                   facilityId: current.$2.id,
                   facilityName: current.$2.name,
+                  facility: current.$2,
                 );
               }
             },

@@ -52,6 +52,10 @@ dependencies:
   image_picker: ^1.1.2
   intl: any
 
+  # BLE / Bluetooth Presence Verification
+  flutter_blue_plus: ^1.35.0
+  flutter_ble_peripheral: ^2.1.0
+
   # Utilities
   geolocator: ^13.0.2
   local_auth: ^2.3.0

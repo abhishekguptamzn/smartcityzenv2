@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/utils/ble_presence_helper.dart';
 import '../../../data/models/facility_model.dart';
 
 void showFacilityQrModal({
@@ -10,6 +15,11 @@ void showFacilityQrModal({
   required FacilityKind kind,
   required String facilityId,
   required String facilityName,
+  FacilityModel? facility,
+  bool? bleVerificationEnabled,
+  String? bleServiceUuid,
+  String? bleSecretKey,
+  int? qrRotationInterval,
 }) {
   showModalBottomSheet(
     context: context,
@@ -19,39 +29,182 @@ void showFacilityQrModal({
       kind: kind,
       facilityId: facilityId,
       facilityName: facilityName,
+      facility: facility,
+      bleVerificationEnabled: bleVerificationEnabled ?? facility?.bleVerificationEnabled ?? false,
+      bleServiceUuid: bleServiceUuid ?? facility?.bleServiceUuid,
+      bleSecretKey: bleSecretKey ?? facility?.bleSecretKey,
+      qrRotationInterval: qrRotationInterval ?? facility?.qrRotationInterval ?? 15,
     ),
   );
 }
 
-class _FacilityQrModalContent extends StatelessWidget {
+class _FacilityQrModalContent extends StatefulWidget {
   const _FacilityQrModalContent({
     required this.kind,
     required this.facilityId,
     required this.facilityName,
+    this.facility,
+    this.bleVerificationEnabled = false,
+    this.bleServiceUuid,
+    this.bleSecretKey,
+    this.qrRotationInterval = 15,
   });
 
   final FacilityKind kind;
   final String facilityId;
   final String facilityName;
+  final FacilityModel? facility;
+  final bool bleVerificationEnabled;
+  final String? bleServiceUuid;
+  final String? bleSecretKey;
+  final int qrRotationInterval;
+
+  @override
+  State<_FacilityQrModalContent> createState() => _FacilityQrModalContentState();
+}
+
+class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
+  final FlutterBlePeripheral _blePeripheral = FlutterBlePeripheral();
+  Timer? _timer;
+
+  String _currentQrNonce = '';
+  String _currentBleNonce = '';
+  int _remainingSeconds = 15;
+  int _totalInterval = 15;
+  bool _isBroadcasting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalInterval = widget.qrRotationInterval > 4 ? widget.qrRotationInterval : 15;
+    _updateNoncesAndBroadcast();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _tickTimer();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _stopBleBroadcast();
+    super.dispose();
+  }
+
+  void _tickTimer() {
+    if (!mounted) return;
+
+    final secret = widget.bleSecretKey ?? 'smart-cityzen-secret-${widget.facilityId}';
+    final nonces = BlePresenceHelper.generateNonces(
+      facilityId: widget.facilityId,
+      secretKey: secret,
+      intervalSeconds: _totalInterval,
+    );
+
+    final remaining = nonces['remaining_seconds'] as int;
+    final newQrNonce = nonces['qr_nonce'] as String;
+    final newBleNonce = nonces['ble_nonce'] as String;
+
+    if (newQrNonce != _currentQrNonce || remaining > _remainingSeconds) {
+      // Time window rotated
+      setState(() {
+        _currentQrNonce = newQrNonce;
+        _currentBleNonce = newBleNonce;
+        _remainingSeconds = remaining;
+      });
+      _startBleBroadcast(newBleNonce);
+    } else {
+      setState(() {
+        _remainingSeconds = remaining;
+      });
+    }
+  }
+
+  void _updateNoncesAndBroadcast() {
+    final secret = widget.bleSecretKey ?? 'smart-cityzen-secret-${widget.facilityId}';
+    final nonces = BlePresenceHelper.generateNonces(
+      facilityId: widget.facilityId,
+      secretKey: secret,
+      intervalSeconds: _totalInterval,
+    );
+
+    _currentQrNonce = nonces['qr_nonce'] as String;
+    _currentBleNonce = nonces['ble_nonce'] as String;
+    _remainingSeconds = nonces['remaining_seconds'] as int;
+
+    if (widget.bleVerificationEnabled) {
+      _startBleBroadcast(_currentBleNonce);
+    }
+  }
+
+  Future<void> _startBleBroadcast(String bleNonce) async {
+    if (!widget.bleVerificationEnabled) return;
+    if (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS) return;
+
+    try {
+      final serviceUuid = widget.bleServiceUuid ?? '0000aaaa-0000-1000-8000-00805f9b34fb';
+      final advertiseData = AdvertiseData(
+        serviceUuid: serviceUuid,
+        localName: 'SC-${widget.facilityId.substring(0, widget.facilityId.length > 6 ? 6 : widget.facilityId.length)}',
+        serviceData: utf8.encode(bleNonce),
+        includeDeviceName: true,
+      );
+
+      final isSupported = await _blePeripheral.isSupported;
+      if (isSupported) {
+        if (_isBroadcasting) {
+          await _blePeripheral.stop();
+        }
+        await _blePeripheral.start(advertiseData: advertiseData);
+        if (mounted) setState(() => _isBroadcasting = true);
+      }
+    } catch (_) {
+      // Fail gracefully if peripheral mode is not permitted
+    }
+  }
+
+  Future<void> _stopBleBroadcast() async {
+    try {
+      if (_isBroadcasting) {
+        await _blePeripheral.stop();
+        _isBroadcasting = false;
+      }
+    } catch (_) {}
+  }
+
+  String _buildQrPayload() {
+    final Map<String, dynamic> data = {
+      'type': 'facility_checkin',
+      'facility_type': widget.kind.pathSegment,
+      'facility_id': widget.facilityId,
+      'facility_name': widget.facilityName,
+    };
+
+    if (widget.bleVerificationEnabled) {
+      data['ble_required'] = true;
+      data['qr_nonce'] = _currentQrNonce;
+      data['service_uuid'] = widget.bleServiceUuid;
+      data['interval'] = _totalInterval;
+    }
+
+    return jsonEncode(data);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isGym = kind == FacilityKind.gym;
+    final isDark = theme.brightness == Brightness.dark;
+    final isGym = widget.kind == FacilityKind.gym;
     final primaryColor = isGym ? const Color(0xFF0D9488) : const Color(0xFF0284C7);
+    final qrPayload = _buildQrPayload();
 
-    final payload = jsonEncode({
-      'type': 'facility_checkin',
-      'facility_type': kind.pathSegment,
-      'facility_id': facilityId,
-      'facility_name': facilityName,
-    });
+    final progress = _totalInterval > 0 ? (_remainingSeconds / _totalInterval) : 1.0;
 
     return Container(
       margin: const EdgeInsets.only(top: 40),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(
           color: scheme.outlineVariant.withValues(alpha: 0.3),
@@ -95,7 +248,9 @@ class _FacilityQrModalContent extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          isGym ? Icons.fitness_center_rounded : Icons.local_library_rounded,
+                          isGym
+                              ? Icons.fitness_center_rounded
+                              : (widget.kind == FacilityKind.library ? Icons.local_library_rounded : Icons.category_rounded),
                           color: primaryColor,
                           size: 22,
                         ),
@@ -105,14 +260,14 @@ class _FacilityQrModalContent extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            facilityName,
+                            widget.facilityName,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            '${kind.displayName} Check-in / Check-out QR',
+                            '${widget.kind.displayName} Check-in / Check-out QR',
                             style: TextStyle(
                               fontSize: 12,
                               color: scheme.onSurfaceVariant,
@@ -128,7 +283,66 @@ class _FacilityQrModalContent extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // BLE Presence Active Indicator Banner
+              if (widget.bleVerificationEnabled) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.bluetooth_searching_rounded,
+                        size: 18,
+                        color: Color(0xFF0284C7),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'BLE Physical Verification Active (Anti-Spoofing)',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                      ),
+                      // Countdown Ring
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 2.5,
+                              color: const Color(0xFF0284C7),
+                              backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                            ),
+                          ),
+                          Text(
+                            '$_remainingSeconds',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // QR Code Container Card
               Container(
@@ -147,9 +361,9 @@ class _FacilityQrModalContent extends StatelessWidget {
                 child: Column(
                   children: [
                     QrImageView(
-                      data: payload,
+                      data: qrPayload,
                       version: QrVersions.auto,
-                      size: 220,
+                      size: 210,
                       backgroundColor: Colors.white,
                       eyeStyle: QrEyeStyle(
                         eyeShape: QrEyeShape.square,
@@ -161,26 +375,57 @@ class _FacilityQrModalContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'ID: $facilityId',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF475569),
-                          letterSpacing: 0.5,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'ID: ${widget.facilityId}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF475569),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (widget.bleVerificationEnabled && _currentQrNonce.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF93C5FD)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.security_rounded, size: 12, color: Color(0xFF2563EB)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'NONCE: $_currentQrNonce',
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Scan Instruction Pill
               Container(
@@ -196,9 +441,11 @@ class _FacilityQrModalContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Citizens and members can scan this QR code with their Smart Cityzen app scanner to check-in, or scan again when leaving to check-out automatically.',
+                        widget.bleVerificationEnabled
+                            ? 'Citizens scanning this QR must have Bluetooth turned on and stand near the counter. The code rotates every $_totalInterval seconds.'
+                            : 'Citizens and members can scan this QR code with their Smart Cityzen app scanner to check-in or check-out.',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: scheme.onSurface,
                           height: 1.3,
                         ),
@@ -207,7 +454,7 @@ class _FacilityQrModalContent extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Action Buttons
               Row(
@@ -221,7 +468,7 @@ class _FacilityQrModalContent extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(text: payload));
+                        Clipboard.setData(ClipboardData(text: qrPayload));
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Facility QR payload copied to clipboard')),
                         );

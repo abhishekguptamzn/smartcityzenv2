@@ -466,6 +466,7 @@ class _FacilityManualCheckinScreenState
                 kind: widget.kind,
                 facilityId: widget.facilityId,
                 facilityName: widget.facility?.name ?? 'Facility',
+                facility: widget.facility,
               );
             },
           ),

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/active_checkin_provider.dart';
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/utils/ble_presence_helper.dart';
 import '../../../core/utils/file_validator.dart';
 import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_model.dart';
@@ -108,10 +109,54 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
             }
 
             final facilityName = decoded['facility_name']?.toString() ?? (kind == FacilityKind.gym ? 'Gym Facility' : (kind == FacilityKind.activity ? 'Facility Center' : 'Library Hub'));
+            final bool bleRequired = decoded['ble_required'] == true;
+            final String? serviceUuid = decoded['service_uuid']?.toString();
+            final String? qrNonce = decoded['qr_nonce']?.toString();
 
             setState(() => _status = _ScanStatus.checkingIn);
+
+            String? detectedBleNonce;
+            int? detectedRssi;
+
+            if (bleRequired) {
+              final isBtOn = await BlePresenceHelper.isBluetoothEnabled();
+              if (!isBtOn) {
+                if (!mounted) return;
+                setState(() {
+                  _status = _ScanStatus.error;
+                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your device and stay near the counter to verify your physical presence.';
+                });
+                return;
+              }
+
+              if (serviceUuid != null && serviceUuid.isNotEmpty) {
+                final beacon = await BlePresenceHelper.scanForFacilityBeacon(
+                  targetUuid: serviceUuid,
+                  timeout: const Duration(milliseconds: 1500),
+                );
+
+                if (beacon == null) {
+                  if (!mounted) return;
+                  setState(() {
+                    _status = _ScanStatus.error;
+                    _errorMessage = 'Facility Bluetooth beacon not detected. Please stand closer to the counter display with Bluetooth turned ON.';
+                  });
+                  return;
+                }
+
+                detectedBleNonce = beacon['ble_nonce']?.toString() ?? qrNonce;
+                detectedRssi = beacon['rssi'] as int?;
+              }
+            }
+
             try {
-              final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(kind, facilityId);
+              final checkinRes = await ref.read(clientFacilityRepositoryProvider).citizenScanAttendance(
+                kind,
+                facilityId,
+                qrNonce: qrNonce,
+                bleNonce: detectedBleNonce ?? qrNonce,
+                rssi: detectedRssi,
+              );
               ref.invalidate(activeCheckinProvider);
               if (!mounted) return;
 
@@ -138,6 +183,7 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
                     'Facility': resolvedName,
                     'Type': kind.displayName,
                     'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
+                    if (bleRequired) 'Physical Presence': 'Verified via Bluetooth (BLE)',
                     if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
                     'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
                   },

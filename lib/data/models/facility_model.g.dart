@@ -36,6 +36,13 @@ _FacilityModel _$FacilityModelFromJson(Map<String, dynamic> json) =>
       openingTime: json['opening_time'] as String?,
       closingTime: json['closing_time'] as String?,
       status: json['status'] as String? ?? 'active',
+      bleVerificationEnabled:
+          json['ble_verification_enabled'] as bool? ?? false,
+      bleServiceUuid: json['ble_service_uuid'] as String?,
+      bleSecretKey: json['ble_secret_key'] as String?,
+      bleProximitySensitivity:
+          json['ble_proximity_sensitivity'] as String? ?? 'high',
+      qrRotationInterval: (json['qr_rotation_interval'] as num?)?.toInt() ?? 15,
       createdBy: json['created_by'] as String?,
       createdAt: json['created_at'] == null
           ? null
@@ -69,6 +76,11 @@ Map<String, dynamic> _$FacilityModelToJson(_FacilityModel instance) =>
       'opening_time': instance.openingTime,
       'closing_time': instance.closingTime,
       'status': instance.status,
+      'ble_verification_enabled': instance.bleVerificationEnabled,
+      'ble_service_uuid': instance.bleServiceUuid,
+      'ble_secret_key': instance.bleSecretKey,
+      'ble_proximity_sensitivity': instance.bleProximitySensitivity,
+      'qr_rotation_interval': instance.qrRotationInterval,
       'created_by': instance.createdBy,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

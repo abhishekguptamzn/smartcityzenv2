@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/providers/facilities_providers.dart';
 import '../../../core/utils/file_validator.dart';
@@ -63,6 +64,12 @@ class _EditFacilityDetailsScreenState
   late TimeOfDay? _closingTime;
   List<AmenityModel> _selectedAmenities = [];
 
+  // BLE Physical Presence Verification State
+  bool _bleEnabled = false;
+  String _bleSensitivity = 'high';
+  String? _bleServiceUuid;
+  int _qrInterval = 15;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +83,11 @@ class _EditFacilityDetailsScreenState
     _closingTime = _parseTimeString(widget.facility?.closingTime) ??
         const TimeOfDay(hour: 22, minute: 0);
     _selectedAmenities = widget.facility?.amenities ?? [];
+
+    _bleEnabled = widget.facility?.bleVerificationEnabled ?? false;
+    _bleSensitivity = widget.facility?.bleProximitySensitivity ?? 'high';
+    _bleServiceUuid = widget.facility?.bleServiceUuid ?? const Uuid().v4();
+    _qrInterval = widget.facility?.qrRotationInterval ?? 15;
 
     _loadFacilityAmenities();
   }
@@ -262,6 +274,10 @@ class _EditFacilityDetailsScreenState
         if (_closingTime != null)
           'closing_time': _formatTimeOfDay(_closingTime!),
         'amenity_ids': _selectedAmenities.map((a) => a.id).toList(),
+        'ble_verification_enabled': _bleEnabled,
+        'ble_service_uuid': _bleServiceUuid,
+        'ble_proximity_sensitivity': _bleSensitivity,
+        'qr_rotation_interval': _qrInterval,
       };
 
       await repo.updateFacilityDetails(widget.kind, widget.facilityId, payload);
@@ -1277,6 +1293,10 @@ class _EditFacilityDetailsScreenState
               ],
             ),
           ),
+          const SizedBox(height: 22),
+
+          // BLE Anti-Spoofing & Physical Presence Card
+          _buildBleSecurityCard(f, isDark, cardBg, cardBorder, brandBlue, theme),
           const SizedBox(height: 28),
 
           // Submit Changes Button
@@ -2282,6 +2302,394 @@ class _EditFacilityDetailsScreenState
             const Icon(Icons.keyboard_arrow_down_rounded,
                 size: 18, color: Colors.grey),
           ],
+        ),
+      ),
+    );
+  }
+
+  // BLE Physical Presence & Anti-Spoofing Configuration Card
+  Widget _buildBleSecurityCard(
+    FacilityModel? f,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color brandBlue,
+    ThemeData theme,
+  ) {
+    const bluetoothBlue = Color(0xFF0284C7);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _bleEnabled
+              ? bluetoothBlue.withValues(alpha: 0.4)
+              : cardBorder,
+          width: _bleEnabled ? 1.5 : 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _bleEnabled
+                ? bluetoothBlue.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: bluetoothBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.bluetooth_searching_rounded,
+                  color: bluetoothBlue,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BLE Physical Presence Verification',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Anti-spoofing dual-verification at counter check-in',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                value: _bleEnabled,
+                activeTrackColor: bluetoothBlue,
+                activeThumbColor: Colors.white,
+                onChanged: (val) {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _bleEnabled = val;
+                    if (_bleEnabled && (_bleServiceUuid == null || _bleServiceUuid!.isEmpty)) {
+                      _bleServiceUuid = const Uuid().v4();
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+
+          if (_bleEnabled) ...[
+            const SizedBox(height: 16),
+            Divider(color: cardBorder, height: 1),
+            const SizedBox(height: 16),
+
+            // Proximity Sensitivity
+            Text(
+              'PROXIMITY RANGE SENSITIVITY (RSSI)',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildSensitivityOption(
+                  label: 'High (~3m)',
+                  subtitle: 'At desk counter',
+                  value: 'high',
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+                const SizedBox(width: 8),
+                _buildSensitivityOption(
+                  label: 'Medium (~8m)',
+                  subtitle: 'Near reception',
+                  value: 'medium',
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+                const SizedBox(width: 8),
+                _buildSensitivityOption(
+                  label: 'Low (~15m)',
+                  subtitle: 'Whole lobby',
+                  value: 'low',
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // QR Rotation Interval
+            Text(
+              'DYNAMIC QR ROTATION INTERVAL',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildIntervalOption(
+                  label: '15 Seconds',
+                  badge: 'Recommended',
+                  value: 15,
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+                const SizedBox(width: 8),
+                _buildIntervalOption(
+                  label: '30 Seconds',
+                  badge: null,
+                  value: 30,
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+                const SizedBox(width: 8),
+                _buildIntervalOption(
+                  label: '60 Seconds',
+                  badge: null,
+                  value: 60,
+                  isDark: isDark,
+                  activeColor: bluetoothBlue,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Beacon UUID
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'FACILITY BEACON UUID',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          setState(() => _bleServiceUuid = const Uuid().v4());
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('New BLE Beacon UUID generated.'),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.refresh_rounded, size: 14, color: bluetoothBlue),
+                            SizedBox(width: 4),
+                            Text(
+                              'Regenerate',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: bluetoothBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    _bleServiceUuid ?? 'Generating...',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Explanatory info box
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bluetoothBlue.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.shield_rounded, size: 16, color: bluetoothBlue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Citizens scanning the QR code must have Bluetooth enabled and be physically within range of this counter to check in. Screenshots or forwarded photos cannot be used remotely.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF334155),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSensitivityOption({
+    required String label,
+    required String subtitle,
+    required String value,
+    required bool isDark,
+    required Color activeColor,
+  }) {
+    final isSelected = _bleSensitivity == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          setState(() => _bleSensitivity = value);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.12)
+                : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? activeColor : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? activeColor
+                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIntervalOption({
+    required String label,
+    required String? badge,
+    required int value,
+    required bool isDark,
+    required Color activeColor,
+  }) {
+    final isSelected = _qrInterval == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          setState(() => _qrInterval = value);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.12)
+                : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? activeColor : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            children: [
+              if (badge != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    badge,
+                    style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? activeColor
+                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

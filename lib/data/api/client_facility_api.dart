@@ -67,8 +67,21 @@ class ClientFacilityApi {
   Future<Response<dynamic>> getPlanDistributionReport(String type, String id) =>
       _dio.get('/client/$type/$id/reports/plan-distribution');
 
-  Future<Response<dynamic>> citizenScanAttendance(String type, String facilityId) =>
-      _dio.post('/facilities/$type/$facilityId/attendance/check-in');
+  Future<Response<dynamic>> citizenScanAttendance(
+    String type,
+    String facilityId, {
+    String? qrNonce,
+    String? bleNonce,
+    int? rssi,
+  }) =>
+      _dio.post(
+        '/facilities/$type/$facilityId/attendance/check-in',
+        data: {
+          if (qrNonce != null && qrNonce.isNotEmpty) 'qr_nonce': qrNonce,
+          if (bleNonce != null && bleNonce.isNotEmpty) 'ble_nonce': bleNonce,
+          if (rssi != null) 'rssi': rssi,
+        },
+      );
 
   // Enquiries
   Future<Response<dynamic>> getEnquiries(String type, String id, {String? status, String? search, int page = 1}) =>
