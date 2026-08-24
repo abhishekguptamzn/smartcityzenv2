@@ -462,26 +462,51 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
                         final logoUrl = widget.facility?.resolvedLogoUrl;
                         final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
 
-                        return QrImageView(
-                          data: qrPayload,
-                          version: QrVersions.auto,
-                          size: 210,
-                          backgroundColor: Colors.white,
-                          eyeStyle: QrEyeStyle(
-                            eyeShape: QrEyeShape.square,
-                            color: isGym ? const Color(0xFF0F766E) : const Color(0xFF0369A1),
+                        return SizedBox(
+                          width: 210,
+                          height: 210,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              QrImageView(
+                                data: qrPayload,
+                                version: QrVersions.auto,
+                                size: 210,
+                                backgroundColor: Colors.white,
+                                eyeStyle: QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: isGym ? const Color(0xFF0F766E) : const Color(0xFF0369A1),
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                errorCorrectionLevel: QrErrorCorrectLevel.M,
+                              ),
+                              if (hasLogo)
+                                Opacity(
+                                  opacity: 0.35,
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.network(
+                                        logoUrl,
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          dataModuleStyle: const QrDataModuleStyle(
-                            dataModuleShape: QrDataModuleShape.square,
-                            color: Color(0xFF0F172A),
-                          ),
-                          errorCorrectionLevel: hasLogo ? QrErrorCorrectLevel.M : QrErrorCorrectLevel.L,
-                          embeddedImage: hasLogo ? NetworkImage(logoUrl) : null,
-                          embeddedImageStyle: hasLogo
-                              ? const QrEmbeddedImageStyle(
-                                  size: Size(42, 42),
-                                )
-                              : null,
                         );
                       },
                     ),

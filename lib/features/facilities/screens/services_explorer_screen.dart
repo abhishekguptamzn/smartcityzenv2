@@ -4,11 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/auth_controller.dart';
-import '../../../core/providers/cities_providers.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
 import '../../../shared/widgets/error_state_view.dart';
-import '../../../shared/widgets/loading/shimmer.dart';
-import '../../../shared/widgets/loading/skeleton_list_item.dart';
 import '../models/facility_hierarchy_models.dart';
 import 'facility_category_centers_screen.dart';
 import '../widgets/facilities_skeletons.dart';
@@ -87,145 +84,11 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
     );
   }
 
-  void _showCitySelectorSheet(BuildContext context, String currentCity) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Select City',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Browse civic centers and amenities by city',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 16),
-              Consumer(
-                builder: (context, ref, _) {
-                  final citiesAsync = ref.watch(citiesListProvider);
-                  return citiesAsync.when(
-                    loading: () => Shimmer(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(3, (index) {
-                          return const SkeletonListItem(
-                            leadingSize: 36,
-                            lines: 1,
-                            hasTrailing: false,
-                            margin: EdgeInsets.only(bottom: 8),
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                          );
-                        }),
-                      ),
-                    ),
-                    error: (error, stackTrace) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: Text(
-                          'Current city: $currentCity',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                    data: (cities) {
-                      if (cities.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: Text(
-                              'Current city: $currentCity',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: cities.length,
-                        separatorBuilder: (ctx, idx) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final c = cities[i];
-                          final isSelected = c.name.toLowerCase() == currentCity.toLowerCase();
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF0D9488).withValues(alpha: 0.15)
-                                    : Colors.grey.shade100,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.location_city_rounded,
-                                size: 18,
-                                color: isSelected ? const Color(0xFF0D9488) : Colors.grey,
-                              ),
-                            ),
-                            title: Text(
-                              c.name,
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? const Color(0xFF0D9488) : null,
-                              ),
-                            ),
-                            subtitle: c.state.isNotEmpty
-                                ? Text(c.state, style: const TextStyle(fontSize: 12))
-                                : null,
-                            trailing: isSelected
-                                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488))
-                                : null,
-                            onTap: () {
-                              ref.read(selectedCityProvider.notifier).setCity(c);
-                              Navigator.of(ctx).pop();
-                            },
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedCity = ref.watch(selectedCityProvider);
     final user = ref.watch(authControllerProvider).value;
-    final effectiveCity = selectedCity ?? user?.city;
-    final cityName = effectiveCity?.name ?? 'Muzaffarnagar';
     final firstName = user?.name.split(' ').first ?? 'Citizen';
 
     final categoriesAsync = ref.watch(unifiedFacilityCategoriesProvider);
@@ -246,7 +109,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. TOP HEADER: Greeting, City Dropdown, Notification Bell
+                  // 1. TOP HEADER: Greeting & Notification Bell
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -272,51 +135,13 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                                   const Text('👋', style: TextStyle(fontSize: 16)),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              GestureDetector(
-                                onTap: () => _showCitySelectorSheet(context, cityName),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.03),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.location_on_rounded,
-                                        size: 13,
-                                        color: Color(0xFF0D9488),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        cityName,
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: isDark ? Colors.white70 : const Color(0xFF334155),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Icon(
-                                        Icons.keyboard_arrow_down_rounded,
-                                        size: 16,
-                                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                                      ),
-                                    ],
-                                  ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Explore Municipal Services & Hubs',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
                                 ),
                               ),
                             ],
@@ -405,7 +230,7 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
                           child: TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              hintText: 'Search all facilities & activities in $cityName...',
+                              hintText: 'Search all facilities & activities...',
                               hintStyle: TextStyle(
                                 fontSize: 13.5,
                                 color: isDark ? Colors.white38 : const Color(0xFF94A3B8),

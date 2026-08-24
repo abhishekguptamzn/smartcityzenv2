@@ -276,8 +276,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 12),
               _MyCitySection(l10n: l10n),
-              const SizedBox(height: 24),
-              _OneAppPromoBanner(l10n: l10n),
             ],
           ),
         ),
@@ -307,77 +305,6 @@ class _SearchFilterButton extends StatelessWidget {
           alignment: Alignment.center,
           child: Icon(Icons.tune_rounded, color: scheme.onSurfaceVariant),
         ),
-      ),
-    );
-  }
-}
-
-class _OneAppPromoBanner extends StatelessWidget {
-  const _OneAppPromoBanner({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: colors.secondaryFixed.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -16,
-            bottom: -16,
-            child: Icon(
-              Icons.location_city_rounded,
-              size: 110,
-              color: scheme.secondary.withValues(alpha: 0.18),
-            ),
-          ),
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Icon(
-              Icons.location_on_rounded,
-              color: scheme.secondary,
-              size: 22,
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.oneAppTitle,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.oneAppSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => context.push('/services'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.secondary,
-                    foregroundColor: scheme.onSecondary,
-                    minimumSize: const Size(0, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                  ),
-                  child: Text(l10n.exploreNow),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
