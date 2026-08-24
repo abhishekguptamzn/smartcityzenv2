@@ -141,7 +141,7 @@ class ProfileScreen extends ConsumerWidget {
                         _ProfileMenuTile(
                           icon: Icons.business_center_rounded,
                           accent: const Color(0xFF0D9488),
-                          title: 'Manage My Facilities (Gym/Library)',
+                          title: 'Manage My Facilities',
                           onTap: () => context.push('/client/facilities'),
                         ),
                         const Divider(height: 1),

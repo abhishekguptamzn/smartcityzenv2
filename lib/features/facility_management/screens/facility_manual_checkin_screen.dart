@@ -15,7 +15,6 @@ import '../widgets/facility_management_skeletons.dart';
 import '../widgets/facility_qr_modal.dart';
 import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
-import 'facility_member_detail_screen.dart';
 import 'facility_members_screen.dart';
 
 final facilityCheckinMembersProvider = FutureProvider.autoDispose
@@ -975,16 +974,11 @@ class _FacilityManualCheckinScreenState
                                 // Avatar (tap to view profile)
                                 GestureDetector(
                                   onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            FacilityMemberDetailScreen(
-                                          kind: widget.kind,
-                                          facilityId: widget.facilityId,
-                                          memberId: memberId,
-                                          facility: widget.facility,
-                                        ),
-                                      ),
+                                    context.push(
+                                      '/client/manage/members/${widget.kind.pathSegment}/${widget.facilityId}/detail/$memberId',
+                                      extra: {
+                                        'facility': widget.facility,
+                                      },
                                     );
                                   },
                                   child: CircleAvatar(

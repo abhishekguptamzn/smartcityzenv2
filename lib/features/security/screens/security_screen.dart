@@ -16,7 +16,6 @@ import '../../../shared/widgets/error_state_view.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading/shimmer.dart';
 import '../../../shared/widgets/loading/skeleton_list_item.dart';
-import 'set_app_pin_screen.dart';
 
 class SecurityScreen extends ConsumerStatefulWidget {
   const SecurityScreen({super.key});
@@ -177,9 +176,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                                   onChanged: (val) async {
                                     if (val && !lockState.isConfigured) {
                                       // Must set up PIN first
-                                      await Navigator.of(context).push(
-                                        MaterialPageRoute(builder: (_) => const SetAppPinScreen()),
-                                      );
+                                      await context.push('/security/pin');
                                     } else {
                                       await controller.toggleAppLock(val);
                                     }
@@ -205,11 +202,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             style: const TextStyle(fontSize: 11.5),
                           ),
                           trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => SetAppPinScreen(isChanging: lockState.isConfigured),
-                            ),
-                          ),
+                          onTap: () => context.push('/security/pin', extra: lockState.isConfigured),
                         ),
 
                         // Unlock with Biometrics Toggle

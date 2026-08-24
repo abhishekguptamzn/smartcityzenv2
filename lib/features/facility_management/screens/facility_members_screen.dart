@@ -9,10 +9,7 @@ import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/add_member_modal.dart';
 import '../widgets/facility_management_skeletons.dart';
-import '../widgets/remove_member_sheet.dart';
-import '../widgets/renew_member_modal.dart';
 import 'facility_dashboard_screen.dart';
-import 'facility_member_detail_screen.dart';
 
 final facilityMembersProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, (FacilityKind, String)>((ref, tuple) async {
   final (kind, facilityId) = tuple;
@@ -60,21 +57,6 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
     );
   }
 
-  void _openRenewMemberModal(BuildContext context, Map<String, dynamic> member) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => RenewMemberModal(
-        kind: widget.kind,
-        facilityId: widget.facilityId,
-        facility: widget.facility,
-        member: member,
-        onSuccess: () => ref.refresh(facilityMembersProvider((widget.kind, widget.facilityId))),
-      ),
-    );
-  }
-
   void _openHistoryModal(BuildContext context, Map<String, dynamic> member) {
     showModalBottomSheet(
       context: context,
@@ -84,31 +66,6 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
         kind: widget.kind,
         facilityId: widget.facilityId,
         member: member,
-      ),
-    );
-  }
-
-  void _confirmRemoveMember(BuildContext context, Map<String, dynamic> member) {
-    final userName = member['user']?['name']?.toString() ?? member['name']?.toString() ?? 'Citizen Member';
-    final memberId = member['id']?.toString() ?? '';
-    final memberEmail = member['user']?['email']?.toString() ?? member['email']?.toString();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => RemoveMemberSheet(
-        kind: widget.kind,
-        facilityId: widget.facilityId,
-        memberId: memberId,
-        memberName: userName,
-        memberEmail: memberEmail,
-        facilityName: widget.facility?.name,
-        onSuccess: () {
-          ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
-          ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
-          ref.invalidate(myOwnedFacilitiesProvider);
-        },
       ),
     );
   }
@@ -347,16 +304,12 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => FacilityMemberDetailScreen(
-                                  kind: widget.kind,
-                                  facilityId: widget.facilityId,
-                                  memberId: m['id'].toString(),
-                                  facility: widget.facility,
-                                  initialMember: m,
-                                ),
-                              ),
+                            await context.push(
+                              '/client/manage/members/${widget.kind.pathSegment}/${widget.facilityId}/detail/${m['id']}',
+                              extra: {
+                                'facility': widget.facility,
+                                'initialMember': m,
+                              },
                             );
                             ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
                             ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
@@ -426,24 +379,40 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: statusColor.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        statusText,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: statusColor,
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: statusColor,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(height: 4),
+                                        IconButton(
+                                          icon: const Icon(Icons.history_rounded, size: 20),
+                                          tooltip: 'Renewal History',
+                                          visualDensity: VisualDensity.compact,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                          color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                          onPressed: () => _openHistoryModal(context, m),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 8),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 4),
                                   child: Row(
@@ -472,60 +441,19 @@ class _FacilityMembersScreenState extends ConsumerState<FacilityMembersScreen> {
                                   ),
                                 ),
                                 if (user['email'] != null || user['phone'] != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '${user['email'] ?? user['phone']}',
-                                          style: TextStyle(
-                                            fontSize: 11.5,
-                                            color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
-                                          ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.contact_mail_outlined, size: 14, color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${user['email'] ?? user['phone']}',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                const Divider(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.history_rounded, size: 18),
-                                      tooltip: 'Renewal History',
-                                      visualDensity: VisualDensity.compact,
-                                      onPressed: () => _openHistoryModal(context, m),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.redAccent,
-                                        side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        visualDensity: VisualDensity.compact,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      icon: const Icon(Icons.person_remove_rounded, size: 14),
-                                      label: const Text('Remove', style: TextStyle(fontSize: 12)),
-                                      onPressed: () => _confirmRemoveMember(context, m),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    FilledButton.icon(
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0D9488),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        visualDensity: VisualDensity.compact,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      icon: const Icon(Icons.autorenew_rounded, size: 14),
-                                      label: const Text('Record Payment / Renew', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      onPressed: () => _openRenewMemberModal(context, m),
-                                    ),
-                                  ],
-                                ),
                               ],
                             ),
                           ),

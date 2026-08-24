@@ -1345,7 +1345,7 @@ class _ClientFacilityHubBanner extends StatelessWidget {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'Manage Gym/Library details, plans & members',
+                            'Manage details, plans & members',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 12.5,

@@ -7,7 +7,6 @@ import '../../../core/providers/auth_controller.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
 import '../../../shared/widgets/error_state_view.dart';
 import '../models/facility_hierarchy_models.dart';
-import 'facility_category_centers_screen.dart';
 import '../widgets/facilities_skeletons.dart';
 
 class ServicesExplorerScreen extends ConsumerStatefulWidget {
@@ -73,14 +72,13 @@ class _ServicesExplorerScreenState extends ConsumerState<ServicesExplorerScreen>
       );
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => FacilityCategoryCentersScreen(
-          category: matchedCat,
-          initialType: matchedType,
-          initialSearch: initialSearch,
-        ),
-      ),
+    context.push(
+      '/services/category/${matchedCat.id}',
+      extra: {
+        'category': matchedCat,
+        'initialType': matchedType,
+        'initialSearch': initialSearch,
+      },
     );
   }
 

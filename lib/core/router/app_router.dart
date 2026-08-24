@@ -6,10 +6,11 @@ import '../../data/models/facility_model.dart';
 import '../../data/models/facility_operations_models.dart';
 import '../../data/models/onboard_model.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
-import '../../features/checkin/screens/qr_checkin_screen.dart';
 import '../../features/auth/screens/login_register_screen.dart';
+import '../../features/auth/screens/onboarding_slides_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
+import '../../features/checkin/screens/qr_checkin_screen.dart';
 import '../../features/city/screens/city_about_screen.dart';
 import '../../features/city/screens/city_culture_screen.dart';
 import '../../features/city/screens/city_famous_screen.dart';
@@ -20,8 +21,10 @@ import '../../features/city/screens/city_information_screen.dart';
 import '../../features/city/screens/city_news_screen.dart';
 import '../../features/city/screens/city_origin_screen.dart';
 import '../../features/city/screens/city_personalities_screen.dart';
+import '../../features/facilities/models/facility_hierarchy_models.dart';
 import '../../features/facilities/screens/activities_explorer_screen.dart';
 import '../../features/facilities/screens/activity_detail_screen.dart';
+import '../../features/facilities/screens/facility_category_centers_screen.dart';
 import '../../features/facilities/screens/facility_detail_screen.dart';
 import '../../features/facilities/screens/services_explorer_screen.dart';
 import '../../features/facility_management/screens/edit_facility_details_screen.dart';
@@ -59,11 +62,12 @@ import '../../features/payments/screens/payment_receipt_screen.dart';
 import '../../features/payments/screens/payments_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/security/screens/app_lock_screen.dart';
 import '../../features/security/screens/security_screen.dart';
+import '../../features/security/screens/set_app_pin_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/support/screens/support_tickets_screen.dart';
 import '../../features/support/screens/ticket_detail_screen.dart';
-import '../../features/auth/screens/onboarding_slides_screen.dart';
 import '../providers/auth_controller.dart';
 import 'app_shell.dart';
 
@@ -165,6 +169,43 @@ GoRouter goRouter(Ref ref) {
             ),
           ),
           GoRoute(
+            path: '/services/:kind/:id',
+            builder: (context, state) => FacilityDetailScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              id: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: '/services/category/:categoryId',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              final category = extra?['category'] as FacilityCategoryItem?;
+              if (category == null) {
+                return const ServicesExplorerScreen();
+              }
+              final initialType = extra?['initialType'] as FacilityTypeItem?;
+              final initialSearch = (extra?['initialSearch'] as String?) ?? state.uri.queryParameters['search'];
+              return FacilityCategoryCentersScreen(
+                category: category,
+                initialType: initialType,
+                initialSearch: initialSearch,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/activities',
+            builder: (context, state) => ActivitiesExplorerScreen(
+              initialCategorySlug: state.uri.queryParameters['category'],
+              initialSearch: state.uri.queryParameters['search'],
+            ),
+          ),
+          GoRoute(
+            path: '/activities/:id',
+            builder: (context, state) => ActivityDetailScreen(
+              id: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
             path: '/checkin',
             builder: (context, state) => const QrCheckinScreen(),
           ),
@@ -173,8 +214,21 @@ GoRouter goRouter(Ref ref) {
             builder: (context, state) => const IdCardScreen(),
           ),
           GoRoute(
+            path: '/membership/:kind/:memberId',
+            builder: (context, state) => MembershipDetailsScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              memberId: state.pathParameters['memberId']!,
+              facilityId: state.uri.queryParameters['facilityId'],
+              facilityName: state.uri.queryParameters['facilityName'],
+            ),
+          ),
+          GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/profile/edit',
+            builder: (context, state) => const EditProfileScreen(),
           ),
           GoRoute(
             path: '/settings',
@@ -185,12 +239,38 @@ GoRouter goRouter(Ref ref) {
             builder: (context, state) => const SupportTicketsScreen(),
           ),
           GoRoute(
+            path: '/support/tickets/:id',
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '');
+              if (id == null) {
+                return const SupportTicketsScreen();
+              }
+              return TicketDetailScreen(ticketId: id);
+            },
+          ),
+          GoRoute(
             path: '/security',
             builder: (context, state) => const SecurityScreen(),
           ),
           GoRoute(
+            path: '/security/pin',
+            builder: (context, state) {
+              final isChanging = state.extra as bool? ?? false;
+              return SetAppPinScreen(isChanging: isChanging);
+            },
+          ),
+          GoRoute(
+            path: '/security/lock',
+            builder: (context, state) => const AppLockScreen(),
+          ),
+          GoRoute(
             path: '/payments',
             builder: (context, state) => const PaymentsScreen(),
+          ),
+          GoRoute(
+            path: '/payments/:id',
+            builder: (context, state) =>
+                PaymentReceiptScreen(paymentId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: '/city/information',
@@ -236,7 +316,8 @@ GoRouter goRouter(Ref ref) {
             path: '/city/history',
             redirect: (context, state) => '/city/timeline',
           ),
-          // Facility Management Dashboard (for Client Users / Facility Owners - retains global bottom nav)
+
+          // Facility Management Dashboard & Sub-Routes (All retain the global bottom navigation bar)
           GoRoute(
             path: '/client/facilities',
             builder: (context, state) => const FacilityDashboardScreen(),
@@ -248,56 +329,162 @@ GoRouter goRouter(Ref ref) {
               initialFacilityId: state.pathParameters['id']!,
             ),
           ),
+          GoRoute(
+            path: '/client/manage/settings/:kind/:id',
+            builder: (context, state) => FacilitySettingsScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/edit/:kind/:id',
+            builder: (context, state) => EditFacilityDetailsScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/plans/:kind/:id',
+            builder: (context, state) => ManageFeePlansScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/members/:kind/:id',
+            builder: (context, state) => FacilityMembersScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/members/:kind/:id/detail/:memberId',
+            builder: (context, state) => FacilityMemberDetailScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              memberId: state.pathParameters['memberId']!,
+              facility: (state.extra is Map ? (state.extra as Map)['facility'] : null) as FacilityModel?,
+              initialMember: state.extra is Map<String, dynamic>
+                  ? state.extra as Map<String, dynamic>
+                  : (state.extra is Map ? (state.extra as Map)['initialMember'] as Map<String, dynamic>? : null),
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/attendance/:kind/:id',
+            builder: (context, state) => FacilityAttendanceScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/checkin/:kind/:id',
+            builder: (context, state) => FacilityManualCheckinScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/status/:kind/:id',
+            builder: (context, state) => FacilityCurrentStatusScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/:kind/:id',
+            builder: (context, state) => FacilityReportsScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/daily/:kind/:id',
+            builder: (context, state) => FacilityDailyCheckinReportScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/monthly/:kind/:id',
+            builder: (context, state) => FacilityMonthlyAttendanceReportScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/expiring/:kind/:id',
+            builder: (context, state) => FacilityExpiringMembersScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/plans/:kind/:id',
+            builder: (context, state) => FacilityPlanDistributionScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/unpaid/:kind/:id',
+            builder: (context, state) => FacilityUnpaidMembersScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/reports/collections/:kind/:id',
+            builder: (context, state) => FacilityCollectionReportScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/enquiries/:kind/:id',
+            builder: (context, state) => FacilityEnquiriesScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/enquiries/:kind/:id/:enquiryId',
+            builder: (context, state) {
+              final extraMap = state.extra as Map<String, dynamic>?;
+              return FacilityEnquiryConversationScreen(
+                kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+                facilityId: state.pathParameters['id']!,
+                enquiryId: state.pathParameters['enquiryId']!,
+                initialEnquiry: extraMap?['enquiry'] as FacilityEnquiryItem?,
+                facility: extraMap?['facility'] as FacilityModel?,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/client/manage/communication/:kind/:id',
+            builder: (context, state) => FacilityCommunicationScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
         ],
       ),
-      GoRoute(
-        path: '/services/:kind/:id',
-        builder: (context, state) => FacilityDetailScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          id: state.pathParameters['id']!,
-        ),
-      ),
-      GoRoute(
-        path: '/activities',
-        builder: (context, state) => ActivitiesExplorerScreen(
-          initialCategorySlug: state.uri.queryParameters['category'],
-          initialSearch: state.uri.queryParameters['search'],
-        ),
-      ),
-      GoRoute(
-        path: '/activities/:id',
-        builder: (context, state) => ActivityDetailScreen(
-          id: state.pathParameters['id']!,
-        ),
-      ),
-      GoRoute(
-        path: '/membership/:kind/:memberId',
-        builder: (context, state) => MembershipDetailsScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          memberId: state.pathParameters['memberId']!,
-          facilityId: state.uri.queryParameters['facilityId'],
-          facilityName: state.uri.queryParameters['facilityName'],
-        ),
-      ),
-      GoRoute(
-        path: '/profile/edit',
-        builder: (context, state) => const EditProfileScreen(),
-      ),
-      GoRoute(
-        path: '/support/tickets/:id',
-        builder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '');
-          if (id == null) {
-            return const SupportTicketsScreen();
-          }
-          return TicketDetailScreen(ticketId: id);
-        },
-      ),
-      GoRoute(
-        path: '/payments/:id',
-        builder: (context, state) =>
-            PaymentReceiptScreen(paymentId: state.pathParameters['id']!),
-      ),
+
       // Onboarding Module Routes (Gated to authenticated onboarding users only).
       // NOTE: This secondary redirect is a presentation-layer gate ensuring standard
       // users are routed to /home, complementing server-side authorization.
@@ -310,160 +497,6 @@ GoRouter goRouter(Ref ref) {
           return null;
         },
         builder: (context, state) => const OnboardHomeScreen(),
-      ),
-      // Facility Management Sub-Routes
-      GoRoute(
-        path: '/client/manage/settings/:kind/:id',
-        builder: (context, state) => FacilitySettingsScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/edit/:kind/:id',
-        builder: (context, state) => EditFacilityDetailsScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/plans/:kind/:id',
-        builder: (context, state) => ManageFeePlansScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/members/:kind/:id',
-        builder: (context, state) => FacilityMembersScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/members/:kind/:id/detail/:memberId',
-        builder: (context, state) => FacilityMemberDetailScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          memberId: state.pathParameters['memberId']!,
-          facility: (state.extra is Map ? (state.extra as Map)['facility'] : null) as FacilityModel?,
-          initialMember: state.extra is Map<String, dynamic>
-              ? state.extra as Map<String, dynamic>
-              : (state.extra is Map ? (state.extra as Map)['initialMember'] as Map<String, dynamic>? : null),
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/attendance/:kind/:id',
-        builder: (context, state) => FacilityAttendanceScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/checkin/:kind/:id',
-        builder: (context, state) => FacilityManualCheckinScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/status/:kind/:id',
-        builder: (context, state) => FacilityCurrentStatusScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/:kind/:id',
-        builder: (context, state) => FacilityReportsScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/daily/:kind/:id',
-        builder: (context, state) => FacilityDailyCheckinReportScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/monthly/:kind/:id',
-        builder: (context, state) => FacilityMonthlyAttendanceReportScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/expiring/:kind/:id',
-        builder: (context, state) => FacilityExpiringMembersScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/plans/:kind/:id',
-        builder: (context, state) => FacilityPlanDistributionScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/unpaid/:kind/:id',
-        builder: (context, state) => FacilityUnpaidMembersScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/reports/collections/:kind/:id',
-        builder: (context, state) => FacilityCollectionReportScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/enquiries/:kind/:id',
-        builder: (context, state) => FacilityEnquiriesScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
-      ),
-      GoRoute(
-        path: '/client/manage/enquiries/:kind/:id/:enquiryId',
-        builder: (context, state) {
-          final extraMap = state.extra as Map<String, dynamic>?;
-          return FacilityEnquiryConversationScreen(
-            kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-            facilityId: state.pathParameters['id']!,
-            enquiryId: state.pathParameters['enquiryId']!,
-            initialEnquiry: extraMap?['enquiry'] as FacilityEnquiryItem?,
-            facility: extraMap?['facility'] as FacilityModel?,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/client/manage/communication/:kind/:id',
-        builder: (context, state) => FacilityCommunicationScreen(
-          kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
-          facilityId: state.pathParameters['id']!,
-          facility: state.extra as FacilityModel?,
-        ),
       ),
       GoRoute(
         path: '/onboard/select/:type',
@@ -527,18 +560,18 @@ GoRouter goRouter(Ref ref) {
 
 const _navPrefixMap = {
   '/home': 0,
+  '/client': 0,
   '/services': 1,
   '/activities': 1,
   '/checkin': 2,
   '/id-card': 3,
+  '/membership': 3,
   '/settings': 4,
   '/profile': 4,
   '/security': 4,
   '/payments': 4,
   '/support': 4,
   '/city': 4,
-  '/client': 4,
-  '/membership': 4,
 };
 
 int _navIndexFor(String path) {
