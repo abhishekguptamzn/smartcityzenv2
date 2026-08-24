@@ -82,6 +82,7 @@ abstract class FacilityModel with _$FacilityModel {
     @JsonKey(name: 'closing_time') String? closingTime,
     @Default('active') String status,
     @JsonKey(name: 'ble_verification_enabled') @Default(false) bool bleVerificationEnabled,
+    @JsonKey(name: 'ble_strict_mode') @Default(false) bool bleStrictMode,
     @JsonKey(name: 'ble_service_uuid') String? bleServiceUuid,
     @JsonKey(name: 'ble_secret_key') String? bleSecretKey,
     @JsonKey(name: 'ble_proximity_sensitivity') @Default('high') String bleProximitySensitivity,

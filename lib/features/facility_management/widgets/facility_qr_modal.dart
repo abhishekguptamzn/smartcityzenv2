@@ -17,6 +17,7 @@ void showFacilityQrModal({
   required String facilityName,
   FacilityModel? facility,
   bool? bleVerificationEnabled,
+  bool? bleStrictMode,
   String? bleServiceUuid,
   String? bleSecretKey,
   int? qrRotationInterval,
@@ -31,6 +32,7 @@ void showFacilityQrModal({
       facilityName: facilityName,
       facility: facility,
       bleVerificationEnabled: bleVerificationEnabled ?? facility?.bleVerificationEnabled ?? false,
+      bleStrictMode: bleStrictMode ?? facility?.bleStrictMode ?? false,
       bleServiceUuid: bleServiceUuid ?? facility?.bleServiceUuid,
       bleSecretKey: bleSecretKey ?? facility?.bleSecretKey,
       qrRotationInterval: qrRotationInterval ?? facility?.qrRotationInterval ?? 15,
@@ -45,6 +47,7 @@ class _FacilityQrModalContent extends StatefulWidget {
     required this.facilityName,
     this.facility,
     this.bleVerificationEnabled = false,
+    this.bleStrictMode = false,
     this.bleServiceUuid,
     this.bleSecretKey,
     this.qrRotationInterval = 15,
@@ -55,6 +58,7 @@ class _FacilityQrModalContent extends StatefulWidget {
   final String facilityName;
   final FacilityModel? facility;
   final bool bleVerificationEnabled;
+  final bool bleStrictMode;
   final String? bleServiceUuid;
   final String? bleSecretKey;
   final int qrRotationInterval;
@@ -79,9 +83,25 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
     _totalInterval = widget.qrRotationInterval > 4 ? widget.qrRotationInterval : 15;
     _updateNoncesAndBroadcast();
 
+    if (widget.bleVerificationEnabled) {
+      _checkAndPromptBluetooth();
+    }
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _tickTimer();
     });
+  }
+
+  Future<void> _checkAndPromptBluetooth() async {
+    try {
+      final isEnabled = await BlePresenceHelper.isBluetoothEnabled();
+      if (!isEnabled) {
+        final turnedOn = await BlePresenceHelper.requestEnableBluetooth();
+        if (turnedOn) {
+          _updateNoncesAndBroadcast();
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -181,6 +201,7 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
 
     if (widget.bleVerificationEnabled) {
       data['ble_required'] = true;
+      data['ble_strict_mode'] = widget.bleStrictMode;
       data['qr_nonce'] = _currentQrNonce;
       data['service_uuid'] = widget.bleServiceUuid;
       data['interval'] = _totalInterval;
@@ -286,60 +307,127 @@ class _FacilityQrModalContentState extends State<_FacilityQrModalContent> {
 
               // BLE Presence Active Indicator Banner
               if (widget.bleVerificationEnabled) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                if (_isBroadcasting)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.bluetooth_searching_rounded,
-                        size: 18,
-                        color: Color(0xFF0284C7),
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'BLE Physical Verification Active (Anti-Spoofing)',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0284C7),
-                          ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.bluetooth_searching_rounded,
+                          size: 18,
+                          color: Color(0xFF0284C7),
                         ),
-                      ),
-                      // Countdown Ring
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              value: progress,
-                              strokeWidth: 2.5,
-                              color: const Color(0xFF0284C7),
-                              backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'BLE Beacon Active (${widget.bleStrictMode ? "Strict Proximity" : "Hybrid Mode"})',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0284C7),
                             ),
                           ),
-                          Text(
-                            '$_remainingSeconds',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0284C7),
+                        ),
+                        // Countdown Ring
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                value: progress,
+                                strokeWidth: 2.5,
+                                color: const Color(0xFF0284C7),
+                                backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                              ),
+                            ),
+                            Text(
+                              '$_remainingSeconds',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  InkWell(
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      final turnedOn = await BlePresenceHelper.requestEnableBluetooth();
+                      if (turnedOn) {
+                        _updateNoncesAndBroadcast();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCD34D)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.bluetooth_disabled_rounded,
+                            size: 18,
+                            color: Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Counter Bluetooth is OFF',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                                Text(
+                                  'Running in Live Display QR Fallback Mode',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Turn ON',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
               ],
 

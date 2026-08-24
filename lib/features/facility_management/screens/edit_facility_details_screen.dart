@@ -66,6 +66,7 @@ class _EditFacilityDetailsScreenState
 
   // BLE Physical Presence Verification State
   bool _bleEnabled = false;
+  bool _bleStrictMode = false;
   String _bleSensitivity = 'high';
   String? _bleServiceUuid;
   int _qrInterval = 15;
@@ -85,6 +86,7 @@ class _EditFacilityDetailsScreenState
     _selectedAmenities = widget.facility?.amenities ?? [];
 
     _bleEnabled = widget.facility?.bleVerificationEnabled ?? false;
+    _bleStrictMode = widget.facility?.bleStrictMode ?? false;
     _bleSensitivity = widget.facility?.bleProximitySensitivity ?? 'high';
     _bleServiceUuid = widget.facility?.bleServiceUuid ?? const Uuid().v4();
     _qrInterval = widget.facility?.qrRotationInterval ?? 15;
@@ -107,6 +109,7 @@ class _EditFacilityDetailsScreenState
       if (mounted) {
         setState(() {
           _bleEnabled = facility.bleVerificationEnabled;
+          _bleStrictMode = facility.bleStrictMode;
           _bleSensitivity = facility.bleProximitySensitivity;
           if (facility.bleServiceUuid != null && facility.bleServiceUuid!.isNotEmpty) {
             _bleServiceUuid = facility.bleServiceUuid;
@@ -293,6 +296,7 @@ class _EditFacilityDetailsScreenState
           'closing_time': _formatTimeOfDay(_closingTime!),
         'amenity_ids': _selectedAmenities.map((a) => a.id).toList(),
         'ble_verification_enabled': _bleEnabled,
+        'ble_strict_mode': _bleStrictMode,
         'ble_service_uuid': _bleServiceUuid,
         'ble_proximity_sensitivity': _bleSensitivity,
         'qr_rotation_interval': _qrInterval,
@@ -2419,6 +2423,136 @@ class _EditFacilityDetailsScreenState
           if (_bleEnabled) ...[
             const SizedBox(height: 16),
             Divider(color: cardBorder, height: 1),
+            const SizedBox(height: 16),
+
+            // Enforcement Mode Selector
+            Text(
+              'ENFORCEMENT RULE (BEACON OFFLINE FALLBACK)',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _bleStrictMode = false);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: !_bleStrictMode
+                            ? bluetoothBlue.withValues(alpha: isDark ? 0.2 : 0.1)
+                            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: !_bleStrictMode ? bluetoothBlue : cardBorder,
+                          width: !_bleStrictMode ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                !_bleStrictMode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                size: 14,
+                                color: !_bleStrictMode ? bluetoothBlue : Colors.grey,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Hybrid (Recommended)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: !_bleStrictMode
+                                      ? bluetoothBlue
+                                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Allows rolling QR code fallback if counter display Bluetooth is off.',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _bleStrictMode = true);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _bleStrictMode
+                            ? const Color(0xFFDC2626).withValues(alpha: isDark ? 0.2 : 0.1)
+                            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _bleStrictMode ? const Color(0xFFDC2626) : cardBorder,
+                          width: _bleStrictMode ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _bleStrictMode ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                size: 14,
+                                color: _bleStrictMode ? const Color(0xFFDC2626) : Colors.grey,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Strict Hardware',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _bleStrictMode
+                                      ? const Color(0xFFDC2626)
+                                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Strictly rejects check-in if physical beacon radio signal is not detected.',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Proximity Sensitivity

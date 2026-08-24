@@ -38,6 +38,7 @@ _FacilityModel _$FacilityModelFromJson(Map<String, dynamic> json) =>
       status: json['status'] as String? ?? 'active',
       bleVerificationEnabled:
           json['ble_verification_enabled'] as bool? ?? false,
+      bleStrictMode: json['ble_strict_mode'] as bool? ?? false,
       bleServiceUuid: json['ble_service_uuid'] as String?,
       bleSecretKey: json['ble_secret_key'] as String?,
       bleProximitySensitivity:
@@ -77,6 +78,7 @@ Map<String, dynamic> _$FacilityModelToJson(_FacilityModel instance) =>
       'closing_time': instance.closingTime,
       'status': instance.status,
       'ble_verification_enabled': instance.bleVerificationEnabled,
+      'ble_strict_mode': instance.bleStrictMode,
       'ble_service_uuid': instance.bleServiceUuid,
       'ble_secret_key': instance.bleSecretKey,
       'ble_proximity_sensitivity': instance.bleProximitySensitivity,

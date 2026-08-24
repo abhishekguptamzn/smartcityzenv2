@@ -124,6 +124,7 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
 
             final facilityName = decoded['facility_name']?.toString() ?? (kind == FacilityKind.gym ? 'Gym Facility' : (kind == FacilityKind.activity ? 'Facility Center' : 'Library Hub'));
             final bool bleRequired = decoded['ble_required'] == true;
+            final bool bleStrictMode = decoded['ble_strict_mode'] == true;
             final String? serviceUuid = decoded['service_uuid']?.toString();
             final String? qrNonce = decoded['qr_nonce']?.toString();
 
@@ -145,7 +146,7 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
                   _status = _ScanStatus.error;
                   _isBluetoothError = true;
                   _pendingRetryPayload = trimmed;
-                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your phone and stay near the counter to verify your physical presence.';
+                  _errorMessage = 'Bluetooth Required: Please turn ON Bluetooth on your phone to verify your presence.';
                 });
                 return;
               }
@@ -153,14 +154,24 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
               if (serviceUuid != null && serviceUuid.isNotEmpty) {
                 final beacon = await BlePresenceHelper.scanForFacilityBeacon(
                   targetUuid: serviceUuid,
-                  timeout: const Duration(milliseconds: 1500),
+                  timeout: const Duration(milliseconds: 2500),
                 );
 
                 if (beacon != null) {
                   detectedBleNonce = beacon['ble_nonce']?.toString() ?? qrNonce;
                   detectedRssi = beacon['rssi'] as int?;
+                } else if (bleStrictMode) {
+                  // In Strict Mode: reject checkin if beacon not detected over the air
+                  if (!mounted) return;
+                  setState(() {
+                    _status = _ScanStatus.error;
+                    _isBluetoothError = false;
+                    _pendingRetryPayload = trimmed;
+                    _errorMessage = 'Facility Bluetooth beacon not detected. Please stand closer to the counter display with Bluetooth turned ON.';
+                  });
+                  return;
                 } else {
-                  // Fallback: Physical Presence verified via live rolling TOTP screen code & active Bluetooth adapter
+                  // In Hybrid Mode: Fallback using live rolling TOTP token
                   detectedBleNonce = qrNonce;
                   detectedRssi = -65;
                 }
@@ -182,6 +193,7 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
               final isCheckOut = statusStr == 'checked_out';
               final durationMinutes = checkinRes['duration_minutes'];
               final resolvedName = checkinRes['facility_name']?.toString() ?? facilityName;
+              final verificationMode = checkinRes['verification_mode']?.toString();
 
               setState(() {
                 _status = _ScanStatus.success;
@@ -201,7 +213,10 @@ class _QrCheckinScreenState extends ConsumerState<QrCheckinScreen> {
                     'Facility': resolvedName,
                     'Type': kind.displayName,
                     'Status': isCheckOut ? 'Checked Out Successfully' : 'Checked In Successfully',
-                    if (bleRequired) 'Physical Presence': 'Verified via Bluetooth (BLE)',
+                    if (bleRequired)
+                      'Verification': verificationMode == 'qr_totp_fallback'
+                          ? 'Live Display QR (Counter Bluetooth Inactive)'
+                          : 'Verified via Bluetooth (BLE Proximity)',
                     if (isCheckOut && durationMinutes != null) 'Session Duration': '$durationMinutes minutes',
                     'Time': DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
                   },
