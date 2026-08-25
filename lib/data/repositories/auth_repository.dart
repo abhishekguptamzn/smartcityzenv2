@@ -128,6 +128,8 @@ class AuthRepository {
       final response = await _api.me();
       final data =
           (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
+      // Ensure FCM device token is registered for restored session
+      unawaited(PushNotificationService.instance.syncDeviceToken(_notificationsApi));
       return UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? data);
     } catch (e) {
       final appEx = AppException.from(e);

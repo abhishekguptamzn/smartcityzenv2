@@ -45,6 +45,43 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // Firebase already initialized or platform specific initialization
   }
 
+  // If payload contains data with no OS-level notification, display local heads-up notification
+  if (message.notification == null && !kIsWeb) {
+    try {
+      final title = message.data['title'] as String?;
+      final body = message.data['body'] as String? ?? message.data['message'] as String?;
+
+      if (title != null || body != null) {
+        final localNotifications = FlutterLocalNotificationsPlugin();
+        await localNotifications.show(
+          message.hashCode,
+          title ?? 'Smart Cityzen Alert',
+          body ?? '',
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              _highImportanceChannel.id,
+              _highImportanceChannel.name,
+              channelDescription: _highImportanceChannel.description,
+              importance: _highImportanceChannel.importance,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+              playSound: true,
+              enableVibration: true,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          payload: message.data.isNotEmpty ? message.data.toString() : null,
+        );
+      }
+    } catch (_) {
+      // Best-effort local display
+    }
+  }
+
   if (kDebugMode) {
     _logger.i(
       'FCM Background Message Received: ID=${message.messageId}, '
