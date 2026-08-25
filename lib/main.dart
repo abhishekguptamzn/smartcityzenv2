@@ -9,6 +9,7 @@ import 'core/providers/locale_controller.dart';
 import 'core/providers/theme_mode_controller.dart';
 import 'core/router/app_router.dart';
 import 'core/services/incident_reporter.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/ui_tier.dart';
 import 'core/utils/url_strategy_helper.dart';
@@ -23,6 +24,7 @@ void main() async {
   setAppPathUrlStrategy();
   UiTierDetector.detect();
   await IncidentReporter.initialize();
+  await PushNotificationService.initialize();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     final errStr = details.exception.toString();

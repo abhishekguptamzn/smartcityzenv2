@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529235789171",
+    "project_id": "smartct-b6e17",
+    "storage_bucket": "smartct-b6e17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529235789171:android:accc5241f134a0dc5fb106",
+        "android_client_info": {
+          "package_name": "com.smartctzen.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCV4jlR01qud6RDC82hnDX2n4q8QBCqWP4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -46,6 +46,26 @@ class NotificationsApi {
 
   Future<Response<dynamic>> executeAction(String id) =>
       _dio.post('/notifications/$id/action');
+
+  Future<Response<dynamic>> registerDeviceToken({
+    required String token,
+    String platform = 'android',
+    String? deviceName,
+  }) =>
+      _dio.post(
+        '/notifications/device-token',
+        data: {
+          'token': token,
+          'platform': platform,
+          if (deviceName != null) 'device_name': deviceName,
+        },
+      );
+
+  Future<Response<dynamic>> removeDeviceToken(String token) =>
+      _dio.delete(
+        '/notifications/device-token',
+        data: {'token': token},
+      );
 }
 
 @Riverpod(keepAlive: true)
