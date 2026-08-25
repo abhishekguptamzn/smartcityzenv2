@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:logger/logger.dart';
 
+import '../../data/api/notifications_api.dart';
+
 final Logger _logger = Logger();
 
 /// High-importance Android notification channel for heads-up push notifications.
@@ -154,6 +156,29 @@ class PushNotificationService {
         _logger.w('Unable to fetch FCM token: $e');
       }
       return null;
+    }
+  }
+
+  /// Syncs the current FCM token with Laravel backend
+  Future<void> syncDeviceToken(NotificationsApi api) async {
+    try {
+      final token = await getToken();
+      if (token != null && token.isNotEmpty) {
+        final platform = kIsWeb
+            ? 'web'
+            : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android');
+        await api.registerDeviceToken(
+          token: token,
+          platform: platform,
+        );
+        if (kDebugMode) {
+          _logger.i('Device token synced with backend successfully.');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        _logger.w('Failed to sync device token with backend: $e');
+      }
     }
   }
 

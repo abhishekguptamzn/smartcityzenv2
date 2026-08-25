@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/active_checkin_provider.dart';
+import '../services/push_notification_service.dart';
 import '../services/realtime_notification_service.dart';
+import '../../data/api/notifications_api.dart';
 import '../../data/models/notification_model.dart';
 import '../../shared/widgets/glass_bottom_nav.dart';
 import '../../shared/widgets/glass_sidebar.dart';
@@ -35,6 +37,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   StreamSubscription<NotificationModel>? _notificationSub;
+  StreamSubscription<String>? _tokenRefreshSub;
 
   @override
   void initState() {
@@ -46,12 +49,24 @@ class _AppShellState extends ConsumerState<AppShell> {
           InAppNotificationToast.show(context, ref, notification);
         }
       });
+
+      // Automatically register & sync FCM device token with Laravel backend
+      final notifApi = ref.read(notificationsApiProvider);
+      PushNotificationService.instance.syncDeviceToken(notifApi);
+
+      // Listen for token refresh events
+      _tokenRefreshSub = PushNotificationService.instance.onTokenRefresh.listen((newToken) {
+        if (mounted) {
+          PushNotificationService.instance.syncDeviceToken(notifApi);
+        }
+      });
     });
   }
 
   @override
   void dispose() {
     _notificationSub?.cancel();
+    _tokenRefreshSub?.cancel();
     super.dispose();
   }
 

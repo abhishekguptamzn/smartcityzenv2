@@ -1,19 +1,23 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/app_exception.dart';
 import '../api/auth_api.dart';
+import '../api/notifications_api.dart';
 import '../api/token_storage.dart';
 import '../models/login_history_model.dart';
 import '../models/pagination_meta.dart';
 import '../models/user_model.dart';
+import '../../core/services/push_notification_service.dart';
 
 part 'auth_repository.g.dart';
 
 class AuthRepository {
-  AuthRepository(this._api, this._tokenStorage);
+  AuthRepository(this._api, this._tokenStorage, this._notificationsApi);
 
   final AuthApi _api;
   final TokenStorage _tokenStorage;
+  final NotificationsApi _notificationsApi;
 
   Future<UserModel> register({
     required String name,
@@ -68,6 +72,10 @@ class AuthRepository {
         (responseData as Map<String, dynamic>)['data'] as Map<String, dynamic>;
     final token = data['token'] as String;
     await _tokenStorage.saveToken(token);
+
+    // Auto-sync FCM device token in background
+    unawaited(PushNotificationService.instance.syncDeviceToken(_notificationsApi));
+
     return UserModel.fromJson(data['user'] as Map<String, dynamic>);
   }
 
@@ -95,6 +103,10 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
+      final fcmToken = await PushNotificationService.instance.getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        unawaited(_notificationsApi.removeDeviceToken(fcmToken));
+      }
       await _api.logout();
     } finally {
       await _tokenStorage.clearToken();
@@ -167,5 +179,6 @@ AuthRepository authRepository(Ref ref) {
   return AuthRepository(
     ref.watch(authApiProvider),
     ref.watch(tokenStorageProvider),
+    ref.watch(notificationsApiProvider),
   );
 }
