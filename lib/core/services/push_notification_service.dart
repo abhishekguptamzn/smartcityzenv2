@@ -53,6 +53,22 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
       if (title != null || body != null) {
         final localNotifications = FlutterLocalNotificationsPlugin();
+        const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const darwinSettings = DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
+        await localNotifications.initialize(
+          const InitializationSettings(android: androidSettings, iOS: darwinSettings),
+        );
+
+        final androidImpl = localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImpl != null) {
+          await androidImpl.createNotificationChannel(_highImportanceChannel);
+        }
+
         await localNotifications.show(
           message.hashCode,
           title ?? 'Smart Cityzen Alert',
