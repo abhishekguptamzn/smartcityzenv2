@@ -23,8 +23,9 @@ class FacilitiesApi {
     int page = 1,
   }) {
     return _dio.get(
-      '/${kind.pathSegment}',
+      '/facilities',
       queryParameters: {
+        'category_slug': kind.pathSegment,
         if (search != null && search.isNotEmpty) 'search': search,
         if (cityId != null) 'city_id': cityId,
         if (location != null) 'location': location,
@@ -47,8 +48,9 @@ class FacilitiesApi {
     int page = 1,
   }) {
     return _dio.get(
-      '/libraries/nearby',
+      '/facilities',
       queryParameters: {
+        'category_slug': 'libraries',
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         if (cityId != null && cityId.isNotEmpty) 'city_id': cityId,
@@ -61,11 +63,11 @@ class FacilitiesApi {
   }
 
   Future<Response<dynamic>> getById(FacilityKind kind, String id) =>
-      _dio.get('/${kind.pathSegment}/$id');
+      _dio.get('/facilities/$id');
 
   /// Returns a plain JSON array, not the standard paginated envelope.
   Future<Response<dynamic>> feePlans(FacilityKind kind, String facilityId) =>
-      _dio.get('/${kind.pathSegment}/$facilityId/fee-plans');
+      _dio.get('/facilities/$facilityId/fee-plans');
 
   /// Returns active & enrolled memberships for current user across gyms, libraries, and activities.
   Future<Response<dynamic>> myMemberships() => _dio.get('/user/memberships');

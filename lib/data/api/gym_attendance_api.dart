@@ -17,7 +17,7 @@ class GymAttendanceApi {
 
   Future<Response<dynamic>> checkIn(String gymId, {required String memberId}) {
     return _dio.post(
-      '/gyms/$gymId/attendance/check-in',
+      '/facilities/$gymId/attendance/check-in',
       data: {'member_id': memberId},
     );
   }
@@ -27,7 +27,7 @@ class GymAttendanceApi {
     required String attendanceId,
   }) {
     return _dio.post(
-      '/gyms/$gymId/attendance/check-out',
+      '/facilities/$gymId/attendance/check-out',
       data: {'attendance_id': attendanceId},
     );
   }
@@ -41,8 +41,9 @@ class GymAttendanceApi {
     int page = 1,
   }) {
     return _dio.get(
-      '/gyms/$gymId/attendance/members/$memberId/attendance',
+      '/facilities/$gymId/attendance',
       queryParameters: {
+        'member_id': memberId,
         if (dateFrom != null) 'date_from': dateFrom,
         if (dateTo != null) 'date_to': dateTo,
         'per_page': perPage,
@@ -52,7 +53,7 @@ class GymAttendanceApi {
   }
 
   Future<Response<dynamic>> getById(String gymId, String attendanceId) {
-    return _dio.get('/gyms/$gymId/attendance/$attendanceId');
+    return _dio.get('/facilities/$gymId/attendance/$attendanceId');
   }
 }
 

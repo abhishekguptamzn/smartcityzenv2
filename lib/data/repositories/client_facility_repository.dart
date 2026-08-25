@@ -17,16 +17,44 @@ class ClientFacilityRepository {
   Future<Map<String, dynamic>> getMyFacilities() async {
     final res = await _api.getMyFacilities();
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
+    final facsRaw = data['facilities'] as List? ?? [];
     final gymsRaw = data['gyms'] as List? ?? [];
     final libsRaw = data['libraries'] as List? ?? [];
     final actsRaw = data['activities'] as List? ?? [];
 
+    final List<FacilityModel> gyms = gymsRaw
+        .map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.gym))
+        .toList();
+    final List<FacilityModel> libraries = libsRaw
+        .map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.library))
+        .toList();
+    final List<FacilityModel> activities = actsRaw
+        .map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.activity))
+        .toList();
+
+    if (gyms.isEmpty && libraries.isEmpty && activities.isEmpty && facsRaw.isNotEmpty) {
+      for (final item in facsRaw) {
+        if (item is Map<String, dynamic>) {
+          final catSlug = (item['category'] is Map ? item['category']['slug'] : null)?.toString().toLowerCase() ?? '';
+          final typeSlug = (item['type'] is Map ? item['type']['slug'] : null)?.toString().toLowerCase() ?? '';
+          if (catSlug.contains('gym') || typeSlug.contains('gym')) {
+            gyms.add(FacilityModel.fromJson(item).copyWith(kind: FacilityKind.gym));
+          } else if (catSlug.contains('lib') || typeSlug.contains('lib')) {
+            libraries.add(FacilityModel.fromJson(item).copyWith(kind: FacilityKind.library));
+          } else {
+            activities.add(FacilityModel.fromJson(item).copyWith(kind: FacilityKind.activity));
+          }
+        }
+      }
+    }
+
     return {
-      'gyms': gymsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.gym)).toList(),
-      'libraries': libsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.library)).toList(),
-      'activities': actsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>).copyWith(kind: FacilityKind.activity)).toList(),
-      'total_facilities': data['total_facilities'] ?? 0,
-      'is_client_user': data['is_client_user'] ?? false,
+      'facilities': facsRaw.map((j) => FacilityModel.fromJson(j as Map<String, dynamic>)).toList(),
+      'gyms': gyms,
+      'libraries': libraries,
+      'activities': activities,
+      'total_facilities': data['total_facilities'] ?? (gyms.length + libraries.length + activities.length),
+      'is_client_user': data['is_client_user'] ?? (gyms.isNotEmpty || libraries.isNotEmpty || activities.isNotEmpty),
     };
   }
 

@@ -80,9 +80,10 @@ class _OnboardingSlidesScreenState extends State<OnboardingSlidesScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0B1120) : const Color(0xFFF8FAFC),
       body: AmbientBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
+        child: SizedBox.expand(
+          child: SafeArea(
+            child: Column(
+              children: [
               // 1. TOP BAR with Logo & SKIP BUTTON (Always visible on all 3 slides)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -152,157 +153,163 @@ class _OnboardingSlidesScreenState extends State<OnboardingSlidesScreen> {
                   },
                   itemBuilder: (context, index) {
                     final slide = _slides[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Hero Illustration Graphic with Glowing Ambient Card
-                          Container(
-                            width: double.infinity,
-                            height: 240,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  slide.accentColor.withValues(alpha: isDark ? 0.22 : 0.12),
-                                  slide.secondaryColor.withValues(alpha: isDark ? 0.08 : 0.04),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(32),
-                              border: Border.all(
-                                color: slide.accentColor.withValues(alpha: 0.3),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: slide.accentColor.withValues(alpha: 0.15),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Positioned(
-                                  top: -20,
-                                  right: -20,
-                                  child: Container(
-                                    width: 110,
-                                    height: 110,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: slide.accentColor.withValues(alpha: 0.12),
-                                    ),
-                                  ),
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(22),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: slide.accentColor,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: slide.accentColor.withValues(alpha: 0.4),
-                                            blurRadius: 20,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        slide.icon,
-                                        size: 48,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 18),
-                                    Wrap(
-                                      spacing: 8,
-                                      children: slide.featurePills
-                                          .map(
-                                            (pill) => Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10, vertical: 5),
-                                              decoration: BoxDecoration(
-                                                color: isDark
-                                                    ? Colors.black.withValues(alpha: 0.3)
-                                                    : Colors.white.withValues(alpha: 0.8),
-                                                borderRadius: BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: slide.accentColor.withValues(alpha: 0.2),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                pill,
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
+                    return Center(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Hero Illustration Graphic with Glowing Ambient Card
+                            Container(
+                              width: double.infinity,
+                              height: 210,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    slide.accentColor.withValues(alpha: isDark ? 0.22 : 0.12),
+                                    slide.secondaryColor.withValues(alpha: isDark ? 0.08 : 0.04),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Category Badge Tag
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: slide.accentColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              slide.badge,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.6,
-                                color: slide.accentColor,
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(
+                                  color: slide.accentColor.withValues(alpha: 0.3),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: slide.accentColor.withValues(alpha: 0.15),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Positioned(
+                                    top: -20,
+                                    right: -20,
+                                    child: Container(
+                                      width: 110,
+                                      height: 110,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: slide.accentColor.withValues(alpha: 0.12),
+                                      ),
+                                    ),
+                                  ),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(18),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: slide.accentColor,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: slide.accentColor.withValues(alpha: 0.4),
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          slide.icon,
+                                          size: 42,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        alignment: WrapAlignment.center,
+                                        children: slide.featurePills
+                                            .map(
+                                              (pill) => Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 9, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: isDark
+                                                      ? Colors.black.withValues(alpha: 0.3)
+                                                      : Colors.white.withValues(alpha: 0.8),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: slide.accentColor.withValues(alpha: 0.2),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  pill,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 24),
 
-                          // Title
-                          Text(
-                            slide.title,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.sora(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              height: 1.25,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: -0.4,
+                            // Category Badge Tag
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: slide.accentColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                slide.badge,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                  color: slide.accentColor,
+                                ),
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 12),
+                            const SizedBox(height: 12),
 
-                          // Subtitle
-                          Text(
-                            slide.subtitle,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              height: 1.5,
-                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            // Title
+                            Text(
+                              slide.title,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.sora(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                height: 1.25,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                letterSpacing: -0.4,
+                              ),
                             ),
-                          ),
-                        ],
+
+                            const SizedBox(height: 10),
+
+                            // Subtitle
+                            Text(
+                              slide.subtitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.45,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -375,7 +382,8 @@ class _OnboardingSlidesScreenState extends State<OnboardingSlidesScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

@@ -110,119 +110,119 @@ class ClientFacilityApi {
   Future<Response<dynamic>> sendCommunication(String type, String id, Map<String, dynamic> data) =>
       _dio.post('/client/$type/$id/communications/send', data: data);
 
-  // Gyms
+  // Facilities / Gyms / Libraries
   Future<Response<dynamic>> getGym(String gymId) =>
-      _dio.get('/client/gyms/$gymId');
+      _dio.get('/client/facilities/$gymId');
 
   Future<Response<dynamic>> updateGym(String gymId, Map<String, dynamic> data) =>
-      _dio.put('/client/gyms/$gymId', data: data);
+      _dio.put('/client/facilities/$gymId', data: data);
 
   Future<Response<dynamic>> getGymPlans(String gymId) =>
-      _dio.get('/client/gyms/$gymId/plans');
+      _dio.get('/client/facilities/$gymId/plans');
 
   Future<Response<dynamic>> createGymPlan(String gymId, Map<String, dynamic> data) =>
-      _dio.post('/client/gyms/$gymId/plans', data: data);
+      _dio.post('/client/facilities/$gymId/plans', data: data);
 
   Future<Response<dynamic>> updateGymPlan(String gymId, String planId, Map<String, dynamic> data) =>
-      _dio.put('/client/gyms/$gymId/plans/$planId', data: data);
+      _dio.put('/client/facilities/$gymId/plans/$planId', data: data);
 
   Future<Response<dynamic>> deleteGymPlan(String gymId, String planId) =>
-      _dio.delete('/client/gyms/$gymId/plans/$planId');
+      _dio.delete('/client/facilities/$gymId/plans/$planId');
 
   Future<Response<dynamic>> getGymMembers(String gymId, {String? search, String? status, int page = 1}) =>
-      _dio.get('/client/gyms/$gymId/members', queryParameters: {
+      _dio.get('/client/facilities/$gymId/members', queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status != 'all') 'status': status,
         'page': page,
       });
 
   Future<Response<dynamic>> addGymMember(String gymId, Map<String, dynamic> data) =>
-      _dio.post('/client/gyms/$gymId/members', data: data);
+      _dio.post('/client/facilities/$gymId/members', data: data);
 
   Future<Response<dynamic>> deleteGymMember(String gymId, String memberId, {String? reason, String? comment}) =>
-      _dio.delete('/client/gyms/$gymId/members/$memberId', data: {
+      _dio.delete('/client/facilities/$gymId/members/$memberId', data: {
         if (reason != null) 'reason': reason,
         if (comment != null) 'comment': comment,
       });
 
   Future<Response<dynamic>> renewGymMember(String gymId, String memberId, Map<String, dynamic> data) =>
-      _dio.post('/client/gyms/$gymId/members/$memberId/renew', data: data);
+      _dio.post('/client/facilities/$gymId/members/$memberId/renew', data: data);
 
   Future<Response<dynamic>> getGymMemberRenewals(String gymId, String memberId) =>
-      _dio.get('/client/gyms/$gymId/members/$memberId/renewals');
+      _dio.get('/client/facilities/$gymId/members/$memberId/renewals');
 
   Future<Response<dynamic>> getGymAttendance(String gymId, {String? date, int page = 1}) =>
-      _dio.get('/client/gyms/$gymId/attendance', queryParameters: {
+      _dio.get('/client/facilities/$gymId/attendance', queryParameters: {
         if (date != null) 'date': date,
         'page': page,
       });
 
   // Libraries
   Future<Response<dynamic>> getLibrary(String libraryId) =>
-      _dio.get('/client/libraries/$libraryId');
+      _dio.get('/client/facilities/$libraryId');
 
   Future<Response<dynamic>> updateLibrary(String libraryId, Map<String, dynamic> data) =>
-      _dio.put('/client/libraries/$libraryId', data: data);
+      _dio.put('/client/facilities/$libraryId', data: data);
 
   Future<Response<dynamic>> getLibraryPlans(String libraryId) =>
-      _dio.get('/client/libraries/$libraryId/plans');
+      _dio.get('/client/facilities/$libraryId/plans');
 
   Future<Response<dynamic>> createLibraryPlan(String libraryId, Map<String, dynamic> data) =>
-      _dio.post('/client/libraries/$libraryId/plans', data: data);
+      _dio.post('/client/facilities/$libraryId/plans', data: data);
 
   Future<Response<dynamic>> updateLibraryPlan(String libraryId, String planId, Map<String, dynamic> data) =>
-      _dio.put('/client/libraries/$libraryId/plans/$planId', data: data);
+      _dio.put('/client/facilities/$libraryId/plans/$planId', data: data);
 
   Future<Response<dynamic>> deleteLibraryPlan(String libraryId, String planId) =>
-      _dio.delete('/client/libraries/$libraryId/plans/$planId');
+      _dio.delete('/client/facilities/$libraryId/plans/$planId');
 
   Future<Response<dynamic>> getLibraryMembers(String libraryId, {String? search, String? status, int page = 1}) =>
-      _dio.get('/client/libraries/$libraryId/members', queryParameters: {
+      _dio.get('/client/facilities/$libraryId/members', queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status != 'all') 'status': status,
         'page': page,
       });
 
   Future<Response<dynamic>> addLibraryMember(String libraryId, Map<String, dynamic> data) =>
-      _dio.post('/client/libraries/$libraryId/members', data: data);
+      _dio.post('/client/facilities/$libraryId/members', data: data);
 
   Future<Response<dynamic>> deleteLibraryMember(String libraryId, String memberId, {String? reason, String? comment}) =>
-      _dio.delete('/client/libraries/$libraryId/members/$memberId', data: {
+      _dio.delete('/client/facilities/$libraryId/members/$memberId', data: {
         if (reason != null) 'reason': reason,
         if (comment != null) 'comment': comment,
       });
 
   // Activities / Facility Centers
   Future<Response<dynamic>> getActivity(String activityId) =>
-      _dio.get('/activities/$activityId');
+      _dio.get('/facilities/$activityId');
 
   Future<Response<dynamic>> updateActivity(String activityId, Map<String, dynamic> data) =>
-      _dio.put('/activities/$activityId', data: data);
+      _dio.put('/facilities/$activityId', data: data);
 
   Future<Response<dynamic>> getActivityPlans(String activityId) =>
-      _dio.get('/activities/$activityId/fee-plans');
+      _dio.get('/facilities/$activityId/fee-plans');
 
   Future<Response<dynamic>> createActivityPlan(String activityId, Map<String, dynamic> data) =>
-      _dio.post('/activities/$activityId/fee-plans', data: data);
+      _dio.post('/facilities/$activityId/fee-plans', data: data);
 
   Future<Response<dynamic>> updateActivityPlan(String activityId, String planId, Map<String, dynamic> data) =>
-      _dio.put('/activities/$activityId/fee-plans/$planId', data: data);
+      _dio.put('/facilities/$activityId/fee-plans/$planId', data: data);
 
   Future<Response<dynamic>> deleteActivityPlan(String activityId, String planId) =>
-      _dio.delete('/activities/$activityId/fee-plans/$planId');
+      _dio.delete('/facilities/$activityId/fee-plans/$planId');
 
   Future<Response<dynamic>> getActivityMembers(String activityId, {String? search, String? status, int page = 1}) =>
-      _dio.get('/activities/$activityId/enrollments', queryParameters: {
+      _dio.get('/facilities/$activityId/members', queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status != 'all') 'status': status,
         'page': page,
       });
 
   Future<Response<dynamic>> addActivityMember(String activityId, Map<String, dynamic> data) =>
-      _dio.post('/activities/$activityId/enrollments', data: data);
+      _dio.post('/facilities/$activityId/members', data: data);
 
   Future<Response<dynamic>> deleteActivityMember(String activityId, String enrollmentId, {String? reason, String? comment}) =>
-      _dio.delete('/activities/$activityId/enrollments/$enrollmentId', data: {
+      _dio.delete('/facilities/$activityId/members/$enrollmentId', data: {
         if (reason != null) 'reason': reason,
         if (comment != null) 'comment': comment,
       });
@@ -243,10 +243,10 @@ class ClientFacilityApi {
       _dio.delete('/client/$type/$facilityId/logo');
 
   Future<Response<dynamic>> renewActivityMember(String activityId, String enrollmentId, Map<String, dynamic> data) =>
-      _dio.post('/client/activities/$activityId/members/$enrollmentId/renew', data: data);
+      _dio.post('/client/facilities/$activityId/members/$enrollmentId/renew', data: data);
 
   Future<Response<dynamic>> getActivityMemberRenewals(String activityId, String enrollmentId) =>
-      _dio.get('/client/activities/$activityId/members/$enrollmentId/renewals');
+      _dio.get('/client/facilities/$activityId/members/$enrollmentId/renewals');
 
   // Active Session Status (Citizen)
   Future<Response<dynamic>> getActiveCheckinSession() =>

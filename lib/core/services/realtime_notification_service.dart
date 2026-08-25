@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../data/api/notifications_api.dart';
 import '../../data/api/token_storage.dart';
 import '../../data/models/notification_model.dart';
 import '../config/app_config.dart';
@@ -15,12 +16,14 @@ class RealtimeNotificationService {
   RealtimeNotificationService({
     required this.config,
     required this.tokenStorage,
+    required this.notificationsApi,
   }) {
     _initConnectivityListener();
   }
 
   final AppConfig config;
   final TokenStorage tokenStorage;
+  final NotificationsApi notificationsApi;
 
   final _notificationController =
       StreamController<NotificationModel>.broadcast();
@@ -64,9 +67,9 @@ class RealtimeNotificationService {
 
   void _startPollingFallback() {
     _pollingFallbackTimer?.cancel();
-    // Background safety poll every 30 seconds
-    _pollingFallbackTimer =
-        Timer.periodic(const Duration(seconds: 30), (_) async {
+    // Background safety poll: 15s on Web, 30s on Native
+    final interval = kIsWeb ? const Duration(seconds: 15) : const Duration(seconds: 30);
+    _pollingFallbackTimer = Timer.periodic(interval, (_) async {
       if (!_isRunning) return;
       await _checkLatestNotifications();
     });
@@ -77,21 +80,9 @@ class RealtimeNotificationService {
     if (token == null || token.isEmpty) return;
 
     try {
-      final dio = Dio(
-        BaseOptions(
-          baseUrl: config.apiBaseUrl,
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
-          },
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-        ),
-      );
-
-      final response = await dio.get('/notifications/unread-count');
+      final response = await notificationsApi.getUnreadCount();
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data['data'] as Map<String, dynamic>?;
+        final data = response.data is Map ? (response.data['data'] ?? response.data) : null;
         final count = (data?['unread_count'] as num?)?.toInt();
         if (count != null && !_unreadCountController.isClosed) {
           _unreadCountController.add(count);
@@ -103,6 +94,12 @@ class RealtimeNotificationService {
   }
 
   Future<void> _startSSEConnection() async {
+    if (kIsWeb) {
+      // Browsers do not support ResponseType.stream via Dio XHR/Fetch; fallback to periodic polling
+      return;
+    }
+
+    int retryCount = 0;
     while (_isRunning) {
       final token = await tokenStorage.readToken();
       if (token == null || token.isEmpty) {
@@ -133,6 +130,7 @@ class RealtimeNotificationService {
         );
 
         if (response.data != null) {
+          retryCount = 0;
           final stream = response.data!.stream;
           String buffer = '';
 
@@ -159,6 +157,7 @@ class RealtimeNotificationService {
           }
         }
       } catch (e) {
+        retryCount++;
         if (kDebugMode) {
           // SSE stream reconnect loop
         }
@@ -167,7 +166,8 @@ class RealtimeNotificationService {
       }
 
       if (_isRunning) {
-        await Future.delayed(const Duration(seconds: 4));
+        final delaySeconds = retryCount > 0 ? (retryCount * 5).clamp(5, 60) : 4;
+        await Future.delayed(Duration(seconds: delaySeconds));
       }
     }
   }
@@ -212,9 +212,11 @@ class RealtimeNotificationService {
 RealtimeNotificationService realtimeNotificationService(Ref ref) {
   final config = ref.watch(appConfigControllerProvider);
   final tokenStorage = ref.watch(tokenStorageProvider);
+  final notificationsApi = ref.watch(notificationsApiProvider);
   final service = RealtimeNotificationService(
     config: config,
     tokenStorage: tokenStorage,
+    notificationsApi: notificationsApi,
   );
 
   service.start();

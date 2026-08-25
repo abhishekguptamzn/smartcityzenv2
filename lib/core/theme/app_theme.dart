@@ -260,7 +260,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: isDark ? ext.primaryFixedDim : scheme.primary,
           foregroundColor: isDark ? ext.onPrimaryFixed : scheme.onPrimary,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: const StadiumBorder(),
           textStyle: GoogleFonts.inter(
@@ -274,7 +274,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: isDark ? ext.primaryFixedDim : scheme.primary,
           foregroundColor: isDark ? ext.onPrimaryFixed : scheme.onPrimary,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           elevation: 0,
           shadowColor: ext.glassShadow,
@@ -289,7 +289,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: isDark ? ext.primaryFixedDim : scheme.primary,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           side: BorderSide(color: scheme.outline),
           shape: const StadiumBorder(),

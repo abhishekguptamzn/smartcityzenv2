@@ -30,6 +30,9 @@ class AppConfig {
   /// default and not hardcoded elsewhere in the app.
   static String platformDefaultBaseUrl() {
     if (_compileTimeApiBaseUrl.isNotEmpty) return _compileTimeApiBaseUrl;
+    if (kIsWeb) {
+      return 'http://127.0.0.1:8000/api/v1';
+    }
     return 'https://admin.smartct.online/api/v1';
   }
 

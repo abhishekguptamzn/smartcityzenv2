@@ -21,7 +21,7 @@ class FacilityMembersApi {
     String facilityId,
     String memberId,
   ) {
-    return _dio.get('/${kind.pathSegment}/$facilityId/members/$memberId');
+    return _dio.get('/facilities/$facilityId/members/$memberId');
   }
 
   Future<Response<dynamic>> renewals(
@@ -30,7 +30,7 @@ class FacilityMembersApi {
     String memberId,
   ) {
     return _dio.get(
-      '/${kind.pathSegment}/$facilityId/members/$memberId/renewals',
+      '/facilities/$facilityId/members/$memberId/renewals',
     );
   }
 }

@@ -117,11 +117,10 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
 
     final config = ref.read(appConfigControllerProvider);
     final baseUrl = config.apiBaseUrl;
-    final pathSegment = widget.kind == FacilityKind.gym ? 'gyms' : 'libraries';
     final tokenStorage = ref.read(tokenStorageProvider);
     final token = await tokenStorage.readToken();
 
-    String rawUrl = directUrl ?? '$baseUrl/client/$pathSegment/${widget.facilityId}/payments/${widget.paymentId}/invoice';
+    String rawUrl = directUrl ?? '$baseUrl/client/facilities/${widget.facilityId}/payments/${widget.paymentId}/invoice';
     if (token != null && token.isNotEmpty && !rawUrl.contains('token=')) {
       rawUrl += '${rawUrl.contains('?') ? '&' : '?'}token=$token';
     }

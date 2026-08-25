@@ -159,6 +159,7 @@ class AmbientBackground extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return Stack(
+      fit: StackFit.expand,
       children: <Widget>[
         Positioned.fill(child: ColoredBox(color: scheme.surface)),
         Positioned(
@@ -171,7 +172,7 @@ class AmbientBackground extends StatelessWidget {
           left: -140,
           child: _Blob(color: colors.ambientTwo.withValues(alpha: 0.20)),
         ),
-        child,
+        Positioned.fill(child: child),
       ],
     );
   }

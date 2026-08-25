@@ -183,6 +183,7 @@ class FacilitiesRepository {
       if (payableType == null || payableId == null) continue;
 
       final FacilityKind? kind = switch (payableType) {
+        'FacilityMember' || 'Facility' || 'App\\Models\\FacilityMember' || 'App\\Models\\Facility' => FacilityKind.gym,
         'LibraryMember' || 'Library' || 'App\\Models\\LibraryMember' || 'App\\Models\\Library' => FacilityKind.library,
         'GymMember' || 'Gym' || 'App\\Models\\GymMember' || 'App\\Models\\Gym' => FacilityKind.gym,
         'ActivityEnrollment' || 'Activity' || 'App\\Models\\ActivityEnrollment' || 'App\\Models\\Activity' => FacilityKind.activity,
@@ -192,7 +193,7 @@ class FacilitiesRepository {
                 ? FacilityKind.library
                 : (payableType.contains('Activity') || payableType.contains('Enrollment')
                     ? FacilityKind.activity
-                    : null)),
+                    : (payableType.contains('Facility') ? FacilityKind.gym : null))),
       };
       if (kind == null) continue;
 
