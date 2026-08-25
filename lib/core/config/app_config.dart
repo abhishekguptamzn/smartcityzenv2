@@ -30,9 +30,6 @@ class AppConfig {
   /// default and not hardcoded elsewhere in the app.
   static String platformDefaultBaseUrl() {
     if (_compileTimeApiBaseUrl.isNotEmpty) return _compileTimeApiBaseUrl;
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000/api/v1';
-    }
     return 'https://admin.smartct.online/api/v1';
   }
 
@@ -80,7 +77,10 @@ class AppConfigController extends _$AppConfigController {
   Future<void> _hydrate() async {
     final prefs = await SharedPreferences.getInstance();
     final defaults = AppConfig.defaults();
-    final url = prefs.getString(_Keys.apiBaseUrl) ?? defaults.apiBaseUrl;
+    var url = prefs.getString(_Keys.apiBaseUrl);
+    if (url == null || url.contains('127.0.0.1') || url.contains('localhost')) {
+      url = defaults.apiBaseUrl;
+    }
     ImageUrlResolver.setActiveBaseUrl(url);
     state = AppConfig(
       apiBaseUrl: url,
