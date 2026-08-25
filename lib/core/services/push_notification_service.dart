@@ -235,11 +235,11 @@ class PushNotificationService {
     }
   }
 
+  final _localNotifications = FlutterLocalNotificationsPlugin();
+
   /// Initialize Flutter Local Notifications & setup the Android channel
   Future<void> _initLocalNotifications() async {
     if (kIsWeb) return;
-
-    final localNotifications = FlutterLocalNotificationsPlugin();
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -255,7 +255,7 @@ class PushNotificationService {
       macOS: darwinSettings,
     );
 
-    await localNotifications.initialize(
+    await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (kDebugMode) {
@@ -266,7 +266,7 @@ class PushNotificationService {
 
     // Create the High Importance Channel on Android
     final androidImplementation =
-        localNotifications.resolvePlatformSpecificImplementation<
+        _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidImplementation != null) {
@@ -317,7 +317,7 @@ class PushNotificationService {
     final body = notification?.body ?? message.data['body'] as String?;
 
     if (title != null || body != null) {
-      FlutterLocalNotificationsPlugin().show(
+      _localNotifications.show(
         message.hashCode,
         title ?? 'Smart Cityzen Alert',
         body ?? '',
@@ -326,11 +326,13 @@ class PushNotificationService {
             _highImportanceChannel.id,
             _highImportanceChannel.name,
             channelDescription: _highImportanceChannel.description,
-            importance: _highImportanceChannel.importance,
-            priority: Priority.high,
+            importance: Importance.max,
+            priority: Priority.max,
+            ticker: title ?? 'Smart Cityzen Alert',
             icon: '@mipmap/ic_launcher',
             playSound: true,
             enableVibration: true,
+            visibility: NotificationVisibility.public,
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,
