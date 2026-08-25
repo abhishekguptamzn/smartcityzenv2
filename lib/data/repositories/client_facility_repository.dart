@@ -301,10 +301,23 @@ class ClientFacilityRepository {
   // Communications
   Future<Map<String, dynamic>> getCommunications(FacilityKind kind, String facilityId, {int page = 1}) async {
     final res = await _api.getCommunications(kind.pathSegment, facilityId, page: page);
-    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
-    final rawList = data['communications'] as List? ?? [];
+    final rawData = res.data is Map ? res.data : {};
+    final dynamic innerData = rawData['data'];
+    final List<dynamic> rawList;
+    final dynamic rawStats = (rawData['meta'] is Map ? (rawData['meta']['stats'] ?? rawData['meta']) : null) ??
+        (innerData is Map ? innerData['stats'] : null);
+    final Map<String, dynamic> stats = rawStats is Map ? rawStats.cast<String, dynamic>() : {};
+
+    if (innerData is List) {
+      rawList = innerData;
+    } else if (innerData is Map) {
+      rawList = (innerData['communications'] ?? innerData['items'] ?? innerData['data']) as List? ?? [];
+    } else {
+      rawList = [];
+    }
+
     return {
-      'stats': data['stats'] as Map<String, dynamic>? ?? {},
+      'stats': stats,
       'communications': rawList.map((j) => FacilityCommunicationItem.fromJson(j as Map<String, dynamic>)).toList(),
     };
   }

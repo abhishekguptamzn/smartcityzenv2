@@ -292,8 +292,10 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
     final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
+      final citizenId = _selectedCitizen?.id ?? code;
       final payload = <String, dynamic>{
-        'citizen_id': _selectedCitizen?.id ?? code,
+        'user_id': citizenId,
+        'citizen_id': citizenId,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
         if (_selectedPlan != null) ...{
           'fee_plan_id': _selectedPlan!.id,

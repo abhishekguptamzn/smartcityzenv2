@@ -489,6 +489,16 @@ class FacilityCommunicationItem {
   final String timeFormatted;
 
   factory FacilityCommunicationItem.fromJson(Map<String, dynamic> json) {
+    final sentAtStr = json['sent_at']?.toString() ?? json['created_at']?.toString() ?? '';
+    DateTime? sentDate;
+    if (sentAtStr.isNotEmpty) {
+      sentDate = DateTime.tryParse(sentAtStr);
+    }
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthName = sentDate != null && sentDate.month >= 1 && sentDate.month <= 12 ? months[sentDate.month - 1] : '';
+    final defaultDate = sentDate != null ? '${sentDate.day} $monthName ${sentDate.year}' : '';
+    final defaultTime = sentDate != null ? '${sentDate.hour.toString().padLeft(2, '0')}:${sentDate.minute.toString().padLeft(2, '0')}' : '';
+
     return FacilityCommunicationItem(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
@@ -497,8 +507,8 @@ class FacilityCommunicationItem {
       channel: json['channel']?.toString() ?? 'email',
       recipientsCount: (json['recipients_count'] as num?)?.toInt() ?? 0,
       targetFilter: json['target_filter']?.toString() ?? 'selected',
-      dateFormatted: json['date_formatted']?.toString() ?? '',
-      timeFormatted: json['time_formatted']?.toString() ?? '',
+      dateFormatted: (json['date_formatted']?.toString().isNotEmpty ?? false) ? json['date_formatted'].toString() : defaultDate,
+      timeFormatted: (json['time_formatted']?.toString().isNotEmpty ?? false) ? json['time_formatted'].toString() : defaultTime,
     );
   }
 }
