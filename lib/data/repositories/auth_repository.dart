@@ -105,7 +105,7 @@ class AuthRepository {
     try {
       final fcmToken = await PushNotificationService.instance.getToken();
       if (fcmToken != null && fcmToken.isNotEmpty) {
-        unawaited(_notificationsApi.removeDeviceToken(fcmToken));
+        unawaited(_notificationsApi.removeDeviceToken(fcmToken).then((_) => null, onError: (_) => null));
       }
       await _api.logout();
     } finally {

@@ -227,6 +227,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
     final messageCtrl = TextEditingController();
     final memberSearchCtrl = TextEditingController();
     String targetFilter = 'active';
+    String selectedChannel = 'both';
     int expiringDays = 7;
     final Set<String> selectedMemberIds = <String>{};
     List<Map<String, dynamic>> availableMembers = [];
@@ -242,7 +243,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
           final theme = Theme.of(context);
           final scheme = theme.colorScheme;
 
-            void loadMembersIfNeeded() async {
+          void loadMembersIfNeeded() async {
             if (availableMembers.isNotEmpty || loadingMembers) return;
             setSheetState(() => loadingMembers = true);
             try {
@@ -297,11 +298,46 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Compose Broadcast Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('Compose Announcement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Delivery Channel
+                  const Text('Delivery Channel', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      ChoiceChip(
+                        avatar: const Icon(Icons.all_inclusive_rounded, size: 16),
+                        label: const Text('Both (Email + Push)', style: TextStyle(fontSize: 12)),
+                        selected: selectedChannel == 'both',
+                        onSelected: (val) {
+                          if (val) setSheetState(() => selectedChannel = 'both');
+                        },
+                      ),
+                      ChoiceChip(
+                        avatar: const Icon(Icons.notifications_active_rounded, size: 16),
+                        label: const Text('Push Notification Only', style: TextStyle(fontSize: 12)),
+                        selected: selectedChannel == 'push',
+                        onSelected: (val) {
+                          if (val) setSheetState(() => selectedChannel = 'push');
+                        },
+                      ),
+                      ChoiceChip(
+                        avatar: const Icon(Icons.email_outlined, size: 16),
+                        label: const Text('Email Only', style: TextStyle(fontSize: 12)),
+                        selected: selectedChannel == 'email',
+                        onSelected: (val) {
+                          if (val) setSheetState(() => selectedChannel = 'email');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
 
                   // Target Recipients
                   const Text('Recipients Target', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
@@ -587,6 +623,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                             'title': titleCtrl.text.trim(),
                             'subject': subjectCtrl.text.trim(),
                             'message': messageCtrl.text.trim(),
+                            'channel': selectedChannel,
                             'target_filter': targetFilter,
                             if (targetFilter == 'expiring_in_days') 'days': expiringDays,
                             if (targetFilter == 'selected_members') ...{
@@ -604,7 +641,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(res['meta']?['message'] ?? 'Broadcast dispatched successfully!'),
+                              content: Text(res['meta']?['message'] ?? 'Announcement broadcast dispatched successfully!'),
                               backgroundColor: const Color(0xFF059669),
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -618,7 +655,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                         }
                       },
                       style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), padding: const EdgeInsets.symmetric(vertical: 14)),
-                      child: const Text('Send Broadcast Email', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text('Send Announcement Broadcast', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
