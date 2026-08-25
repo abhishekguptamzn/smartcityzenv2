@@ -18,6 +18,15 @@ const AndroidNotificationChannel _highImportanceChannel =
   enableVibration: true,
 );
 
+/// Web Firebase configuration options
+const FirebaseOptions _webFirebaseOptions = FirebaseOptions(
+  apiKey: 'AIzaSyCV4jlR01qud6RDC82hnDX2n4q8QBCqWP4',
+  appId: '1:529235789171:android:accc5241f134a0dc5fb106',
+  messagingSenderId: '529235789171',
+  projectId: 'smartct-b6e17',
+  storageBucket: 'smartct-b6e17.firebasestorage.app',
+);
+
 /// Top-level background message handler for FCM.
 ///
 /// MUST be annotated with `@pragma('vm:entry-point')` so the Dart VM
@@ -25,7 +34,11 @@ const AndroidNotificationChannel _highImportanceChannel =
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    await Firebase.initializeApp();
+    if (kIsWeb) {
+      await Firebase.initializeApp(options: _webFirebaseOptions);
+    } else {
+      await Firebase.initializeApp();
+    }
   } catch (_) {
     // Firebase already initialized or platform specific initialization
   }
@@ -43,14 +56,11 @@ class PushNotificationService {
   PushNotificationService._();
   static final PushNotificationService instance = PushNotificationService._();
 
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
-
   final _tokenController = StreamController<String>.broadcast();
   final _messageClickController = StreamController<RemoteMessage>.broadcast();
 
-  Stream<String> get onTokenRefresh => _fcm.onTokenRefresh;
+  Stream<String> get onTokenRefresh =>
+      _isInitialized ? FirebaseMessaging.instance.onTokenRefresh : const Stream.empty();
   Stream<RemoteMessage> get onMessageClick => _messageClickController.stream;
 
   bool _isInitialized = false;
@@ -60,28 +70,37 @@ class PushNotificationService {
     if (instance._isInitialized) return;
 
     try {
-      // 1. Initialize Firebase Core
-      await Firebase.initializeApp();
+      // 1. Initialize Firebase Core safely with Web & Native Options
+      if (kIsWeb) {
+        await Firebase.initializeApp(options: _webFirebaseOptions);
+      } else {
+        await Firebase.initializeApp();
+      }
 
-      // 2. Register Background FCM Handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      final fcm = FirebaseMessaging.instance;
+
+      // 2. Register Background FCM Handler (Native Mobile Only)
+      if (!kIsWeb) {
+        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      }
 
       // 3. Initialize Local Notifications Plugin & Android Channel
       await instance._initLocalNotifications();
 
-      // 4. Request Permissions (especially for Android 13+ / iOS)
+      // 4. Request Permissions (especially for Android 13+ / iOS / Web)
       await instance.requestPermission();
 
-      // 5. Configure Foreground Presentation Options
-      await FirebaseMessaging.instance
-          .setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      // 5. Configure Foreground Presentation Options (Native Mobile)
+      if (!kIsWeb) {
+        await fcm.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
 
       // 6. Setup Listeners
-      instance._setupMessageListeners();
+      instance._setupMessageListeners(fcm);
 
       instance._isInitialized = true;
       if (kDebugMode) {
@@ -89,36 +108,43 @@ class PushNotificationService {
       }
     } catch (e, stack) {
       if (kDebugMode) {
-        _logger.e('Failed to initialize PushNotificationService',
+        _logger.w('PushNotificationService initialization skipped/error: $e',
             error: e, stackTrace: stack);
       }
     }
   }
 
   /// Request Notification Permissions from the user
-  Future<NotificationSettings> requestPermission() async {
-    final settings = await _fcm.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
+  Future<NotificationSettings?> requestPermission() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
 
-    if (kDebugMode) {
-      _logger.i(
-          'Push Notification Permission Status: ${settings.authorizationStatus}');
+      if (kDebugMode) {
+        _logger.i(
+            'Push Notification Permission Status: ${settings.authorizationStatus}');
+      }
+
+      return settings;
+    } catch (e) {
+      if (kDebugMode) {
+        _logger.w('Unable to request notification permission: $e');
+      }
+      return null;
     }
-
-    return settings;
   }
 
   /// Retrieve the unique FCM Device Registration Token.
   Future<String?> getToken() async {
     try {
-      final token = await _fcm.getToken();
+      final token = await FirebaseMessaging.instance.getToken();
       if (kDebugMode) {
         _logger.i('FCM Registration Token: $token');
       }
@@ -135,6 +161,8 @@ class PushNotificationService {
   Future<void> _initLocalNotifications() async {
     if (kIsWeb) return;
 
+    final localNotifications = FlutterLocalNotificationsPlugin();
+
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwinSettings = DarwinInitializationSettings(
@@ -149,7 +177,7 @@ class PushNotificationService {
       macOS: darwinSettings,
     );
 
-    await _localNotifications.initialize(
+    await localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (kDebugMode) {
@@ -160,7 +188,7 @@ class PushNotificationService {
 
     // Create the High Importance Channel on Android
     final androidImplementation =
-        _localNotifications.resolvePlatformSpecificImplementation<
+        localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidImplementation != null) {
@@ -170,7 +198,7 @@ class PushNotificationService {
   }
 
   /// Setup foreground, background open, and terminated open listeners
-  void _setupMessageListeners() {
+  void _setupMessageListeners(FirebaseMessaging fcm) {
     // 1. Foreground message handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (kDebugMode) {
@@ -192,14 +220,14 @@ class PushNotificationService {
     });
 
     // 3. Terminated state tap handler (when app is launched from notification tray while terminated)
-    _fcm.getInitialMessage().then((RemoteMessage? message) {
+    fcm.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         if (kDebugMode) {
           _logger.i('FCM App launched from terminated state: ${message.data}');
         }
         _messageClickController.add(message);
       }
-    });
+    }).catchError((_) {});
   }
 
   /// Displays a local heads-up notification when a message arrives while app is in foreground
@@ -211,7 +239,7 @@ class PushNotificationService {
     final body = notification?.body ?? message.data['body'] as String?;
 
     if (title != null || body != null) {
-      _localNotifications.show(
+      FlutterLocalNotificationsPlugin().show(
         message.hashCode,
         title ?? 'Smart Cityzen Alert',
         body ?? '',

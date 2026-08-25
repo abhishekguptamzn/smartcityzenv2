@@ -24,7 +24,11 @@ void main() async {
   setAppPathUrlStrategy();
   UiTierDetector.detect();
   await IncidentReporter.initialize();
-  await PushNotificationService.initialize();
+  try {
+    await PushNotificationService.initialize();
+  } catch (e) {
+    appLogger.w('Push notification initialization deferred: $e');
+  }
 
   FlutterError.onError = (FlutterErrorDetails details) {
     final errStr = details.exception.toString();
