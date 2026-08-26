@@ -940,8 +940,9 @@ class _MembershipCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = context.appColors;
-    final dateStr = summary.latestPaidAt != null
-        ? DateFormat.yMMMd().format(summary.latestPaidAt!)
+    final dateTarget = summary.endDate ?? summary.latestPaidAt;
+    final dateStr = dateTarget != null
+        ? DateFormat.yMMMd().format(dateTarget)
         : '—';
     final isLibrary = summary.kind == FacilityKind.library;
     final isGym = summary.kind == FacilityKind.gym;
@@ -1015,7 +1016,9 @@ class _MembershipCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: colors.idCardGlow.withValues(alpha: 0.2),
+              color: summary.isActuallyActive
+                  ? colors.idCardGlow.withValues(alpha: 0.2)
+                  : const Color(0xFFEF4444).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -1026,14 +1029,18 @@ class _MembershipCard extends StatelessWidget {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: colors.idCardGlow,
+                    color: summary.isActuallyActive
+                        ? colors.idCardGlow
+                        : const Color(0xFFF87171),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  l10n.active,
+                  summary.isActuallyActive ? l10n.active : 'Expired',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.idCardGlow,
+                    color: summary.isActuallyActive
+                        ? colors.idCardGlow
+                        : const Color(0xFFFCA5A5),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
