@@ -264,23 +264,42 @@ class ClientFacilityRepository {
   // Enquiries
   Future<Map<String, dynamic>> getEnquiries(FacilityKind kind, String facilityId, {String? status, String? search, int page = 1}) async {
     final res = await _api.getEnquiries(kind.pathSegment, facilityId, status: status, search: search, page: page);
-    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
-    final rawList = data['enquiries'] as List? ?? [];
+    final rawData = res.data is Map ? (res.data as Map<String, dynamic>) : <String, dynamic>{};
+    final dynamic innerData = rawData['data'];
+    final dynamic meta = rawData['meta'];
+
+    final List<dynamic> rawList;
+    if (innerData is List) {
+      rawList = innerData;
+    } else if (innerData is Map) {
+      rawList = (innerData['enquiries'] ?? innerData['items'] ?? innerData['data']) as List? ?? [];
+    } else {
+      rawList = [];
+    }
+
+    final dynamic rawCounts = (meta is Map ? meta['counts'] : null) ?? (innerData is Map ? innerData['counts'] : null);
+    final Map<String, dynamic> counts = rawCounts is Map ? rawCounts.cast<String, dynamic>() : {};
+
+    final dynamic rawPagination = (meta is Map ? meta['pagination'] : null) ?? (innerData is Map ? innerData['pagination'] : null);
+    final Map<String, dynamic> pagination = rawPagination is Map ? rawPagination.cast<String, dynamic>() : {};
+
     return {
-      'counts': data['counts'] as Map<String, dynamic>? ?? {},
-      'enquiries': rawList.map((j) => FacilityEnquiryItem.fromJson(j as Map<String, dynamic>)).toList(),
-      'pagination': data['pagination'] as Map<String, dynamic>? ?? {},
+      'counts': counts,
+      'enquiries': rawList.whereType<Map<String, dynamic>>().map(FacilityEnquiryItem.fromJson).toList(),
+      'pagination': pagination,
     };
   }
 
   Future<Map<String, dynamic>> getEnquiryDetails(FacilityKind kind, String facilityId, String enquiryId) async {
     final res = await _api.getEnquiryDetails(kind.pathSegment, facilityId, enquiryId);
-    final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
-    final enq = data['enquiry'] as Map<String, dynamic>? ?? {};
-    final msgs = enq['messages'] as List? ?? [];
+    final rawData = res.data is Map ? (res.data as Map<String, dynamic>) : <String, dynamic>{};
+    final dynamic innerData = rawData['data'] ?? rawData;
+    final Map<String, dynamic> enq = innerData is Map ? (innerData['enquiry'] is Map ? (innerData['enquiry'] as Map<String, dynamic>) : innerData.cast<String, dynamic>()) : <String, dynamic>{};
+    final List<dynamic> msgs = (enq['messages'] ?? (innerData is Map ? innerData['messages'] : null)) as List? ?? [];
+
     return {
       'enquiry': FacilityEnquiryItem.fromJson(enq),
-      'messages': msgs.map((j) => EnquiryMessage.fromJson(j as Map<String, dynamic>)).toList(),
+      'messages': msgs.whereType<Map<String, dynamic>>().map(EnquiryMessage.fromJson).toList(),
     };
   }
 

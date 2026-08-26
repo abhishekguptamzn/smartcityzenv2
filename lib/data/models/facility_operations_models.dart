@@ -419,20 +419,36 @@ class FacilityEnquiryItem {
   final int messagesCount;
 
   factory FacilityEnquiryItem.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map ? (json['user'] as Map<String, dynamic>) : null;
+    final createdAt = json['created_at']?.toString() ?? '';
+    String timeFormatted = json['time_formatted']?.toString() ?? '';
+    String dateFormatted = json['date_formatted']?.toString() ?? '';
+
+    if (timeFormatted.isEmpty && createdAt.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(createdAt);
+        timeFormatted = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        dateFormatted = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      } catch (_) {}
+    }
+
+    final msgs = json['messages'] as List?;
+    final msgsCount = (json['messages_count'] as num?)?.toInt() ?? (msgs?.length ?? 0);
+
     return FacilityEnquiryItem(
       id: json['id']?.toString() ?? '',
       enquiryNumber: json['enquiry_number']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Citizen',
-      email: json['email']?.toString() ?? '',
-      phone: json['phone']?.toString(),
+      name: json['name']?.toString() ?? user?['name']?.toString() ?? 'Citizen',
+      email: json['email']?.toString() ?? user?['email']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? user?['phone']?.toString(),
       subject: json['subject']?.toString() ?? '',
       message: json['message']?.toString() ?? '',
       status: json['status']?.toString() ?? 'new',
       priority: json['priority']?.toString() ?? 'medium',
-      createdAt: json['created_at']?.toString() ?? '',
-      timeFormatted: json['time_formatted']?.toString() ?? '',
-      dateFormatted: json['date_formatted']?.toString() ?? '',
-      messagesCount: (json['messages_count'] as num?)?.toInt() ?? 0,
+      createdAt: createdAt,
+      timeFormatted: timeFormatted,
+      dateFormatted: dateFormatted,
+      messagesCount: msgsCount,
     );
   }
 }

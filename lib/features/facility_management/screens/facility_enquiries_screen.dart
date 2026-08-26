@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/auth_controller.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -278,71 +279,134 @@ class _FacilityEnquiriesScreenState extends ConsumerState<FacilityEnquiriesScree
   }
 
   void _showNewEnquirySheet(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+    final user = ref.read(authControllerProvider).value;
+    final nameCtrl = TextEditingController(text: user?.name ?? '');
+    final emailCtrl = TextEditingController(text: user?.email ?? '');
+    final phoneCtrl = TextEditingController(text: user?.phone ?? '');
     final subjectCtrl = TextEditingController();
     final messageCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        margin: EdgeInsets.only(top: 80, bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          margin: EdgeInsets.only(top: 80, bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Create Enquiry', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Create Enquiry', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Customer Name *', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter customer name' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: 'Customer Email *', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || !v.contains('@')) ? 'Please enter a valid email' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: subjectCtrl,
+                    decoration: const InputDecoration(labelText: 'Subject *', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a subject' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: messageCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Message / Query *', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your message or query' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) {
+                                return;
+                              }
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                await ref.read(clientFacilityRepositoryProvider).submitCitizenEnquiry(
+                                  widget.kind,
+                                  widget.facilityId,
+                                  {
+                                    'name': nameCtrl.text.trim(),
+                                    'email': emailCtrl.text.trim(),
+                                    'phone': phoneCtrl.text.trim(),
+                                    'subject': subjectCtrl.text.trim(),
+                                    'message': messageCtrl.text.trim(),
+                                  },
+                                );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                ref.invalidate(facilityEnquiriesProvider((widget.kind, widget.facilityId, _selectedStatus, _searchQuery)));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Enquiry submitted successfully!'),
+                                      backgroundColor: Color(0xFF10B981),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to submit enquiry: $e'),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Submit Enquiry', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Customer Name *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Customer Email *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Subject *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: messageCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Message / Query *', border: OutlineInputBorder())),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty || messageCtrl.text.trim().isEmpty) {
-                      return;
-                    }
-                    Navigator.pop(ctx);
-                    await ref.read(clientFacilityRepositoryProvider).submitCitizenEnquiry(
-                      widget.kind,
-                      widget.facilityId,
-                      {
-                        'name': nameCtrl.text.trim(),
-                        'email': emailCtrl.text.trim(),
-                        'phone': phoneCtrl.text.trim(),
-                        'subject': subjectCtrl.text.trim().isEmpty ? 'General Enquiry' : subjectCtrl.text.trim(),
-                        'message': messageCtrl.text.trim(),
-                      },
-                    );
-                    ref.invalidate(facilityEnquiriesProvider((widget.kind, widget.facilityId, _selectedStatus, _searchQuery)));
-                  },
-                  child: const Text('Submit Enquiry'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
