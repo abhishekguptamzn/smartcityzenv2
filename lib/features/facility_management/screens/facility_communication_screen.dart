@@ -165,49 +165,46 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                   )
                 else
                   for (final item in communications) ...[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _showCommunicationDetailsSheet(item),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'To: ${item.recipientsCount} Members',
-                                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.dateFormatted,
-                                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
-                                ),
-                              ],
-                            ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0D9488).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Email',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title.isNotEmpty ? item.title : item.subject,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'To: ${item.recipientsCount} Members',
+                                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.dateFormatted}${item.timeFormatted.isNotEmpty ? ' • ${item.timeFormatted}' : ''}',
+                                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              _buildChannelBadge(item.channel),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
@@ -663,6 +660,198 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildChannelBadge(String channel) {
+    final ch = channel.toLowerCase();
+    Color bg;
+    Color fg;
+    String label;
+    IconData icon;
+
+    if (ch == 'push' || ch == 'notification') {
+      bg = const Color(0xFF3B82F6).withValues(alpha: 0.12);
+      fg = const Color(0xFF2563EB);
+      label = 'Push';
+      icon = Icons.notifications_active_rounded;
+    } else if (ch == 'email') {
+      bg = const Color(0xFF0D9488).withValues(alpha: 0.12);
+      fg = const Color(0xFF0D9488);
+      label = 'Email';
+      icon = Icons.email_rounded;
+    } else if (ch == 'both') {
+      bg = const Color(0xFF10B981).withValues(alpha: 0.12);
+      fg = const Color(0xFF059669);
+      label = 'Push & Email';
+      icon = Icons.campaign_rounded;
+    } else {
+      bg = const Color(0xFFF59E0B).withValues(alpha: 0.12);
+      fg = const Color(0xFFD97706);
+      label = channel.toUpperCase();
+      icon = Icons.message_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCommunicationDetailsSheet(FacilityCommunicationItem item) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).padding.bottom + 20),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Communication Details',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  _buildChannelBadge(item.channel),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Subject / Audience Summary Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item.title.isNotEmpty) ...[
+                      Text(
+                        item.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (item.subject.isNotEmpty && item.subject != item.title) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.subject_rounded, size: 14, color: scheme.onSurfaceVariant),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              item.subject,
+                              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Row(
+                      children: [
+                        Icon(Icons.people_alt_outlined, size: 14, color: scheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Recipients: ${item.recipientsCount} Member(s) (${item.targetFilter})',
+                          style: TextStyle(fontSize: 12, color: scheme.primary, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, size: 14, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Sent on ${item.dateFormatted} at ${item.timeFormatted}',
+                          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Message Content',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35)),
+                ),
+                child: SelectableText(
+                  item.message,
+                  style: const TextStyle(fontSize: 14, height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text('Dismiss'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
