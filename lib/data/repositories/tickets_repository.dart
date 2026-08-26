@@ -57,9 +57,11 @@ class TicketsRepository {
 
   Future<TicketModel> reply(int id, {required String message}) async {
     final response = await _api.reply(id, message: message);
-    final data =
-        (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>;
-    return TicketModel.fromJson(data);
+    final rawData = (response.data as Map<String, dynamic>)['data'];
+    if (rawData is Map<String, dynamic> && rawData.containsKey('ticket_number')) {
+      return TicketModel.fromJson(rawData);
+    }
+    return getById(id);
   }
 }
 

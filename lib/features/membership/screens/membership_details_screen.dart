@@ -887,9 +887,9 @@ class _CheckInTab extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              r.date != null
+                              (r.date ?? r.checkInAt) != null
                                   ? DateFormat('EEE, d MMM yyyy')
-                                      .format(r.date!)
+                                      .format((r.date ?? r.checkInAt)!)
                                   : 'Unknown date',
                               style: Theme.of(context)
                                   .textTheme
