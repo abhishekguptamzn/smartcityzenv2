@@ -131,23 +131,68 @@ class FacilitiesRepository {
         final List<MyMembershipSummary> summaries = [];
         for (final raw in rawList) {
           if (raw is! Map<String, dynamic>) continue;
-          final kindStr = (raw['kind'] ?? '').toString().toLowerCase();
-          final FacilityKind kind = switch (kindStr) {
-            'gym' || 'gyms' || 'gymmember' => FacilityKind.gym,
-            'activity' || 'activities' || 'activityenrollment' => FacilityKind.activity,
-            _ => FacilityKind.library,
+          final facilityMap = raw['facility'] is Map<String, dynamic>
+              ? raw['facility'] as Map<String, dynamic>
+              : null;
+          final facName = raw['facility_name']?.toString() ??
+              facilityMap?['name']?.toString();
+          final facId = raw['facility_id']?.toString() ??
+              facilityMap?['id']?.toString();
+          final catMap = facilityMap?['category'] is Map<String, dynamic>
+              ? facilityMap!['category'] as Map<String, dynamic>
+              : null;
+          final catSlug = (raw['category_slug'] ??
+                  catMap?['slug'] ??
+                  raw['category_name'] ??
+                  catMap?['name'] ??
+                  raw['kind'] ??
+                  '')
+              .toString()
+              .toLowerCase();
+
+          final FacilityKind kind = switch (catSlug) {
+            'gym' || 'gyms' || 'gymmember' || 'sports' || 'fitness' => FacilityKind.gym,
+            'activity' || 'activities' || 'activityenrollment' || 'hobby' || 'craft' => FacilityKind.activity,
+            _ => catSlug.contains('gym') || catSlug.contains('sport')
+                ? FacilityKind.gym
+                : (catSlug.contains('activ') || catSlug.contains('hobby') || catSlug.contains('craft')
+                    ? FacilityKind.activity
+                    : FacilityKind.library),
           };
 
-          final payableId = raw['payable_id']?.toString() ?? raw['id']?.toString();
+          final payableId =
+              raw['payable_id']?.toString() ?? raw['id']?.toString();
           if (payableId == null || payableId.isEmpty) continue;
 
-          final dateRaw = raw['latest_paid_at'] ?? raw['created_at'] ?? raw['start_date'];
-          final parsedDate = dateRaw != null ? DateTime.tryParse(dateRaw.toString()) : null;
+          final dateRaw = raw['end_date'] ??
+              raw['latest_paid_at'] ??
+              raw['start_date'] ??
+              raw['created_at'];
+          final parsedDate =
+              dateRaw != null ? DateTime.tryParse(dateRaw.toString()) : null;
+          final startRaw = raw['start_date'];
+          final startDate =
+              startRaw != null ? DateTime.tryParse(startRaw.toString()) : null;
+          final endRaw = raw['end_date'];
+          final endDate =
+              endRaw != null ? DateTime.tryParse(endRaw.toString()) : null;
 
           final amountRaw = raw['amount'];
           final double amount = amountRaw is num
               ? amountRaw.toDouble()
               : double.tryParse(amountRaw?.toString() ?? '0') ?? 0;
+
+          final status = raw['status']?.toString();
+          final bool? isValid = raw['is_valid'] is bool
+              ? raw['is_valid'] as bool
+              : (status != null
+                  ? (status == 'active' &&
+                      (endDate == null || !endDate.isBefore(DateTime.now())))
+                  : null);
+
+          final batchMap = raw['batch'] is Map<String, dynamic>
+              ? raw['batch'] as Map<String, dynamic>
+              : null;
 
           summaries.add(MyMembershipSummary(
             kind: kind,
@@ -155,8 +200,16 @@ class FacilitiesRepository {
             latestPaidAt: parsedDate,
             amount: amount,
             currency: raw['currency']?.toString() ?? 'INR',
-            facilityId: raw['facility_id']?.toString(),
-            facilityName: raw['facility_name']?.toString(),
+            facilityId: facId,
+            facilityName: facName,
+            categoryName: catMap?['name']?.toString() ??
+                raw['category_name']?.toString(),
+            status: status,
+            isValid: isValid,
+            startDate: startDate,
+            endDate: endDate,
+            membershipType: raw['membership_type']?.toString(),
+            batchName: batchMap?['name']?.toString(),
           ));
         }
 

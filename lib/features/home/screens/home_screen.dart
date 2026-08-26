@@ -208,7 +208,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   TextButton(
-                    onPressed: () => context.push('/profile'),
+                    onPressed: () => context.push('/memberships'),
                     child: Text(l10n.manage),
                   ),
                 ],
@@ -249,7 +249,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   message: l10n.errorGeneric,
                 ),
                 data: (summaries) {
-                  if (summaries.isEmpty) {
+                  final activeSummaries =
+                      summaries.where((s) => s.isActuallyActive).toList();
+                  if (activeSummaries.isEmpty) {
                     return EmptyStateView(
                       icon: Icons.card_membership_rounded,
                       message: l10n.noMembershipsYet,
@@ -257,9 +259,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   }
                   return Column(
                     children: [
-                      for (var i = 0; i < summaries.length; i++) ...[
+                      for (var i = 0; i < activeSummaries.length; i++) ...[
                         if (i > 0) const SizedBox(height: 12),
-                        _MembershipCard(summary: summaries[i]),
+                        _MembershipCard(summary: activeSummaries[i]),
                       ],
                     ],
                   );

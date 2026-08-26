@@ -56,4 +56,4 @@ final class RealtimeNotificationServiceProvider
 }
 
 String _$realtimeNotificationServiceHash() =>
-    r'c9e4cfc741ba95318cb6d6ff47183ba9e5b78779';
+    r'0b3a5b1a4296ea86f3d54d058772ebfae6282921';

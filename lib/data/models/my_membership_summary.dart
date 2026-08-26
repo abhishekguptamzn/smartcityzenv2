@@ -4,12 +4,10 @@ import 'facility_model.dart';
 
 part 'my_membership_summary.freezed.dart';
 
-/// See the top-of-file comment in `FacilitiesRepository` for why this exists:
-/// there is no API endpoint to list a customer's own memberships, so this is
-/// derived purely from payment history and intentionally carries nothing
-/// more than a payment record already gives us.
 @freezed
 abstract class MyMembershipSummary with _$MyMembershipSummary {
+  const MyMembershipSummary._();
+
   const factory MyMembershipSummary({
     required FacilityKind kind,
     required String payableId,
@@ -18,5 +16,21 @@ abstract class MyMembershipSummary with _$MyMembershipSummary {
     required String currency,
     String? facilityId,
     String? facilityName,
+    String? categoryName,
+    String? status,
+    bool? isValid,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? membershipType,
+    String? batchName,
   }) = _MyMembershipSummary;
+
+  bool get isActuallyActive {
+    if (isValid == false) return false;
+    if (status != null && status!.toLowerCase() != 'active') return false;
+    if (endDate != null && endDate!.isBefore(DateTime.now())) return false;
+    return true;
+  }
+
+  bool get isExpired => !isActuallyActive;
 }

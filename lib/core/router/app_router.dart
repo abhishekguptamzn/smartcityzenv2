@@ -49,6 +49,7 @@ import '../../features/facility_management/screens/manage_fee_plans_screen.dart'
 import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/id_card_screen.dart';
 import '../../features/membership/screens/membership_details_screen.dart';
+import '../../features/membership/screens/my_memberships_screen.dart';
 import '../../features/notifications/screens/notification_center_screen.dart';
 import '../../features/onboard/screens/onboard_complete_screen.dart';
 import '../../features/onboard/screens/onboard_email_sent_screen.dart';
@@ -215,12 +216,16 @@ GoRouter goRouter(Ref ref) {
             builder: (context, state) => const IdCardScreen(),
           ),
           GoRoute(
+            path: '/memberships',
+            builder: (context, state) => const MyMembershipsScreen(),
+          ),
+          GoRoute(
             path: '/membership/details',
-            redirect: (context, state) => '/id-card',
+            redirect: (context, state) => '/memberships',
           ),
           GoRoute(
             path: '/membership',
-            redirect: (context, state) => '/id-card',
+            redirect: (context, state) => '/memberships',
           ),
           GoRoute(
             path: '/membership/:kind/:memberId',
