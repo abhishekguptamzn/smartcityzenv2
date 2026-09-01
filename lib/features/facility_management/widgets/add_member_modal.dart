@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../data/models/onboard_model.dart';
@@ -68,6 +69,12 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
   List<FeePlanModel> _plans = [];
   FeePlanModel? _selectedPlan;
   bool _loadingPlans = true;
+
+  List<FacilityBatchModel> _batches = [];
+  FacilityBatchModel? _selectedBatch;
+  bool _loadingBatches = true;
+  bool _enrollIntoBatch = false;
+
   bool _submitting = false;
   DateTime _startDate = DateTime.now();
 
@@ -80,7 +87,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
-    _fetchPlans();
+    _fetchPlansAndBatches();
   }
 
   @override
@@ -91,9 +98,9 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
     super.dispose();
   }
 
-  Future<void> _fetchPlans() async {
+  Future<void> _fetchPlansAndBatches() async {
+    final repo = ref.read(clientFacilityRepositoryProvider);
     try {
-      final repo = ref.read(clientFacilityRepositoryProvider);
       final plans = await repo.getFacilityPlans(widget.kind, widget.facilityId);
       if (mounted) {
         setState(() {
@@ -104,6 +111,23 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingPlans = false);
+    }
+
+    try {
+      final batches = await repo.getBatches(widget.kind, widget.facilityId, status: 'active');
+      if (mounted) {
+        setState(() {
+          _batches = batches;
+          _selectedBatch = null;
+          _loadingBatches = false;
+          if (widget.facility?.batchManagementEnabled == true && _batches.isNotEmpty) {
+            _enrollIntoBatch = true;
+            _selectedBatch = _batches.first;
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingBatches = false);
     }
   }
 
@@ -254,23 +278,28 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       return;
     }
 
-    if (_selectedPlan != null) {
-      final calculatedEndDate = _calculateInitialEndDate(_startDate, _selectedPlan);
-      final intervalUnit = _selectedPlan!.intervalCount > 1
-          ? '${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}s'
-          : _selectedPlan!.interval;
+    final isBatch = _enrollIntoBatch && _selectedBatch != null;
+    if (isBatch || _selectedPlan != null) {
+      final String planTitle = isBatch
+          ? 'Batch: ${_selectedBatch!.name} (${_selectedBatch!.feeDisplay})'
+          : 'Plan: ${_selectedPlan!.name} (₹${_selectedPlan!.amount.toStringAsFixed(0)})';
+      final calculatedEndDate = isBatch
+          ? (_selectedBatch!.endDate != null ? DateTime.tryParse(_selectedBatch!.endDate!) : _startDate.add(const Duration(days: 30))) ?? _startDate.add(const Duration(days: 30))
+          : _calculateInitialEndDate(_startDate, _selectedPlan);
+
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
-              Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF0D9488)),
+              Icon(Icons.verified_user_rounded, color: Color(0xFF0D9488)),
               SizedBox(width: 8),
-              Text('Confirm Fee Plan Assignment'),
+              Text('Confirm Enrollment'),
             ],
           ),
           content: Text(
-            'You are enrolling this member with the fee plan "${_selectedPlan!.name}" (₹${_selectedPlan!.amount.toStringAsFixed(0)} / $intervalUnit).\n\n• Start Date: ${DateFormat("dd MMM yyyy").format(_startDate)}\n• End Date: ${DateFormat("dd MMM yyyy").format(calculatedEndDate)}\n\nDo you want to confirm and generate this membership pass?',
+            'You are enrolling this member with $planTitle.\n\n• Start Date: ${DateFormat("dd MMM yyyy").format(_startDate)}\n• End Date: ${DateFormat("dd MMM yyyy").format(calculatedEndDate)}\n\nDo you want to confirm and generate this membership pass?',
           ),
           actions: [
             TextButton(
@@ -297,7 +326,15 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
         'user_id': citizenId,
         'citizen_id': citizenId,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
-        if (_selectedPlan != null) ...{
+        if (isBatch) ...{
+          'batch_id': _selectedBatch!.id,
+          if (_selectedBatch!.fee != null) 'amount': _selectedBatch!.fee,
+          if (_selectedBatch!.feePlanId != null) 'fee_plan_id': _selectedBatch!.feePlanId,
+          if (_selectedBatch!.endDate != null)
+            'end_date': _selectedBatch!.endDate
+          else
+            'end_date': DateFormat('yyyy-MM-dd').format(_startDate.add(const Duration(days: 30))),
+        } else if (_selectedPlan != null) ...{
           'fee_plan_id': _selectedPlan!.id,
           'end_date': DateFormat('yyyy-MM-dd').format(_calculateInitialEndDate(_startDate, _selectedPlan)),
         },
@@ -313,9 +350,11 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       widget.onSuccess();
       Navigator.of(context).pop();
 
-      final successMsg = _selectedPlan != null
-          ? 'Member enrolled with active plan! Welcome pass & receipt emailed.'
-          : 'Citizen registered as new member! You can assign a fee plan anytime.';
+      final successMsg = isBatch
+          ? 'Member enrolled into batch "${_selectedBatch!.name}" successfully!'
+          : (_selectedPlan != null
+              ? 'Member enrolled with active plan! Welcome pass & receipt emailed.'
+              : 'Citizen registered as new member! You can assign a fee plan anytime.');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -512,7 +551,14 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
             style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
-          _buildFeePlanSelector(theme, scheme),
+          if (widget.facility?.batchManagementEnabled == true || _batches.isNotEmpty) ...[
+            _buildEnrollmentTypeSelector(theme, scheme),
+            const SizedBox(height: 8),
+          ],
+          if (_enrollIntoBatch)
+            _buildBatchSelector(theme, scheme)
+          else
+            _buildFeePlanSelector(theme, scheme),
         ],
       ),
     );
@@ -625,9 +671,154 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
           ),
 
         const SizedBox(height: 16),
-        _buildFeePlanSelector(theme, scheme),
+        if (widget.facility?.batchManagementEnabled == true || _batches.isNotEmpty)
+          _buildEnrollmentTypeSelector(theme, scheme),
+        const SizedBox(height: 12),
+        if (_enrollIntoBatch)
+          _buildBatchSelector(theme, scheme)
+        else
+          _buildFeePlanSelector(theme, scheme),
         const SizedBox(height: 16),
         _buildStartDatePicker(theme, scheme),
+      ],
+    );
+  }
+
+  Widget _buildEnrollmentTypeSelector(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Enrollment Mode',
+          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment<bool>(
+              value: false,
+              icon: Icon(Icons.confirmation_number_outlined),
+              label: Text('Standard Fee Plan'),
+            ),
+            ButtonSegment<bool>(
+              value: true,
+              icon: Icon(Icons.groups_rounded),
+              label: Text('Batch / Class'),
+            ),
+          ],
+          selected: {_enrollIntoBatch},
+          onSelectionChanged: (val) {
+            setState(() {
+              _enrollIntoBatch = val.first;
+              if (_enrollIntoBatch && _selectedBatch == null && _batches.isNotEmpty) {
+                _selectedBatch = _batches.first;
+              }
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBatchSelector(ThemeData theme, ColorScheme scheme) {
+    if (_loadingBatches) {
+      return const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()));
+    }
+
+    if (_batches.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.blue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.4)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Colors.blue, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'No batches created yet. Go to Facility Settings > Batches to set up time slots.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Select Batch / Class',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            if (_selectedBatch != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Fee: ${_selectedBatch!.feeDisplay}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0D9488),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<FacilityBatchModel>(
+          initialValue: _selectedBatch,
+          decoration: InputDecoration(
+            isDense: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          ),
+          isExpanded: true,
+          items: _batches.map((batch) {
+            final spots = batch.availableSpots > 0 ? '${batch.availableSpots} spots left' : 'Full (${batch.enrolledCount})';
+            return DropdownMenuItem<FacilityBatchModel>(
+              value: batch,
+              child: Text(
+                '${batch.name} • ${batch.timingDisplay} (${batch.feeDisplay}) • $spots',
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (b) => setState(() => _selectedBatch = b),
+        ),
+        if (_selectedBatch != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF0284C7)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Time: ${_selectedBatch!.timingDisplay}${_selectedBatch!.recurringDaysFormatted != null ? " • ${_selectedBatch!.recurringDaysFormatted}" : ""}',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -733,7 +924,12 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Membership Status', style: TextStyle(fontWeight: FontWeight.bold)),
-              if (_selectedPlan != null)
+              if (_enrollIntoBatch && _selectedBatch != null)
+                Text(
+                  'Enrolled in ${_selectedBatch!.name}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                )
+              else if (_selectedPlan != null)
                 Text(
                   'Expires ${DateFormat("dd MMM yyyy").format(_calculateInitialEndDate(_startDate, _selectedPlan))}',
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),

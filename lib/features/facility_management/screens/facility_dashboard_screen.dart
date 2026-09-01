@@ -131,6 +131,17 @@ class _FacilityDashboardScreenState
               },
             ),
             ListTile(
+              leading: const Icon(Icons.groups_rounded, color: Color(0xFF0284C7)),
+              title: const Text('Manage Batches & Timetables'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await context.push('/client/manage/batches/${kind.pathSegment}/${facility.id}', extra: facility);
+                ref.invalidate(myOwnedFacilitiesProvider);
+                ref.invalidate(facilityStatsProvider((kind, facility.id)));
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.bar_chart_rounded, color: Color(0xFF8B5CF6)),
               title: const Text('Attendance & Revenue Reports'),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -515,7 +526,28 @@ class _FacilityDashboardScreenState
                             },
                           ),
 
-                          // 7. Communication
+                          // 7. Batches & Timetables
+                          _OperationsCard(
+                            icon: Icons.groups_rounded,
+                            iconColor: const Color(0xFF0284C7),
+                            iconBg: const Color(0xFFE0F2FE),
+                            title: 'Batches & Classes',
+                            subtitle: 'Timetables, slots & rosters',
+                            onTap: () async {
+                              await context.push(
+                                '/client/manage/batches/${activeKind.pathSegment}/${activeFacility.id}',
+                                extra: activeFacility,
+                              );
+                              ref.invalidate(myOwnedFacilitiesProvider);
+                              ref.invalidate(
+                                facilityStatsProvider(
+                                  (activeKind, activeFacility.id),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // 8. Communication
                           _OperationsCard(
                             icon: Icons.send_rounded,
                             iconColor: const Color(0xFF2563EB),
@@ -535,7 +567,7 @@ class _FacilityDashboardScreenState
                             },
                           ),
 
-                          // 8. Settings
+                          // 9. Settings
                           _OperationsCard(
                             icon: Icons.settings_rounded,
                             iconColor: const Color(0xFF475569),

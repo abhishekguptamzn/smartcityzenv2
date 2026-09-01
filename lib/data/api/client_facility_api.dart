@@ -366,6 +366,109 @@ class ClientFacilityApi {
 
   Future<Response<dynamic>> deleteMedia(String mediaId) =>
       _dio.delete('/media/$mediaId');
+
+  // Batch Management API
+  Future<Response<dynamic>> getBatches(
+    String type,
+    String id, {
+    String? search,
+    String? status,
+    int page = 1,
+  }) =>
+      _dio.get(
+        '/client/$type/$id/batches',
+        queryParameters: {
+          if (search != null && search.isNotEmpty) 'search': search,
+          if (status != null && status != 'all') 'status': status,
+          'page': page,
+        },
+      );
+
+  Future<Response<dynamic>> getBatchDetails(String type, String id, String batchId) =>
+      _dio.get('/client/$type/$id/batches/$batchId');
+
+  Future<Response<dynamic>> createBatch(String type, String id, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/batches', data: data);
+
+  Future<Response<dynamic>> updateBatch(String type, String id, String batchId, Map<String, dynamic> data) =>
+      _dio.put('/client/$type/$id/batches/$batchId', data: data);
+
+  Future<Response<dynamic>> deleteBatch(String type, String id, String batchId) =>
+      _dio.delete('/client/$type/$id/batches/$batchId');
+
+  Future<Response<dynamic>> getBatchMembers(
+    String type,
+    String id,
+    String batchId, {
+    String? status,
+    String? search,
+    int page = 1,
+  }) =>
+      _dio.get(
+        '/client/$type/$id/batches/$batchId/members',
+        queryParameters: {
+          if (status != null && status != 'all') 'status': status,
+          if (search != null && search.isNotEmpty) 'search': search,
+          'page': page,
+        },
+      );
+
+  Future<Response<dynamic>> enrollBatchMember(String type, String id, String batchId, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/batches/$batchId/enroll', data: data);
+
+  Future<Response<dynamic>> unenrollBatchMember(
+    String type,
+    String id,
+    String batchId,
+    String memberId, {
+    String? reason,
+  }) =>
+      _dio.delete(
+        '/client/$type/$id/batches/$batchId/members/$memberId',
+        data: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+      );
+
+  Future<Response<dynamic>> switchBatch(
+    String type,
+    String id,
+    String batchId,
+    String memberId,
+    String targetBatchId,
+  ) =>
+      _dio.post(
+        '/client/$type/$id/batches/$batchId/members/$memberId/switch',
+        data: {'target_batch_id': targetBatchId},
+      );
+
+  Future<Response<dynamic>> getBatchAttendance(String type, String id, String batchId, {String? date}) =>
+      _dio.get(
+        '/client/$type/$id/batches/$batchId/attendance',
+        queryParameters: {if (date != null) 'date': date},
+      );
+
+  Future<Response<dynamic>> markBatchAttendance(
+    String type,
+    String id,
+    String batchId, {
+    required String date,
+    required List<Map<String, dynamic>> records,
+  }) =>
+      _dio.post(
+        '/client/$type/$id/batches/$batchId/attendance',
+        data: {
+          'date': date,
+          'records': records,
+        },
+      );
+
+  Future<Response<dynamic>> getBatchAnnouncements(String type, String id, String batchId, {int page = 1}) =>
+      _dio.get(
+        '/client/$type/$id/batches/$batchId/announcements',
+        queryParameters: {'page': page},
+      );
+
+  Future<Response<dynamic>> sendBatchAnnouncement(String type, String id, String batchId, Map<String, dynamic> data) =>
+      _dio.post('/client/$type/$id/batches/$batchId/announcements', data: data);
 }
 
 @Riverpod(keepAlive: true)

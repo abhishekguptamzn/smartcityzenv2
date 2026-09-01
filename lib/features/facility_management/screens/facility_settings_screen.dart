@@ -164,7 +164,94 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
             ),
             const SizedBox(height: 24),
 
-            // SECTION 2: PHYSICAL PRESENCE & SECURITY
+            // SECTION 2: ATTENDANCE & CHECK-OUT CONFIGURATION
+            _buildSectionHeader('ATTENDANCE & CHECK-OUT CONFIGURATION', scheme),
+            const SizedBox(height: 8),
+            _buildSettingsToggleTile(
+              context: context,
+              icon: Icons.qr_code_scanner_rounded,
+              iconColor: const Color(0xFFF59E0B),
+              iconBg: const Color(0xFFFEF3C7),
+              title: 'Member Check-Out Tracking',
+              subtitle: f?.checkoutEnabled == true
+                  ? 'ON: Citizens check-in and check-out (2 scans). Active visits tracked in real time.'
+                  : 'OFF (Single-Scan Mode): Check-in immediately records completed visit. Check-out notifications suppressed.',
+              value: f?.checkoutEnabled ?? true,
+              onChanged: (val) => _saveFacilitySetting('checkout_enabled', val),
+            ),
+            if (f?.checkoutEnabled == true) ...[
+              const SizedBox(height: 8),
+              _buildSettingsTile(
+                context: context,
+                icon: Icons.timer_outlined,
+                iconColor: const Color(0xFFEA580C),
+                iconBg: const Color(0xFFFFEDD5),
+                title: 'Default Auto-Checkout Limit',
+                subtitle: 'Visits exceeding ${f?.defaultCheckoutDurationMinutes ?? 120} minutes are automatically checked out by the hourly cron job',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${f?.defaultCheckoutDurationMinutes ?? 120} min',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFC2410C),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded, size: 20),
+                  ],
+                ),
+                onTap: () => _showDurationPicker(context, f?.defaultCheckoutDurationMinutes ?? 120),
+              ),
+            ],
+            const SizedBox(height: 24),
+
+            // SECTION 3: BATCH & CLASS MANAGEMENT
+            _buildSectionHeader('BATCH & CLASS MANAGEMENT', scheme),
+            const SizedBox(height: 8),
+            _buildSettingsToggleTile(
+              context: context,
+              icon: Icons.groups_rounded,
+              iconColor: const Color(0xFF0284C7),
+              iconBg: const Color(0xFFE0F2FE),
+              title: 'Batch & Class Management',
+              subtitle: f?.batchManagementEnabled == true
+                  ? 'Active: Fixed time slots, capacity limits, batch fees & daily roster attendance.'
+                  : 'Disabled: All members follow open general access / standard fee plans.',
+              value: f?.batchManagementEnabled ?? false,
+              onChanged: (val) => _saveFacilitySetting('batch_management_enabled', val),
+            ),
+            if (f?.batchManagementEnabled == true) ...[
+              const SizedBox(height: 8),
+              _buildSettingsTile(
+                context: context,
+                icon: Icons.event_note_rounded,
+                iconColor: const Color(0xFF1565D8),
+                iconBg: const Color(0xFFEFF6FF),
+                title: 'Manage Batches & Timetables',
+                subtitle: 'View batches, schedules, participant capacities & daily rosters',
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  context.push(
+                    '/client/manage/batches/${widget.kind.pathSegment}/${widget.facilityId}',
+                    extra: f,
+                  );
+                },
+              ),
+            ],
+            const SizedBox(height: 24),
+
+            // SECTION 4: PHYSICAL PRESENCE & SECURITY
             _buildSectionHeader('PHYSICAL PRESENCE & SECURITY', scheme),
             const SizedBox(height: 8),
             _buildSettingsTile(
@@ -243,7 +330,7 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
             ),
             const SizedBox(height: 24),
 
-            // SECTION 3: OPERATIONS & MANAGEMENT SHORTCUTS
+            // SECTION 5: OPERATIONS & MANAGEMENT SHORTCUTS
             _buildSectionHeader('MEMBERSHIP & COMMUNICATION', scheme),
             const SizedBox(height: 8),
             _buildSettingsTile(
@@ -275,6 +362,152 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _saveFacilitySetting(String key, dynamic value) async {
+    HapticFeedback.selectionClick();
+    try {
+      final updated = await ref
+          .read(clientFacilityRepositoryProvider)
+          .updateFacilityDetails(widget.kind, widget.facilityId, {key: value});
+      setState(() => _currentFacility = updated);
+      ref.invalidate(facilityDetailSettingsProvider((widget.kind, widget.facilityId)));
+      ref.invalidate(myOwnedFacilitiesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Setting updated successfully'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update setting: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDurationPicker(BuildContext context, int currentMinutes) {
+    HapticFeedback.lightImpact();
+    final options = [30, 45, 60, 90, 120, 150, 180, 240, 360, 480];
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Default Auto-Checkout Limit',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'If an active visit has not been checked out, the system cron will automatically conclude the session after this duration.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: options.map((mins) {
+                  final isSelected = mins == currentMinutes;
+                  return ChoiceChip(
+                    label: Text(
+                      mins >= 60 ? '${mins ~/ 60}h ${mins % 60 > 0 ? "${mins % 60}m" : ""}'.trim() : '$mins mins',
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        Navigator.pop(ctx);
+                        _saveFacilitySetting('default_checkout_duration_minutes', mins);
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsToggleTile({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      borderRadius: BorderRadius.circular(14),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? iconColor.withValues(alpha: 0.15) : iconBg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: iconColor,
+          ),
+        ],
       ),
     );
   }

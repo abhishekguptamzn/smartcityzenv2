@@ -575,3 +575,59 @@ class FacilityMediaModel {
     );
   }
 }
+
+class FacilityBatchMemberItem {
+  const FacilityBatchMemberItem({
+    required this.id,
+    this.userId,
+    this.facilityId,
+    this.batchId,
+    this.membershipNumber,
+    this.membershipType,
+    this.status = 'active',
+    this.startDate,
+    this.endDate,
+    this.userName,
+    this.userEmail,
+    this.userPhone,
+    this.userAvatar,
+  });
+
+  final String id;
+  final String? userId;
+  final String? facilityId;
+  final String? batchId;
+  final String? membershipNumber;
+  final String? membershipType;
+  final String status;
+  final String? startDate;
+  final String? endDate;
+  final String? userName;
+  final String? userEmail;
+  final String? userPhone;
+  final String? userAvatar;
+
+  String get memberId => id;
+  String get displayName => userName ?? 'Member #$id';
+  bool get isActive => status.toLowerCase() == 'active';
+
+  factory FacilityBatchMemberItem.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map ? json['user'] as Map<String, dynamic> : null;
+    return FacilityBatchMemberItem(
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString(),
+      facilityId: json['facility_id']?.toString(),
+      batchId: json['batch_id']?.toString(),
+      membershipNumber: json['membership_number']?.toString(),
+      membershipType: json['membership_type']?.toString(),
+      status: json['status']?.toString() ?? 'active',
+      startDate: json['start_date']?.toString(),
+      endDate: json['end_date']?.toString(),
+      userName: user?['name']?.toString() ?? json['user_name']?.toString(),
+      userEmail: user?['email']?.toString() ?? json['user_email']?.toString(),
+      userPhone: user?['phone']?.toString() ?? json['user_phone']?.toString(),
+      userAvatar: user?['avatar']?.toString() ?? json['user_avatar']?.toString(),
+    );
+  }
+}
+

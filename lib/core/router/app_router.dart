@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../data/models/facility_batch_model.dart';
 import '../../data/models/facility_model.dart';
 import '../../data/models/facility_operations_models.dart';
 import '../../data/models/onboard_model.dart';
@@ -27,8 +28,11 @@ import '../../features/facilities/screens/activity_detail_screen.dart';
 import '../../features/facilities/screens/facility_category_centers_screen.dart';
 import '../../features/facilities/screens/facility_detail_screen.dart';
 import '../../features/facilities/screens/services_explorer_screen.dart';
+import '../../features/facility_management/screens/create_edit_batch_screen.dart';
 import '../../features/facility_management/screens/edit_facility_details_screen.dart';
 import '../../features/facility_management/screens/facility_attendance_screen.dart';
+import '../../features/facility_management/screens/facility_batch_detail_screen.dart';
+import '../../features/facility_management/screens/facility_batches_screen.dart';
 import '../../features/facility_management/screens/facility_collection_report_screen.dart';
 import '../../features/facility_management/screens/facility_communication_screen.dart';
 import '../../features/facility_management/screens/facility_current_status_screen.dart';
@@ -370,6 +374,85 @@ GoRouter goRouter(Ref ref) {
               facilityId: state.pathParameters['id']!,
               facility: state.extra as FacilityModel?,
             ),
+          ),
+          GoRoute(
+            path: '/client/manage/batches/:kind/:id',
+            builder: (context, state) => FacilityBatchesScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/batches/:kind/:id/create',
+            builder: (context, state) => CreateEditBatchScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/batches/:kind/:id/:batchId/edit',
+            builder: (context, state) {
+              final extra = state.extra;
+              FacilityModel? fac;
+              FacilityBatchModel? batch;
+              if (extra is (FacilityModel?, FacilityBatchModel?)) {
+                fac = extra.$1;
+                batch = extra.$2;
+              } else if (extra is FacilityBatchModel) {
+                batch = extra;
+              }
+              return CreateEditBatchScreen(
+                kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+                facilityId: state.pathParameters['id']!,
+                facility: fac,
+                batch: batch,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/client/manage/batches/:kind/:id/:batchId/attendance',
+            builder: (context, state) {
+              final extra = state.extra;
+              FacilityModel? fac;
+              FacilityBatchModel? batch;
+              if (extra is (FacilityModel?, FacilityBatchModel?)) {
+                fac = extra.$1;
+                batch = extra.$2;
+              } else if (extra is FacilityBatchModel) {
+                batch = extra;
+              }
+              return FacilityBatchDetailScreen(
+                kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+                facilityId: state.pathParameters['id']!,
+                batchId: state.pathParameters['batchId']!,
+                facility: fac,
+                initialBatch: batch,
+                initialTab: 1, // Attendance tab
+              );
+            },
+          ),
+          GoRoute(
+            path: '/client/manage/batches/:kind/:id/:batchId',
+            builder: (context, state) {
+              final extra = state.extra;
+              FacilityModel? fac;
+              FacilityBatchModel? batch;
+              if (extra is (FacilityModel?, FacilityBatchModel?)) {
+                fac = extra.$1;
+                batch = extra.$2;
+              } else if (extra is FacilityBatchModel) {
+                batch = extra;
+              }
+              return FacilityBatchDetailScreen(
+                kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+                facilityId: state.pathParameters['id']!,
+                batchId: state.pathParameters['batchId']!,
+                facility: fac,
+                initialBatch: batch,
+              );
+            },
           ),
           GoRoute(
             path: '/client/manage/members/:kind/:id',

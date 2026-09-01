@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../api/client_facility_api.dart';
 import '../models/amenity_model.dart';
+import '../models/facility_batch_model.dart';
 import '../models/facility_model.dart';
 import '../models/facility_operations_models.dart';
 import '../models/fee_plan_model.dart';
@@ -785,6 +786,186 @@ class ClientFacilityRepository {
 
   Future<void> deleteFacilityMedia(String mediaId) async {
     await _api.deleteMedia(mediaId);
+  }
+
+  // ─── Batch Management ──────────────────────────────────────────
+  Future<List<FacilityBatchModel>> getBatches(
+    FacilityKind kind,
+    String facilityId, {
+    String? search,
+    String? status,
+    int page = 1,
+  }) async {
+    final res = await _api.getBatches(
+      kind.pathSegment,
+      facilityId,
+      search: search,
+      status: status,
+      page: page,
+    );
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    if (raw is List) {
+      return raw
+          .map((j) => FacilityBatchModel.fromJson(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<FacilityBatchModel> getBatchDetails(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+  ) async {
+    final res = await _api.getBatchDetails(kind.pathSegment, facilityId, batchId);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return FacilityBatchModel.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  Future<FacilityBatchModel> createBatch(
+    FacilityKind kind,
+    String facilityId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await _api.createBatch(kind.pathSegment, facilityId, data);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return FacilityBatchModel.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  Future<FacilityBatchModel> updateBatch(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await _api.updateBatch(kind.pathSegment, facilityId, batchId, data);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return FacilityBatchModel.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  Future<void> deleteBatch(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+  ) async {
+    await _api.deleteBatch(kind.pathSegment, facilityId, batchId);
+  }
+
+  Future<List<FacilityBatchMemberItem>> getBatchMembers(
+    FacilityKind kind,
+    String facilityId,
+    String batchId, {
+    String? status,
+    String? search,
+    int page = 1,
+  }) async {
+    final res = await _api.getBatchMembers(
+      kind.pathSegment,
+      facilityId,
+      batchId,
+      status: status,
+      search: search,
+      page: page,
+    );
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    if (raw is List) {
+      return raw
+          .map((j) => FacilityBatchMemberItem.fromJson(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<FacilityBatchMemberItem> enrollBatchMember(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await _api.enrollBatchMember(kind.pathSegment, facilityId, batchId, data);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return FacilityBatchMemberItem.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  Future<void> unenrollBatchMember(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+    String memberId, {
+    String? reason,
+  }) async {
+    await _api.unenrollBatchMember(kind.pathSegment, facilityId, batchId, memberId, reason: reason);
+  }
+
+  Future<FacilityBatchMemberItem> switchBatch(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+    String memberId,
+    String targetBatchId,
+  ) async {
+    final res = await _api.switchBatch(kind.pathSegment, facilityId, batchId, memberId, targetBatchId);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return FacilityBatchMemberItem.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  Future<Map<String, dynamic>> getBatchAttendance(
+    FacilityKind kind,
+    String facilityId,
+    String batchId, {
+    String? date,
+  }) async {
+    final res = await _api.getBatchAttendance(kind.pathSegment, facilityId, batchId, date: date);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return Map<String, dynamic>.from(raw as Map);
+  }
+
+  Future<Map<String, dynamic>> markBatchAttendance(
+    FacilityKind kind,
+    String facilityId,
+    String batchId, {
+    required String date,
+    required List<Map<String, dynamic>> records,
+  }) async {
+    final res = await _api.markBatchAttendance(kind.pathSegment, facilityId, batchId, date: date, records: records);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return Map<String, dynamic>.from(raw as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> getBatchAnnouncements(
+    FacilityKind kind,
+    String facilityId,
+    String batchId, {
+    int page = 1,
+  }) async {
+    final res = await _api.getBatchAnnouncements(kind.pathSegment, facilityId, batchId, page: page);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    if (raw is List) {
+      return raw.map((j) => Map<String, dynamic>.from(j as Map)).toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> sendBatchAnnouncement(
+    FacilityKind kind,
+    String facilityId,
+    String batchId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await _api.sendBatchAnnouncement(kind.pathSegment, facilityId, batchId, data);
+    dynamic raw = res.data;
+    if (raw is Map) raw = raw['data'] ?? raw;
+    return Map<String, dynamic>.from(raw as Map);
   }
 }
 
