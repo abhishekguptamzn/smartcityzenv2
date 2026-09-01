@@ -186,23 +186,31 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                 icon: Icons.timer_outlined,
                 iconColor: const Color(0xFFEA580C),
                 iconBg: const Color(0xFFFFEDD5),
-                title: 'Default Auto-Checkout Limit',
-                subtitle: 'Visits exceeding ${f?.defaultCheckoutDurationMinutes ?? 120} minutes are automatically checked out by the hourly cron job',
+                title: 'Auto-Checkout Duration Limit',
+                subtitle: f?.defaultCheckoutDurationMinutes != null && f!.defaultCheckoutDurationMinutes > 0
+                    ? 'Active: Visits exceeding ${f.defaultCheckoutDurationMinutes} min are auto checked out'
+                    : 'Disabled (Tap to set duration limit)',
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEA580C).withValues(alpha: 0.12),
+                        color: (f?.defaultCheckoutDurationMinutes != null && f!.defaultCheckoutDurationMinutes > 0)
+                            ? const Color(0xFFEA580C).withValues(alpha: 0.12)
+                            : Colors.grey.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${f?.defaultCheckoutDurationMinutes ?? 120} min',
-                        style: const TextStyle(
+                        (f?.defaultCheckoutDurationMinutes != null && f!.defaultCheckoutDurationMinutes > 0)
+                            ? '${f.defaultCheckoutDurationMinutes} min'
+                            : 'None',
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFC2410C),
+                          color: (f?.defaultCheckoutDurationMinutes != null && f!.defaultCheckoutDurationMinutes > 0)
+                              ? const Color(0xFFC2410C)
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ),
@@ -211,6 +219,46 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                   ],
                 ),
                 onTap: () => _showDurationPicker(context, f?.defaultCheckoutDurationMinutes ?? 120),
+              ),
+              const SizedBox(height: 8),
+              _buildSettingsTile(
+                context: context,
+                icon: Icons.alarm_on_rounded,
+                iconColor: const Color(0xFFD97706),
+                iconBg: const Color(0xFFFEF3C7),
+                title: 'Fixed Daily Auto-Checkout Time',
+                subtitle: (f?.defaultCheckoutTime != null && f!.defaultCheckoutTime!.isNotEmpty)
+                    ? 'Active: All checked-in members will be auto checked out at ${f.defaultCheckoutTime}'
+                    : 'Set a fixed daily closing time to auto check out all members',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (f?.defaultCheckoutTime != null && f!.defaultCheckoutTime!.isNotEmpty)
+                            ? const Color(0xFFD97706).withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        (f?.defaultCheckoutTime != null && f!.defaultCheckoutTime!.isNotEmpty)
+                            ? f.defaultCheckoutTime!
+                            : 'None',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: (f?.defaultCheckoutTime != null && f!.defaultCheckoutTime!.isNotEmpty)
+                              ? const Color(0xFFB45309)
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded, size: 20),
+                  ],
+                ),
+                onTap: () => _showTimePickerForAutoCheckout(context, f?.defaultCheckoutTime),
               ),
             ],
             const SizedBox(height: 24),
@@ -367,24 +415,58 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
   }
 
   Future<void> _saveFacilitySetting(String key, dynamic value) async {
+    await _saveFacilitySettings({key: value});
+  }
+
+  Future<void> _saveFacilitySettings(Map<String, dynamic> patch) async {
     HapticFeedback.selectionClick();
+    final previous = _currentFacility;
+
+    // Optimistically update local state so switches/inputs respond instantly
+    if (previous != null) {
+      setState(() {
+        var updated = previous;
+        if (patch.containsKey('checkout_enabled')) {
+          updated = updated.copyWith(checkoutEnabled: patch['checkout_enabled'] as bool);
+        }
+        if (patch.containsKey('batch_management_enabled')) {
+          updated = updated.copyWith(batchManagementEnabled: patch['batch_management_enabled'] as bool);
+        }
+        if (patch.containsKey('default_checkout_duration_minutes')) {
+          updated = updated.copyWith(
+            defaultCheckoutDurationMinutes: (patch['default_checkout_duration_minutes'] as int?) ?? 0,
+            defaultCheckoutTime: patch.containsKey('default_checkout_time') ? (patch['default_checkout_time'] as String?) : updated.defaultCheckoutTime,
+          );
+        }
+        if (patch.containsKey('default_checkout_time')) {
+          updated = updated.copyWith(
+            defaultCheckoutTime: patch['default_checkout_time'] as String?,
+          );
+        }
+        _currentFacility = updated;
+      });
+    }
+
     try {
       final updated = await ref
           .read(clientFacilityRepositoryProvider)
-          .updateFacilityDetails(widget.kind, widget.facilityId, {key: value});
+          .updateFacilityDetails(widget.kind, widget.facilityId, patch);
       setState(() => _currentFacility = updated);
       ref.invalidate(facilityDetailSettingsProvider((widget.kind, widget.facilityId)));
       ref.invalidate(myOwnedFacilitiesProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Setting updated successfully'),
+            content: const Text('Setting updated successfully'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
+      if (previous != null) {
+        setState(() => _currentFacility = previous);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -394,6 +476,36 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _showTimePickerForAutoCheckout(BuildContext context, String? currentTime) async {
+    HapticFeedback.lightImpact();
+    TimeOfDay initial = const TimeOfDay(hour: 22, minute: 0);
+    if (currentTime != null && currentTime.isNotEmpty) {
+      final parts = currentTime.split(':');
+      if (parts.length >= 2) {
+        initial = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 22,
+          minute: int.tryParse(parts[1]) ?? 0,
+        );
+      }
+    }
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: 'SELECT DAILY AUTO-CHECKOUT TIME',
+      confirmText: 'SET TIME',
+      cancelText: 'CANCEL',
+    );
+
+    if (picked != null) {
+      final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
+      await _saveFacilitySettings({
+        'default_checkout_time': formatted,
+        'default_checkout_duration_minutes': null,
+      });
     }
   }
 
@@ -418,7 +530,7 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
               ),
               const SizedBox(height: 6),
               Text(
-                'If an active visit has not been checked out, the system cron will automatically conclude the session after this duration.',
+                'Visits exceeding this duration are automatically checked out. Setting this will clear the fixed daily time.',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 16),
@@ -438,7 +550,10 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                     onSelected: (selected) {
                       if (selected) {
                         Navigator.pop(ctx);
-                        _saveFacilitySetting('default_checkout_duration_minutes', mins);
+                        _saveFacilitySettings({
+                          'default_checkout_duration_minutes': mins,
+                          'default_checkout_time': null,
+                        });
                       }
                     },
                   );

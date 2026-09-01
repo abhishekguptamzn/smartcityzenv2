@@ -197,7 +197,7 @@ class ClientFacilityApi {
       _dio.get('/facilities/$activityId');
 
   Future<Response<dynamic>> updateActivity(String activityId, Map<String, dynamic> data) =>
-      _dio.put('/facilities/$activityId', data: data);
+      _dio.put('/client/facilities/$activityId', data: data);
 
   Future<Response<dynamic>> getActivityPlans(String activityId) =>
       _dio.get('/facilities/$activityId/fee-plans');
