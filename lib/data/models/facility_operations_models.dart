@@ -17,8 +17,8 @@ class MonthlyEarningPoint {
     return MonthlyEarningPoint(
       month: json['month']?.toString() ?? '',
       year: json['year']?.toString() ?? '',
-      earnings: (json['earnings'] as num?)?.toDouble() ?? 0.0,
-      count: (json['count'] as num?)?.toInt() ?? 0,
+      earnings: (json['earnings'] as num?)?.toDouble() ?? (json['revenue'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? (json['transactions_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -40,8 +40,8 @@ class WeeklyEarningPoint {
     return WeeklyEarningPoint(
       day: json['day']?.toString() ?? '',
       date: json['date']?.toString() ?? '',
-      earnings: (json['earnings'] as num?)?.toDouble() ?? 0.0,
-      count: (json['count'] as num?)?.toInt() ?? 0,
+      earnings: (json['earnings'] as num?)?.toDouble() ?? (json['revenue'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? (json['transactions_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -90,10 +90,10 @@ class PlanDistributionStat {
     return PlanDistributionStat(
       planId: json['plan_id']?.toString() ?? '',
       planName: json['plan_name']?.toString() ?? 'Plan',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      amount: (json['amount'] as num?)?.toDouble() ?? (json['price'] as num?)?.toDouble() ?? 0.0,
       interval: json['interval']?.toString() ?? 'month',
       intervalCount: (json['interval_count'] as num?)?.toInt() ?? 1,
-      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+      memberCount: (json['member_count'] as num?)?.toInt() ?? (json['members_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -134,8 +134,8 @@ class RecentPaymentRecord {
       id: json['id']?.toString() ?? '',
       invoiceNumber: json['invoice_number']?.toString() ?? '',
       memberId: json['member_id']?.toString() ?? '',
-      memberName: json['member_name']?.toString() ?? 'Citizen Member',
-      memberEmail: json['member_email']?.toString(),
+      memberName: json['member_name']?.toString() ?? json['user_name']?.toString() ?? 'Citizen Member',
+      memberEmail: json['member_email']?.toString() ?? json['user_email']?.toString(),
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: json['payment_method']?.toString() ?? 'CASH',
       status: json['status']?.toString() ?? 'paid',

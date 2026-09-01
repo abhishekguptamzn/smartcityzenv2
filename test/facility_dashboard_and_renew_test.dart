@@ -88,5 +88,43 @@ void main() {
       expect(stats.recentPayments[0].memberName, 'Rahul Sharma');
       expect(stats.recentPayments[0].invoiceNumber, 'INV-202608-ABC123');
     });
+
+    test('parses analytics payload using alternative keys (revenue, transactions_count, user_name, members_count)', () {
+      final json = {
+        'today_checkins': 5,
+        'currently_inside': 2,
+        'total_members': 10,
+        'active_members': 8,
+        'total_earnings_all_time': 7600.0,
+        'monthly_earnings_trend': [
+          {'month': 'Sep 2026', 'revenue': 7600.0, 'transactions_count': 3},
+        ],
+        'weekly_earnings_trend': [
+          {'day': 'Tue, 01 Sep', 'date': '2026-09-01', 'revenue': 2000.0, 'transactions_count': 1},
+        ],
+        'plan_distribution': [
+          {'plan_id': 'p1', 'plan_name': 'Gold', 'price': 5000.0, 'members_count': 4},
+        ],
+        'recent_payments': [
+          {
+            'id': 'pay-2',
+            'invoice_number': 'INV-202609-123456',
+            'user_name': 'Amit Kumar',
+            'user_email': 'amit@example.com',
+            'amount': 2000.0,
+          },
+        ],
+      };
+
+      final stats = FacilityDashboardStats.fromJson(json);
+      expect(stats.monthlyEarningsTrend.first.earnings, 7600.0);
+      expect(stats.monthlyEarningsTrend.first.count, 3);
+      expect(stats.weeklyEarningsTrend.first.earnings, 2000.0);
+      expect(stats.weeklyEarningsTrend.first.count, 1);
+      expect(stats.planDistribution.first.amount, 5000.0);
+      expect(stats.planDistribution.first.memberCount, 4);
+      expect(stats.recentPayments.first.memberName, 'Amit Kumar');
+      expect(stats.recentPayments.first.memberEmail, 'amit@example.com');
+    });
   });
 }

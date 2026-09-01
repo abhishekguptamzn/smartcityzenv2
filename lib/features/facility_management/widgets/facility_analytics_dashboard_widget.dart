@@ -602,53 +602,78 @@ class _FacilityAnalyticsDashboardWidgetState extends State<FacilityAnalyticsDash
     final maxVal = barData.map((e) => e.value).fold<double>(0.0, (prev, curr) => curr > prev ? curr : prev);
     final maxScale = maxVal > 0 ? maxVal : 1000.0;
 
+    String formatBarAmount(double val) {
+      if (val <= 0) return '-';
+      if (val >= 100000) {
+        final l = val / 100000;
+        return '₹${l.toStringAsFixed(l.truncateToDouble() == l ? 0 : 1)}L';
+      }
+      if (val >= 1000) {
+        final k = val / 1000;
+        return '₹${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
+      }
+      return '₹${val.toInt()}';
+    }
+
     return SizedBox(
       height: 160,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: barData.map((b) {
-          final heightFactor = (b.value / maxScale).clamp(0.08, 1.0);
+          final heightFactor = b.value > 0 ? (b.value / maxScale).clamp(0.12, 1.0) : 0.04;
           final isPeak = b.value > 0 && b.value >= maxVal;
 
+          String displayLabel = b.label;
+          if (_chartPeriod == ChartPeriod.weekly && displayLabel.contains(',')) {
+            displayLabel = displayLabel.split(',').first.trim();
+          }
+
           return Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  b.value > 0 ? '₹${b.value >= 1000 ? "${(b.value / 1000).toStringAsFixed(1)}k" : b.value.toInt()}' : '-',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: isPeak ? FontWeight.bold : FontWeight.w500,
-                    color: isPeak ? primaryColor : scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 100 * heightFactor,
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: isPeak
-                          ? [primaryColor.withValues(alpha: 0.8), primaryColor]
-                          : [primaryColor.withValues(alpha: 0.3), primaryColor.withValues(alpha: 0.6)],
+            child: Tooltip(
+              message: '${b.label}: ${_currencyFormat.format(b.value)}',
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    formatBarAmount(b.value),
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: isPeak ? FontWeight.bold : FontWeight.w600,
+                      color: isPeak ? primaryColor : (b.value > 0 ? scheme.onSurface : scheme.onSurfaceVariant.withValues(alpha: 0.6)),
                     ),
-                    borderRadius: BorderRadius.circular(8),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  b.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isPeak ? FontWeight.bold : FontWeight.w500,
-                    color: isPeak ? theme.colorScheme.onSurface : scheme.onSurfaceVariant,
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 100 * heightFactor,
+                    margin: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: b.value > 0
+                            ? (isPeak
+                                ? [primaryColor.withValues(alpha: 0.85), primaryColor]
+                                : [primaryColor.withValues(alpha: 0.35), primaryColor.withValues(alpha: 0.75)])
+                            : [scheme.outlineVariant.withValues(alpha: 0.3), scheme.outlineVariant.withValues(alpha: 0.4)],
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    displayLabel,
+                    style: TextStyle(
+                      fontSize: _chartPeriod == ChartPeriod.monthly ? 10.5 : 11,
+                      fontWeight: isPeak ? FontWeight.bold : FontWeight.w500,
+                      color: isPeak ? theme.colorScheme.onSurface : scheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           );
         }).toList(),

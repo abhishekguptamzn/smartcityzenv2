@@ -53,13 +53,50 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
 
   // Attendance Tab State
   DateTime _attendanceDate = DateTime.now();
-  final Map<String, String> _rosterStatus = {}; // memberId -> 'present' | 'absent'
+  final Set<String> _presentMemberIds = {};
+  bool _loadingAttendance = false;
   bool _savingRoster = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
+    _loadDateAttendance();
+  }
+
+  Future<void> _loadDateAttendance() async {
+    if (!mounted) return;
+    setState(() => _loadingAttendance = true);
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_attendanceDate);
+      final data = await ref.read(clientFacilityRepositoryProvider).getBatchAttendance(
+            widget.kind,
+            widget.facilityId,
+            widget.batchId,
+            date: dateStr,
+          );
+      final attendances = data['attendances'] as List? ?? [];
+      final Set<String> present = {};
+      for (final att in attendances) {
+        if (att is Map) {
+          final memId = att['facility_member_id']?.toString() ?? att['member_id']?.toString() ?? '';
+          final userId = att['user_id']?.toString() ?? '';
+          if (memId.isNotEmpty) present.add(memId);
+          if (userId.isNotEmpty) present.add(userId);
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _presentMemberIds.clear();
+          _presentMemberIds.addAll(present);
+          _loadingAttendance = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingAttendance = false);
+      }
+    }
   }
 
   @override
@@ -324,6 +361,7 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
                   );
                   if (picked != null) {
                     setState(() => _attendanceDate = picked);
+                    _loadDateAttendance();
                   }
                 },
               ),
@@ -345,29 +383,57 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
               );
             }
 
+            final allMarked = members.isNotEmpty && members.every((m) => _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id));
+            final presentCount = members.where((m) => _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id)).length;
+
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Student / Member List', style: TextStyle(fontWeight: FontWeight.bold)),
                     Row(
                       children: [
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              for (final m in members) {
-                                _rosterStatus[m.memberId] = 'present';
-                              }
-                            });
-                          },
-                          child: const Text('Mark All Present'),
+                        const Text('Student / Member List', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$presentCount / ${members.length} Present',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          ),
                         ),
                       ],
+                    ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                      icon: Icon(allMarked ? Icons.clear_all_rounded : Icons.done_all_rounded, size: 16),
+                      label: Text(allMarked ? 'Clear All' : 'Mark All Present'),
+                      onPressed: () {
+                        setState(() {
+                          if (allMarked) {
+                            _presentMemberIds.clear();
+                          } else {
+                            for (final m in members) {
+                              _presentMemberIds.add(m.memberId);
+                              _presentMemberIds.add(m.id);
+                            }
+                          }
+                        });
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (_loadingAttendance)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -375,43 +441,98 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (ctx, i) {
                     final m = members[i];
-                    final current = _rosterStatus[m.memberId] ?? 'present';
-                    final isPresent = current == 'present';
+                    final isPresent = _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id);
 
-                    return GlassContainer(
-                      borderRadius: BorderRadius.circular(14),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: isPresent
-                                ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                : Colors.red.withValues(alpha: 0.15),
-                            child: Icon(
-                              isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                              color: isPresent ? const Color(0xFF059669) : Colors.red,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              m.displayName,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                            ),
-                          ),
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(value: 'present', label: Text('P', style: TextStyle(fontWeight: FontWeight.bold))),
-                              ButtonSegment(value: 'absent', label: Text('A', style: TextStyle(fontWeight: FontWeight.bold))),
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isPresent) {
+                              _presentMemberIds.remove(m.memberId);
+                              _presentMemberIds.remove(m.id);
+                            } else {
+                              _presentMemberIds.add(m.memberId);
+                              _presentMemberIds.add(m.id);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: GlassContainer(
+                          borderRadius: BorderRadius.circular(14),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isPresent
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : scheme.surfaceContainerHighest,
+                                child: Icon(
+                                  isPresent ? Icons.check_circle_rounded : Icons.person_outline_rounded,
+                                  color: isPresent ? const Color(0xFF059669) : scheme.onSurfaceVariant,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      m.displayName,
+                                      style: TextStyle(
+                                        fontWeight: isPresent ? FontWeight.bold : FontWeight.w600,
+                                        fontSize: 14,
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
+                                    if (m.userPhone != null && m.userPhone!.isNotEmpty)
+                                      Text(
+                                        m.userPhone!,
+                                        style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isPresent
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                      : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isPresent
+                                        ? const Color(0xFF10B981)
+                                        : scheme.outlineVariant.withValues(alpha: 0.6),
+                                    width: isPresent ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isPresent ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                      size: 15,
+                                      color: isPresent ? const Color(0xFF059669) : scheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      isPresent ? 'Present' : 'Check In',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isPresent ? FontWeight.bold : FontWeight.w500,
+                                        color: isPresent ? const Color(0xFF059669) : scheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
-                            selected: {current},
-                            onSelectionChanged: (val) {
-                              setState(() => _rosterStatus[m.memberId] = val.first);
-                            },
                           ),
-                        ],
+                        ),
                       ),
                     );
                   },
@@ -731,10 +852,10 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
     final dateStr = DateFormat('yyyy-MM-dd').format(_attendanceDate);
 
     final records = members.map((m) {
-      final status = _rosterStatus[m.id] ?? 'present';
+      final isPresent = _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id);
       return {
         'member_id': m.id,
-        'status': status,
+        'status': isPresent ? 'present' : 'absent',
       };
     }).toList();
 
@@ -746,19 +867,20 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
             date: dateStr,
             records: records,
           );
-      final count = res['saved'] ?? records.length;
+      final count = res['saved'] ?? records.where((r) => r['status'] == 'present').length;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Roster saved! Recorded attendance for $count members.'),
-            backgroundColor: const Color(0xFF0D9488),
+            content: Text('Attendance saved: $count present on ${DateFormat("dd MMM yyyy").format(_attendanceDate)}'),
+            backgroundColor: const Color(0xFF059669),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = AppException.extractMessage(e, fallback: 'Failed to save attendance');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save roster: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(errorMsg), backgroundColor: const Color(0xFFDC2626)),
         );
       }
     } finally {
