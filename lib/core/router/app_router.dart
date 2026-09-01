@@ -47,6 +47,7 @@ import '../../features/facility_management/screens/facility_manual_checkin_scree
 import '../../features/facility_management/screens/facility_member_detail_screen.dart';
 import '../../features/facility_management/screens/facility_members_screen.dart';
 import '../../features/facility_management/screens/facility_monthly_attendance_report_screen.dart';
+import '../../features/facility_management/screens/facility_operating_hours_screen.dart';
 import '../../features/facility_management/screens/facility_plan_distribution_screen.dart';
 import '../../features/facility_management/screens/facility_reports_screen.dart';
 import '../../features/facility_management/screens/facility_settings_screen.dart';
@@ -395,6 +396,14 @@ GoRouter goRouter(Ref ref) {
           GoRoute(
             path: '/client/manage/edit/:kind/:id',
             builder: (context, state) => EditFacilityDetailsScreen(
+              kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
+              facilityId: state.pathParameters['id']!,
+              facility: state.extra as FacilityModel?,
+            ),
+          ),
+          GoRoute(
+            path: '/client/manage/operating-hours/:kind/:id',
+            builder: (context, state) => FacilityOperatingHoursScreen(
               kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
               facilityId: state.pathParameters['id']!,
               facility: state.extra as FacilityModel?,

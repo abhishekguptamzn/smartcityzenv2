@@ -112,7 +112,7 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
               iconColor: const Color(0xFF0D9488),
               iconBg: const Color(0xFFECFDF5),
               title: 'Edit Facility Details',
-              subtitle: 'Name, address, contact, operating hours & photos',
+              subtitle: 'Name, address, contact, amenities & photos',
               trailing: const Icon(Icons.chevron_right_rounded, size: 20),
               onTap: () async {
                 HapticFeedback.lightImpact();
@@ -133,33 +133,39 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
               iconColor: const Color(0xFF2563EB),
               iconBg: const Color(0xFFEFF6FF),
               title: 'Operating Hours',
-              subtitle: f != null
-                  ? '${f.openingTime ?? "06:00 AM"} – ${f.closingTime ?? "10:00 PM"}'
-                  : 'Configure daily timings',
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Daily',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2563EB),
+              subtitle: _formatOperatingHoursSubtitle(f),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      f?.operatingHoursMap != null ? 'Weekly' : 'Daily',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded, size: 20),
+                ],
               ),
               onTap: () async {
                 HapticFeedback.lightImpact();
                 await context.push(
-                  '/client/manage/edit/${widget.kind.pathSegment}/${widget.facilityId}',
+                  '/client/manage/operating-hours/${widget.kind.pathSegment}/${widget.facilityId}',
                   extra: f,
                 );
                 ref.invalidate(
                   facilityDetailSettingsProvider((widget.kind, widget.facilityId)),
                 );
+                ref.invalidate(myOwnedFacilitiesProvider);
               },
             ),
             const SizedBox(height: 24),
@@ -263,15 +269,15 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
             ],
             const SizedBox(height: 24),
 
-            // SECTION 3: BATCH & CLASS MANAGEMENT
-            _buildSectionHeader('BATCH & CLASS MANAGEMENT', scheme),
+            // SECTION 3: BATCH MANAGEMENT
+            _buildSectionHeader('BATCH MANAGEMENT', scheme),
             const SizedBox(height: 8),
             _buildSettingsToggleTile(
               context: context,
               icon: Icons.groups_rounded,
               iconColor: const Color(0xFF0284C7),
               iconBg: const Color(0xFFE0F2FE),
-              title: 'Batch & Class Management',
+              title: 'Batch Management',
               subtitle: f?.batchManagementEnabled == true
                   ? 'Active: Fixed time slots, capacity limits, batch fees & daily roster attendance.'
                   : 'Disabled: All members follow open general access / standard fee plans.',
@@ -285,7 +291,7 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                 icon: Icons.event_note_rounded,
                 iconColor: const Color(0xFF1565D8),
                 iconBg: const Color(0xFFEFF6FF),
-                title: 'Manage Batches & Timetables',
+                title: 'Manage Batches',
                 subtitle: 'View batches, schedules, participant capacities & daily rosters',
                 trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                 onTap: () {
@@ -800,4 +806,32 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
       ),
     );
   }
+
+  String _formatOperatingHoursSubtitle(FacilityModel? f) {
+    if (f == null) return 'Configure daily timings';
+    final opHours = f.operatingHoursMap;
+    if (opHours != null && opHours.isNotEmpty) {
+      final closedDays = <String>[];
+      final daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      final shortNames = {'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun'};
+      
+      for (final k in daysOrder) {
+        if (opHours[k] is Map && (opHours[k]['is_closed'] == true || opHours[k]['closed'] == true)) {
+          closedDays.add(shortNames[k] ?? k);
+        }
+      }
+
+      final mon = opHours['monday'] is Map ? opHours['monday'] as Map : null;
+      final openStr = mon?['open'] ?? f.openingTime ?? '07:00';
+      final closeStr = mon?['close'] ?? f.closingTime ?? '20:00';
+
+      if (closedDays.isNotEmpty) {
+        return '$openStr – $closeStr (${closedDays.join(", ")} Closed)';
+      }
+      return '$openStr – $closeStr (Open 7 Days)';
+    }
+
+    return '${f.openingTime ?? "07:00 AM"} – ${f.closingTime ?? "08:00 PM"}';
+  }
 }
+

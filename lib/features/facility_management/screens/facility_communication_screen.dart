@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -230,6 +231,9 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
     List<Map<String, dynamic>> availableMembers = [];
     bool loadingMembers = false;
     String memberSearchQuery = '';
+    List<FacilityBatchModel> availableBatches = [];
+    bool loadingBatches = false;
+    FacilityBatchModel? selectedTargetBatch;
 
     showModalBottomSheet(
       context: context,
@@ -255,8 +259,28 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
             }
           }
 
+          void loadBatchesIfNeeded() async {
+            if (availableBatches.isNotEmpty || loadingBatches) return;
+            setSheetState(() => loadingBatches = true);
+            try {
+              final repo = ref.read(clientFacilityRepositoryProvider);
+              final batches = await repo.getBatches(widget.kind, widget.facilityId, status: 'active');
+              setSheetState(() {
+                availableBatches = batches;
+                if (availableBatches.isNotEmpty && selectedTargetBatch == null) {
+                  selectedTargetBatch = availableBatches.first;
+                }
+                loadingBatches = false;
+              });
+            } catch (_) {
+              setSheetState(() => loadingBatches = false);
+            }
+          }
+
           if (targetFilter == 'selected_members') {
             loadMembersIfNeeded();
+          } else if (targetFilter == 'batch') {
+            loadBatchesIfNeeded();
           }
 
           final filteredMemberList = availableMembers.where((m) {
@@ -350,6 +374,23 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                           if (val) setSheetState(() => targetFilter = 'active');
                         },
                       ),
+                      if (widget.facility?.batchManagementEnabled == true)
+                        ChoiceChip(
+                          avatar: const Icon(Icons.groups_rounded, size: 16),
+                          label: Text(
+                            selectedTargetBatch == null
+                                ? 'Batch Members'
+                                : 'Batch: ${selectedTargetBatch!.name}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          selected: targetFilter == 'batch',
+                          onSelected: (val) {
+                            if (val) {
+                              setSheetState(() => targetFilter = 'batch');
+                              loadBatchesIfNeeded();
+                            }
+                          },
+                        ),
                       ChoiceChip(
                         avatar: const Icon(Icons.hourglass_bottom_rounded, size: 16),
                         label: Text('Expiring in $expiringDays Days', style: const TextStyle(fontSize: 12)),
@@ -456,6 +497,60 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                           const SizedBox(height: 4),
                           Text(
                             'Will target members whose membership validity expires within the next $expiringDays days.',
+                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Batch Members Option
+                  if (widget.facility?.batchManagementEnabled == true && targetFilter == 'batch') ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.groups_rounded, color: Color(0xFF0284C7), size: 18),
+                              SizedBox(width: 8),
+                              Text('Select Target Batch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (loadingBatches)
+                            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                          else if (availableBatches.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Text('No active batches found for this facility.', style: TextStyle(fontSize: 12)),
+                            )
+                          else
+                            DropdownButtonFormField<FacilityBatchModel>(
+                              initialValue: selectedTargetBatch,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                filled: true,
+                                fillColor: theme.cardColor,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              hint: const Text('Choose Batch'),
+                              items: availableBatches.map((b) => DropdownMenuItem(
+                                value: b,
+                                child: Text('${b.name} (${b.enrolledCount} enrolled)'),
+                              )).toList(),
+                              onChanged: (val) => setSheetState(() => selectedTargetBatch = val),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Will broadcast announcement specifically to enrolled members in this batch.',
                             style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
                           ),
                         ],
@@ -614,6 +709,13 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                           return;
                         }
 
+                        if (targetFilter == 'batch' && selectedTargetBatch == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select a batch to send this broadcast to.')),
+                          );
+                          return;
+                        }
+
                         Navigator.pop(ctx);
                         try {
                           final payload = {
@@ -623,6 +725,7 @@ class _FacilityCommunicationScreenState extends ConsumerState<FacilityCommunicat
                             'channel': selectedChannel,
                             'target_filter': targetFilter,
                             if (targetFilter == 'expiring_in_days') 'days': expiringDays,
+                            if (targetFilter == 'batch' && selectedTargetBatch != null) 'batch_id': selectedTargetBatch!.id,
                             if (targetFilter == 'selected_members') ...{
                               'recipient_ids': selectedMemberIds.toList(),
                               'member_ids': selectedMemberIds.toList(),

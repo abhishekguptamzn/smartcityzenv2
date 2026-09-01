@@ -91,6 +91,7 @@ abstract class FacilityModel with _$FacilityModel {
     @JsonKey(name: 'ble_secret_key') String? bleSecretKey,
     @JsonKey(name: 'ble_proximity_sensitivity') @Default('high') String bleProximitySensitivity,
     @JsonKey(name: 'qr_rotation_interval') @Default(15) int qrRotationInterval,
+    Map<String, dynamic>? metadata,
     @JsonKey(name: 'created_by') String? createdBy,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'updated_at') DateTime? updatedAt,
@@ -101,6 +102,13 @@ abstract class FacilityModel with _$FacilityModel {
 
   factory FacilityModel.fromJson(Map<String, dynamic> json) =>
       _$FacilityModelFromJson(json);
+
+  Map<String, dynamic>? get operatingHoursMap {
+    if (metadata != null && metadata!['operating_hours'] is Map) {
+      return (metadata!['operating_hours'] as Map).cast<String, dynamic>();
+    }
+    return null;
+  }
 
   /// Primary cover image URL from image_url, image object, or first item in images list.
   String? get coverImageUrl {

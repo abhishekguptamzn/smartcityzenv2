@@ -60,7 +60,7 @@ class _FacilityBatchesScreenState extends ConsumerState<FacilityBatchesScreen> {
             }
           },
         ),
-        title: Text(widget.facility != null ? '${widget.facility!.name} Batches' : 'Batches & Timetables'),
+        title: Text(widget.facility != null ? '${widget.facility!.name} Batches' : 'Batches'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),

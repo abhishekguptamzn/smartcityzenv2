@@ -113,21 +113,32 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       if (mounted) setState(() => _loadingPlans = false);
     }
 
-    try {
-      final batches = await repo.getBatches(widget.kind, widget.facilityId, status: 'active');
+    if (widget.facility?.batchManagementEnabled == true) {
+      try {
+        final batches = await repo.getBatches(widget.kind, widget.facilityId, status: 'active');
+        if (mounted) {
+          setState(() {
+            _batches = batches;
+            _selectedBatch = null;
+            _loadingBatches = false;
+            if (_batches.isNotEmpty) {
+              _enrollIntoBatch = true;
+              _selectedBatch = _batches.first;
+            }
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _loadingBatches = false);
+      }
+    } else {
       if (mounted) {
         setState(() {
-          _batches = batches;
+          _batches = [];
           _selectedBatch = null;
+          _enrollIntoBatch = false;
           _loadingBatches = false;
-          if (widget.facility?.batchManagementEnabled == true && _batches.isNotEmpty) {
-            _enrollIntoBatch = true;
-            _selectedBatch = _batches.first;
-          }
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loadingBatches = false);
     }
   }
 
@@ -551,11 +562,11 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
             style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
-          if (widget.facility?.batchManagementEnabled == true || _batches.isNotEmpty) ...[
+          if (widget.facility?.batchManagementEnabled == true) ...[
             _buildEnrollmentTypeSelector(theme, scheme),
             const SizedBox(height: 8),
           ],
-          if (_enrollIntoBatch)
+          if (widget.facility?.batchManagementEnabled == true && _enrollIntoBatch)
             _buildBatchSelector(theme, scheme)
           else
             _buildFeePlanSelector(theme, scheme),
@@ -671,10 +682,11 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
           ),
 
         const SizedBox(height: 16),
-        if (widget.facility?.batchManagementEnabled == true || _batches.isNotEmpty)
+        if (widget.facility?.batchManagementEnabled == true) ...[
           _buildEnrollmentTypeSelector(theme, scheme),
-        const SizedBox(height: 12),
-        if (_enrollIntoBatch)
+          const SizedBox(height: 12),
+        ],
+        if (widget.facility?.batchManagementEnabled == true && _enrollIntoBatch)
           _buildBatchSelector(theme, scheme)
         else
           _buildFeePlanSelector(theme, scheme),
@@ -703,7 +715,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
             ButtonSegment<bool>(
               value: true,
               icon: Icon(Icons.groups_rounded),
-              label: Text('Batch / Class'),
+              label: Text('Batches'),
             ),
           ],
           selected: {_enrollIntoBatch},
@@ -729,13 +741,13 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blue.withValues(alpha: 0.1),
+          color: Colors.amber.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.withValues(alpha: 0.4)),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         ),
         child: const Row(
           children: [
-            Icon(Icons.info_outline_rounded, color: Colors.blue, size: 18),
+            Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -755,7 +767,7 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Select Batch / Class',
+              'Select Batch',
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (_selectedBatch != null)

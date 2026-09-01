@@ -49,6 +49,7 @@ _FacilityModel _$FacilityModelFromJson(
   bleProximitySensitivity:
       json['ble_proximity_sensitivity'] as String? ?? 'high',
   qrRotationInterval: (json['qr_rotation_interval'] as num?)?.toInt() ?? 15,
+  metadata: json['metadata'] as Map<String, dynamic>?,
   createdBy: json['created_by'] as String?,
   createdAt: json['created_at'] == null
       ? null
@@ -93,6 +94,7 @@ Map<String, dynamic> _$FacilityModelToJson(
   'ble_secret_key': instance.bleSecretKey,
   'ble_proximity_sensitivity': instance.bleProximitySensitivity,
   'qr_rotation_interval': instance.qrRotationInterval,
+  'metadata': instance.metadata,
   'created_by': instance.createdBy,
   'created_at': instance.createdAt?.toIso8601String(),
   'updated_at': instance.updatedAt?.toIso8601String(),
