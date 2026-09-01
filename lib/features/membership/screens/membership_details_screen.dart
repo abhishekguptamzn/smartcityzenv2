@@ -83,10 +83,7 @@ class _MembershipDetailsScreenState
     final hasFacilityId = widget.facilityId != null;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
@@ -158,50 +155,94 @@ class _MembershipBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _HeroCard(member: member, kind: kind),
-        Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: TabBar(
-            controller: tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            tabs: const [
-              _Tab(icon: Icons.dashboard_rounded, label: 'Overview'),
-              _Tab(icon: Icons.access_time_rounded, label: 'Check-ins'),
-              _Tab(icon: Icons.receipt_long_rounded, label: 'Payments'),
-              _Tab(icon: Icons.autorenew_rounded, label: 'Renewals'),
-            ],
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          SliverToBoxAdapter(
+            child: _HeroCard(member: member, kind: kind),
           ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: TabBarView(
-            controller: tabController,
-            children: [
-              _OverviewTab(
-                member: member,
-                kind: kind,
-                facilityId: facilityId,
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _SliverTabBarDelegate(
+              tabBar: TabBar(
+                controller: tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                tabs: const [
+                  _Tab(icon: Icons.dashboard_rounded, label: 'Overview'),
+                  _Tab(icon: Icons.access_time_rounded, label: 'Check-ins'),
+                  _Tab(icon: Icons.receipt_long_rounded, label: 'Payments'),
+                  _Tab(icon: Icons.autorenew_rounded, label: 'Renewals'),
+                ],
               ),
-              _CheckInTab(
-                kind: kind,
-                facilityId: facilityId,
-                memberId: member.id,
-              ),
-              _PaymentsTab(payableId: member.id),
-              _RenewalsTab(
-                kind: kind,
-                facilityId: facilityId,
-                memberId: member.id,
-              ),
-            ],
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
           ),
-        ),
-      ],
+        ];
+      },
+      body: TabBarView(
+        controller: tabController,
+        children: [
+          _OverviewTab(
+            member: member,
+            kind: kind,
+            facilityId: facilityId,
+          ),
+          _CheckInTab(
+            kind: kind,
+            facilityId: facilityId,
+            memberId: member.id,
+          ),
+          _PaymentsTab(payableId: member.id),
+          _RenewalsTab(
+            kind: kind,
+            facilityId: facilityId,
+            memberId: member.id,
+          ),
+        ],
+      ),
     );
+  }
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height + 1;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: backgroundColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tabBar,
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar ||
+        backgroundColor != oldDelegate.backgroundColor;
   }
 }
 
@@ -260,10 +301,9 @@ class _HeroCard extends StatelessWidget {
     final String defaultTypeName = isGym ? 'GYM' : (isActivity ? 'ACTIVITY ACADEMY' : 'LIBRARY');
     final String tierFormatted = (member.membershipType != null && member.membershipType!.toLowerCase() != 'none' && member.membershipType!.trim().isNotEmpty) ? member.membershipType!.toUpperCase() : defaultTypeName;
     final String headingText = isGym ? 'Gym Membership' : (isActivity ? 'Activity Academy Pass' : 'Library Membership');
-    final topMargin = MediaQuery.paddingOf(context).top + kToolbarHeight + 8;
 
     return Container(
-      margin: EdgeInsets.fromLTRB(16, topMargin, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../providers/facility_explorer_providers.dart';
 import '../../data/models/facility_batch_model.dart';
 import '../../data/models/facility_model.dart';
 import '../../data/models/facility_operations_models.dart';
@@ -175,28 +177,59 @@ GoRouter goRouter(Ref ref) {
             ),
           ),
           GoRoute(
+            path: '/services/category/:categoryId',
+            builder: (context, state) {
+              final categoryId = state.pathParameters['categoryId'] ?? '';
+              final extra = state.extra as Map<String, dynamic>?;
+              final category = extra?['category'] as FacilityCategoryItem?;
+              final initialType = extra?['initialType'] as FacilityTypeItem?;
+              final initialSearch = (extra?['initialSearch'] as String?) ?? state.uri.queryParameters['search'];
+
+              if (category != null) {
+                return FacilityCategoryCentersScreen(
+                  category: category,
+                  initialType: initialType,
+                  initialSearch: initialSearch,
+                );
+              }
+
+              return Consumer(
+                builder: (context, ref, _) {
+                  final catsAsync = ref.watch(unifiedFacilityCategoriesProvider);
+                  return catsAsync.when(
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (_, _) => const ServicesExplorerScreen(),
+                    data: (cats) {
+                      final found = cats.firstWhere(
+                        (c) => c.id == categoryId || c.slug == categoryId,
+                        orElse: () => FacilityCategoryItem(
+                          id: categoryId,
+                          name: categoryId.toUpperCase(),
+                          slug: categoryId,
+                          icon: Icons.category_rounded,
+                          gradientColors: const [Color(0xFF0D9488), Color(0xFF0284C7)],
+                          description: 'Municipal Services',
+                        ),
+                      );
+                      return FacilityCategoryCentersScreen(
+                        category: found,
+                        initialType: initialType,
+                        initialSearch: initialSearch,
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+          GoRoute(
             path: '/services/:kind/:id',
             builder: (context, state) => FacilityDetailScreen(
               kind: FacilityKind.fromPathSegment(state.pathParameters['kind']!),
               id: state.pathParameters['id']!,
             ),
-          ),
-          GoRoute(
-            path: '/services/category/:categoryId',
-            builder: (context, state) {
-              final extra = state.extra as Map<String, dynamic>?;
-              final category = extra?['category'] as FacilityCategoryItem?;
-              if (category == null) {
-                return const ServicesExplorerScreen();
-              }
-              final initialType = extra?['initialType'] as FacilityTypeItem?;
-              final initialSearch = (extra?['initialSearch'] as String?) ?? state.uri.queryParameters['search'];
-              return FacilityCategoryCentersScreen(
-                category: category,
-                initialType: initialType,
-                initialSearch: initialSearch,
-              );
-            },
           ),
           GoRoute(
             path: '/activities',
