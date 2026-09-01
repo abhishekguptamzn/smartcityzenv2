@@ -220,6 +220,7 @@ class ClientFacilityRepository {
     String facilityId,
     String memberId, {
     String? feePlanId,
+    String? batchId,
     double? amount,
     String? startDate,
     String paymentMethod = 'cash',
@@ -228,6 +229,7 @@ class ClientFacilityRepository {
   }) async {
     final payload = {
       if (feePlanId != null) 'fee_plan_id': feePlanId,
+      if (batchId != null) 'batch_id': batchId,
       if (amount != null) 'amount': amount,
       if (startDate != null) 'start_date': startDate,
       'payment_method': paymentMethod,

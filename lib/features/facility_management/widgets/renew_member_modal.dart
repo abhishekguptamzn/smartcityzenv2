@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -34,6 +35,13 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
   List<FeePlanModel> _plans = [];
   FeePlanModel? _selectedPlan;
   bool _loadingPlans = true;
+
+  List<FacilityBatchModel> _batches = [];
+  FacilityBatchModel? _selectedBatch;
+  bool _loadingBatches = true;
+
+  // 'batch' or 'plan'
+  String _renewalSource = 'plan';
   bool _submitting = false;
 
   late DateTime _startDate;
@@ -54,7 +62,15 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     final isExpired = currentEnd == null || currentEnd.isBefore(now);
     _startDate = isExpired ? now : currentEnd;
 
-    _fetchPlans();
+    // If member already has a batch assigned, default to batch renewal
+    final hasBatch = widget.member['batch_id'] != null ||
+        widget.member['batch'] != null ||
+        (widget.member['membership_type']?.toString().toLowerCase() == 'batch');
+    if (hasBatch) {
+      _renewalSource = 'batch';
+    }
+
+    _fetchPlansAndBatches();
   }
 
   @override
@@ -65,28 +81,101 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     super.dispose();
   }
 
-  Future<void> _fetchPlans() async {
-    try {
-      final repo = ref.read(clientFacilityRepositoryProvider);
-      final plans = await repo.getFacilityPlans(widget.kind, widget.facilityId);
+  Future<void> _fetchPlansAndBatches() async {
+    final repo = ref.read(clientFacilityRepositoryProvider);
 
+    // 1. Fetch Fee Plans
+    try {
+      final plans = await repo.getFacilityPlans(widget.kind, widget.facilityId);
       if (mounted) {
         setState(() {
           _plans = plans.where((p) => p.isActive).toList();
           _loadingPlans = false;
-          if (_plans.isNotEmpty) {
-            _selectedPlan = _plans.first;
-            _amountCtrl.text = _selectedPlan!.amount.toStringAsFixed(0);
-          }
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loadingPlans = false);
     }
+
+    // 2. Fetch Batches
+    try {
+      final batches = await repo.getBatches(widget.kind, widget.facilityId, status: 'active');
+      if (mounted) {
+        setState(() {
+          _batches = batches;
+          _loadingBatches = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingBatches = false);
+    }
+
+    // 3. Resolve initial selection
+    if (mounted) {
+      setState(() {
+        final memberBatchId = widget.member['batch_id']?.toString() ??
+            (widget.member['batch'] is Map ? widget.member['batch']['id']?.toString() : null);
+
+        if (memberBatchId != null && memberBatchId.isNotEmpty) {
+          final matched = _batches.where((b) => b.id == memberBatchId).firstOrNull;
+          if (matched != null) {
+            _selectedBatch = matched;
+          } else if (widget.member['batch'] is Map) {
+            try {
+              _selectedBatch = FacilityBatchModel.fromJson(widget.member['batch'] as Map<String, dynamic>);
+            } catch (_) {}
+          }
+        }
+
+        if (_selectedBatch == null && _batches.isNotEmpty && _renewalSource == 'batch') {
+          _selectedBatch = _batches.first;
+        }
+
+        if (_plans.isNotEmpty && _selectedPlan == null) {
+          _selectedPlan = _plans.first;
+        }
+
+        if (_renewalSource == 'batch' && _selectedBatch != null) {
+          _applyBatchPrice(_selectedBatch!);
+        } else if (_selectedPlan != null) {
+          _applyPlanPrice(_selectedPlan!);
+        }
+      });
+    }
   }
 
-  DateTime _calculateRenewedEndDate(DateTime baseDate, FeePlanModel? plan) {
-    if (plan == null) return baseDate.add(const Duration(days: 30));
+  void _applyBatchPrice(FacilityBatchModel batch) {
+    final fee = batch.fee ?? (batch.feePlan?.amount ?? 0.0);
+    _amountCtrl.text = fee > 0 ? fee.toStringAsFixed(0) : '0';
+  }
+
+  void _applyPlanPrice(FeePlanModel plan) {
+    _amountCtrl.text = plan.amount.toStringAsFixed(0);
+  }
+
+  DateTime _calculateRenewedEndDate(DateTime baseDate) {
+    if (_renewalSource == 'batch' && _selectedBatch != null) {
+      if (_selectedBatch!.feePlan != null) {
+        return _calculatePlanEndDate(baseDate, _selectedBatch!.feePlan!);
+      }
+      if (_selectedBatch!.endDate != null) {
+        final batchEnd = DateTime.tryParse(_selectedBatch!.endDate!);
+        if (batchEnd != null && batchEnd.isAfter(baseDate)) {
+          return batchEnd;
+        }
+      }
+      // Default batch pass validity is 1 month
+      return DateTime(baseDate.year, baseDate.month + 1, baseDate.day);
+    }
+
+    if (_selectedPlan != null) {
+      return _calculatePlanEndDate(baseDate, _selectedPlan!);
+    }
+
+    return baseDate.add(const Duration(days: 30));
+  }
+
+  DateTime _calculatePlanEndDate(DateTime baseDate, FeePlanModel plan) {
     final count = plan.intervalCount > 0 ? plan.intervalCount : 1;
     final interval = plan.interval.toLowerCase();
     switch (interval) {
@@ -112,17 +201,40 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     }
   }
 
+  String _getDurationLabel() {
+    if (_renewalSource == 'batch' && _selectedBatch != null) {
+      if (_selectedBatch!.feePlan != null) {
+        final fp = _selectedBatch!.feePlan!;
+        return '${fp.intervalCount} ${fp.interval}';
+      }
+      return '1 month (Batch)';
+    }
+
+    if (_selectedPlan != null) {
+      return '${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}';
+    }
+
+    return '1 month';
+  }
+
   Future<void> _submitRenewal() async {
     final memberId = widget.member['id']?.toString();
     if (memberId == null || memberId.isEmpty) return;
 
     final user = widget.member['user'] as Map<String, dynamic>? ?? {};
     final userName = user['name']?.toString() ?? widget.member['name']?.toString() ?? 'Citizen Member';
-    final amount = double.tryParse(_amountCtrl.text.trim()) ?? _selectedPlan?.amount ?? 0.0;
-    final planTitle = _selectedPlan != null
-        ? '${_selectedPlan!.name} (${_selectedPlan!.intervalCount} ${_selectedPlan!.interval})'
-        : 'Custom Fee Pass';
-    final endDate = _calculateRenewedEndDate(_startDate, _selectedPlan);
+    final amount = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
+
+    final String planTitle;
+    if (_renewalSource == 'batch' && _selectedBatch != null) {
+      planTitle = '${_selectedBatch!.name} (Batch Pass)';
+    } else if (_selectedPlan != null) {
+      planTitle = '${_selectedPlan!.name} (${_selectedPlan!.intervalCount} ${_selectedPlan!.interval})';
+    } else {
+      planTitle = 'Custom Fee Pass';
+    }
+
+    final endDate = _calculateRenewedEndDate(_startDate);
     final validityStr = '${DateFormat("d MMM yyyy").format(_startDate)} → ${DateFormat("d MMM yyyy").format(endDate)}';
 
     final confirm = await showAppConfirmDialog(
@@ -132,7 +244,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
       confirmLabel: 'Confirm & Renew',
       details: [
         ConfirmDetailRow(label: 'Member', value: userName),
-        ConfirmDetailRow(label: 'Plan', value: planTitle),
+        ConfirmDetailRow(label: 'Pass Type', value: planTitle),
         ConfirmDetailRow(label: 'Validity Window', value: validityStr),
         ConfirmDetailRow(label: 'Amount Payable', value: '₹${amount.toStringAsFixed(0)}', isHighlighted: true),
         ConfirmDetailRow(label: 'Payment Method', value: _paymentMethod.toUpperCase()),
@@ -145,11 +257,19 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
 
     try {
       final repo = ref.read(clientFacilityRepositoryProvider);
+      final batchIdToSave = _renewalSource == 'batch'
+          ? _selectedBatch?.id
+          : (widget.member['batch_id']?.toString());
+      final feePlanIdToSave = _renewalSource == 'batch'
+          ? _selectedBatch?.feePlanId
+          : _selectedPlan?.id;
+
       await repo.renewMember(
         widget.kind,
         widget.facilityId,
         memberId,
-        feePlanId: _selectedPlan?.id,
+        feePlanId: feePlanIdToSave,
+        batchId: batchIdToSave,
         amount: amount,
         startDate: DateFormat('yyyy-MM-dd').format(_startDate),
         paymentMethod: _paymentMethod,
@@ -157,7 +277,7 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
         notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
       );
 
-      // Invalidate stats cache so dashboard auto-updates
+      // Invalidate stats and members cache so dashboard auto-updates
       ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
       ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
       ref.invalidate(myOwnedFacilitiesProvider);
@@ -206,10 +326,10 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
     }
 
     final isExpired = currentEnd == null || currentEnd.isBefore(now);
-    final calculatedNewEnd = _calculateRenewedEndDate(_startDate, _selectedPlan);
-    final durationLabel = _selectedPlan != null
-        ? '${_selectedPlan!.intervalCount} ${_selectedPlan!.interval}'
-        : '1 month';
+    final calculatedNewEnd = _calculateRenewedEndDate(_startDate);
+    final durationLabel = _getDurationLabel();
+    final hasBatchesOption = _batches.isNotEmpty || _selectedBatch != null;
+    final isBatchMode = _renewalSource == 'batch' && hasBatchesOption;
 
     return Container(
       decoration: BoxDecoration(
@@ -331,45 +451,197 @@ class _RenewMemberModalState extends ConsumerState<RenewMemberModal> {
               ),
               const SizedBox(height: 16),
 
-              // Fee Plan Picklist
-              Text('Select Fee Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
-              const SizedBox(height: 8),
-
-              if (_loadingPlans)
-                const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-              else if (_plans.isEmpty)
+              // Renewal Pass Type Switcher (If batches exist)
+              if (hasBatchesOption) ...[
+                Text('Renewal Pass Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
                   ),
-                  child: const Text('No active fee plans configured. You can specify a custom amount below.', style: TextStyle(fontSize: 12)),
-                )
-              else
-                DropdownButtonFormField<FeePlanModel>(
-                  initialValue: _selectedPlan,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.sell_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _renewalSource = 'batch';
+                              if (_selectedBatch == null && _batches.isNotEmpty) {
+                                _selectedBatch = _batches.first;
+                              }
+                              if (_selectedBatch != null) {
+                                _applyBatchPrice(_selectedBatch!);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isBatchMode ? primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: isBatchMode
+                                  ? [BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.school_rounded, size: 16, color: isBatchMode ? Colors.white : scheme.onSurfaceVariant),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Batch Pass',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isBatchMode ? Colors.white : scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _renewalSource = 'plan';
+                              if (_selectedPlan == null && _plans.isNotEmpty) {
+                                _selectedPlan = _plans.first;
+                              }
+                              if (_selectedPlan != null) {
+                                _applyPlanPrice(_selectedPlan!);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: !isBatchMode ? primaryColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: !isBatchMode
+                                  ? [BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.sell_outlined, size: 16, color: !isBatchMode ? Colors.white : scheme.onSurfaceVariant),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Facility Fee Plan',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: !isBatchMode ? Colors.white : scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  items: _plans.map((p) {
-                    final intervalStr = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
-                    return DropdownMenuItem<FeePlanModel>(
-                      value: p,
-                      child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalStr'),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _selectedPlan = val;
-                        _amountCtrl.text = val.amount.toStringAsFixed(0);
-                      });
-                    }
-                  },
                 ),
+                const SizedBox(height: 14),
+              ],
+
+              // Batch Selection View
+              if (isBatchMode) ...[
+                Text('Select Batch', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+                const SizedBox(height: 8),
+                if (_loadingBatches)
+                  const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                else if (_batches.isEmpty && _selectedBatch == null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('No active batches found. You can specify a custom amount below or switch to Fee Plan.', style: TextStyle(fontSize: 12)),
+                  )
+                else ...[
+                  DropdownButtonFormField<FacilityBatchModel>(
+                    initialValue: _batches.any((b) => b.id == _selectedBatch?.id)
+                        ? _batches.firstWhere((b) => b.id == _selectedBatch?.id)
+                        : (_batches.isNotEmpty ? _batches.first : _selectedBatch),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.school_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    ),
+                    items: (_batches.isNotEmpty ? _batches : (_selectedBatch != null ? [_selectedBatch!] : <FacilityBatchModel>[])).map((b) {
+                      final fee = b.fee ?? (b.feePlan?.amount ?? 0.0);
+                      final timing = b.startTime != null && b.endTime != null ? ' (${b.startTime} - ${b.endTime})' : '';
+                      return DropdownMenuItem<FacilityBatchModel>(
+                        value: b,
+                        child: Text(
+                          '${b.name} — ₹${fee.toStringAsFixed(0)}$timing',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _selectedBatch = val;
+                          _applyBatchPrice(val);
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ] else ...[
+                // Fee Plan Picklist View
+                Text('Select Fee Plan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface)),
+                const SizedBox(height: 8),
+
+                if (_loadingPlans)
+                  const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                else if (_plans.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('No active fee plans configured. You can specify a custom amount below.', style: TextStyle(fontSize: 12)),
+                  )
+                else
+                  DropdownButtonFormField<FeePlanModel>(
+                    initialValue: _plans.any((p) => p.id == _selectedPlan?.id)
+                        ? _plans.firstWhere((p) => p.id == _selectedPlan?.id)
+                        : (_plans.isNotEmpty ? _plans.first : null),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.sell_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    ),
+                    items: _plans.map((p) {
+                      final intervalStr = p.intervalCount > 1 ? '${p.intervalCount} ${p.interval}s' : p.interval;
+                      return DropdownMenuItem<FeePlanModel>(
+                        value: p,
+                        child: Text('${p.name} — ₹${p.amount.toStringAsFixed(0)} / $intervalStr'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _selectedPlan = val;
+                          _applyPlanPrice(val);
+                        });
+                      }
+                    },
+                  ),
+              ],
               const SizedBox(height: 14),
 
               // Renewal Start Date Picker (Editable)
