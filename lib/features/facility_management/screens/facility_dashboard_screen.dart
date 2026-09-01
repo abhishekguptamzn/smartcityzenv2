@@ -527,8 +527,8 @@ class _FacilityDashboardScreenState
                             },
                           ),
 
-                          // 7. Batches & Attendance (Shown only if enabled in Settings)
-                          if (activeFacility.batchManagementEnabled) ...[
+                          // 7a. Batches (shown when batch management is enabled)
+                          if (activeFacility.batchManagementEnabled)
                             _OperationsCard(
                               icon: Icons.groups_rounded,
                               iconColor: const Color(0xFF0284C7),
@@ -548,6 +548,9 @@ class _FacilityDashboardScreenState
                                 );
                               },
                             ),
+
+                          // 7b. Attendance (shown only when attendance management is enabled in settings)
+                          if (activeFacility.attendanceManagementEnabled)
                             _OperationsCard(
                               icon: Icons.fact_check_rounded,
                               iconColor: const Color(0xFF059669),
@@ -566,7 +569,6 @@ class _FacilityDashboardScreenState
                                 );
                               },
                             ),
-                          ],
 
                           // 8. Communication
                           _OperationsCard(

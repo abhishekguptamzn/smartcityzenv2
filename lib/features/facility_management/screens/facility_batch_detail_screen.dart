@@ -53,7 +53,10 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
 
   // Attendance Tab State
   DateTime _attendanceDate = DateTime.now();
+  /// Legacy simple-mode set (non-attendance-management mode)
   final Set<String> _presentMemberIds = {};
+  /// Attendance management mode: maps memberId -> 'present'|'absent'|null (null = not yet marked)
+  final Map<String, String?> _rosterStatusMap = {};
   bool _loadingAttendance = false;
   bool _savingRoster = false;
 
@@ -77,18 +80,28 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
           );
       final attendances = data['attendances'] as List? ?? [];
       final Set<String> present = {};
+      final Map<String, String?> statusMap = {};
       for (final att in attendances) {
         if (att is Map) {
           final memId = att['facility_member_id']?.toString() ?? att['member_id']?.toString() ?? '';
           final userId = att['user_id']?.toString() ?? '';
-          if (memId.isNotEmpty) present.add(memId);
-          if (userId.isNotEmpty) present.add(userId);
+          final status = att['status']?.toString() ?? 'present';
+          if (memId.isNotEmpty) {
+            present.add(memId);
+            statusMap[memId] = status;
+          }
+          if (userId.isNotEmpty) {
+            present.add(userId);
+            statusMap[userId] = status;
+          }
         }
       }
       if (mounted) {
         setState(() {
           _presentMemberIds.clear();
           _presentMemberIds.addAll(present);
+          _rosterStatusMap.clear();
+          _rosterStatusMap.addAll(statusMap);
           _loadingAttendance = false;
         });
       }
@@ -949,16 +962,42 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
   }
 
   Future<void> _saveRoster(List<FacilityBatchMemberItem> members, FacilityBatchModel? batch) async {
+    final isAttMgmt = widget.facility?.attendanceManagementEnabled ?? false;
     setState(() => _savingRoster = true);
     final dateStr = DateFormat('yyyy-MM-dd').format(_attendanceDate);
 
-    final records = members.map((m) {
-      final isPresent = _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id);
-      return {
-        'member_id': m.id,
-        'status': isPresent ? 'present' : 'absent',
-      };
-    }).toList();
+    List<Map<String, dynamic>> records;
+    if (isAttMgmt) {
+      // Only submit members that have been explicitly marked — skip untouched (null) members
+      records = members
+          .where((m) {
+            final s = _rosterStatusMap[m.memberId] ?? _rosterStatusMap[m.id];
+            return s != null;
+          })
+          .map<Map<String, dynamic>>((m) {
+            final status = _rosterStatusMap[m.memberId] ?? _rosterStatusMap[m.id] ?? 'present';
+            return {'member_id': m.id, 'status': status};
+          })
+          .toList();
+    } else {
+      records = members.map<Map<String, dynamic>>((m) {
+        final isPresent = _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id);
+        return {'member_id': m.id, 'status': isPresent ? 'present' : 'absent'};
+      }).toList();
+    }
+
+    if (records.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please mark at least one member before saving.'),
+            backgroundColor: Color(0xFFF59E0B),
+          ),
+        );
+      }
+      setState(() => _savingRoster = false);
+      return;
+    }
 
     try {
       final res = await ref.read(clientFacilityRepositoryProvider).markBatchAttendance(
@@ -968,11 +1007,12 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
             date: dateStr,
             records: records,
           );
-      final count = res['saved'] ?? records.where((r) => r['status'] == 'present').length;
+      final presentCount = records.where((r) => r['status'] == 'present').length;
+      final absentCount = records.where((r) => r['status'] == 'absent').length;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Attendance saved: $count present on ${DateFormat("dd MMM yyyy").format(_attendanceDate)}'),
+            content: Text('Saved: $presentCount Present, $absentCount Absent on ${DateFormat("dd MMM yyyy").format(_attendanceDate)}'),
             backgroundColor: const Color(0xFF059669),
           ),
         );
