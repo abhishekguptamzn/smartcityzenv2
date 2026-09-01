@@ -61,6 +61,17 @@ abstract class FacilityBatchModel with _$FacilityBatchModel {
     return 'Flexible Timings';
   }
 
+  String? get timeFormatted {
+    if (startTime != null && endTime != null) {
+      final s = startTime!.length >= 5 ? startTime!.substring(0, 5) : startTime!;
+      final e = endTime!.length >= 5 ? endTime!.substring(0, 5) : endTime!;
+      return '$s - $e';
+    }
+    return null;
+  }
+
+  int get activeMembersCount => enrolledCount;
+
   String get feeDisplay {
     if (fee != null && fee! > 0) {
       return '₹${fee!.toStringAsFixed(0)}';
