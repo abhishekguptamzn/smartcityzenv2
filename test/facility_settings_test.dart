@@ -51,7 +51,20 @@ void main() {
       expect(find.text('Live QR Turnstile Screen'), findsOneWidget);
       expect(find.text('Fee Plans & Pricing'), findsOneWidget);
       expect(find.text('Broadcast & Member Communication'), findsOneWidget);
+      expect(find.text('Attendance Management'), findsOneWidget);
       expect(find.text('ACTIVE'), findsNWidgets(2)); // Badge on facility card + badge on BLE tile
+    });
+
+    test('FacilityModel correctly parses attendance_management_enabled', () {
+      final json = {
+        'id': 'FAC123',
+        'name': 'Power Gym',
+        'attendance_management_enabled': true,
+        'batch_management_enabled': true,
+      };
+      final facility = FacilityModel.fromJson(json);
+      expect(facility.attendanceManagementEnabled, isTrue);
+      expect(facility.batchManagementEnabled, isTrue);
     });
   });
 }

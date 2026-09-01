@@ -383,8 +383,10 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
               );
             }
 
+            final isAttMgmt = widget.facility?.attendanceManagementEnabled ?? false;
             final allMarked = members.isNotEmpty && members.every((m) => _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id));
             final presentCount = members.where((m) => _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id)).length;
+            final absentCount = members.length - presentCount;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,29 +405,58 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            '$presentCount / ${members.length} Present',
+                            isAttMgmt
+                                ? '$presentCount P • $absentCount A'
+                                : '$presentCount / ${members.length} Present',
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                           ),
                         ),
                       ],
                     ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                      icon: Icon(allMarked ? Icons.clear_all_rounded : Icons.done_all_rounded, size: 16),
-                      label: Text(allMarked ? 'Clear All' : 'Mark All Present'),
-                      onPressed: () {
-                        setState(() {
-                          if (allMarked) {
-                            _presentMemberIds.clear();
-                          } else {
-                            for (final m in members) {
-                              _presentMemberIds.add(m.memberId);
-                              _presentMemberIds.add(m.id);
+                    if (isAttMgmt)
+                      Row(
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                            onPressed: () {
+                              setState(() {
+                                for (final m in members) {
+                                  _presentMemberIds.add(m.memberId);
+                                  _presentMemberIds.add(m.id);
+                                }
+                              });
+                            },
+                            child: const Text('All Present', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          TextButton(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                            onPressed: () {
+                              setState(() {
+                                _presentMemberIds.clear();
+                              });
+                            },
+                            child: const Text('All Absent', style: TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                          ),
+                        ],
+                      )
+                    else
+                      TextButton.icon(
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        icon: Icon(allMarked ? Icons.clear_all_rounded : Icons.done_all_rounded, size: 16),
+                        label: Text(allMarked ? 'Clear All' : 'Mark All Present'),
+                        onPressed: () {
+                          setState(() {
+                            if (allMarked) {
+                              _presentMemberIds.clear();
+                            } else {
+                              for (final m in members) {
+                                _presentMemberIds.add(m.memberId);
+                                _presentMemberIds.add(m.id);
+                              }
                             }
-                          }
-                        });
-                      },
-                    ),
+                          });
+                        },
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -442,6 +473,76 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
                   itemBuilder: (ctx, i) {
                     final m = members[i];
                     final isPresent = _presentMemberIds.contains(m.memberId) || _presentMemberIds.contains(m.id);
+
+                    if (isAttMgmt) {
+                      return GlassContainer(
+                        borderRadius: BorderRadius.circular(14),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: isPresent
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                              child: Icon(
+                                isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                                color: isPresent ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    m.displayName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  if (m.userPhone != null && m.userPhone!.isNotEmpty)
+                                    Text(
+                                      m.userPhone!,
+                                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            SegmentedButton<String>(
+                              style: SegmentedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                selectedBackgroundColor: isPresent
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                                    : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                                selectedForegroundColor: isPresent ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                              ),
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'present',
+                                  label: Text('P', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                                ButtonSegment(
+                                  value: 'absent',
+                                  label: Text('A', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                              ],
+                              selected: {isPresent ? 'present' : 'absent'},
+                              onSelectionChanged: (val) {
+                                setState(() {
+                                  if (val.first == 'present') {
+                                    _presentMemberIds.add(m.memberId);
+                                    _presentMemberIds.add(m.id);
+                                  } else {
+                                    _presentMemberIds.remove(m.memberId);
+                                    _presentMemberIds.remove(m.id);
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
                     return Material(
                       color: Colors.transparent,

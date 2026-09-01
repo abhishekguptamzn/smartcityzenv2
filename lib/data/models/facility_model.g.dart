@@ -42,6 +42,8 @@ _FacilityModel _$FacilityModelFromJson(
   defaultCheckoutDurationMinutes:
       (json['default_checkout_duration_minutes'] as num?)?.toInt() ?? 120,
   batchManagementEnabled: json['batch_management_enabled'] as bool? ?? false,
+  attendanceManagementEnabled:
+      json['attendance_management_enabled'] as bool? ?? false,
   bleVerificationEnabled: json['ble_verification_enabled'] as bool? ?? false,
   bleStrictMode: json['ble_strict_mode'] as bool? ?? false,
   bleServiceUuid: json['ble_service_uuid'] as String?,
@@ -88,6 +90,7 @@ Map<String, dynamic> _$FacilityModelToJson(
   'default_checkout_time': instance.defaultCheckoutTime,
   'default_checkout_duration_minutes': instance.defaultCheckoutDurationMinutes,
   'batch_management_enabled': instance.batchManagementEnabled,
+  'attendance_management_enabled': instance.attendanceManagementEnabled,
   'ble_verification_enabled': instance.bleVerificationEnabled,
   'ble_strict_mode': instance.bleStrictMode,
   'ble_service_uuid': instance.bleServiceUuid,

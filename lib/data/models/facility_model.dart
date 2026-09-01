@@ -85,6 +85,7 @@ abstract class FacilityModel with _$FacilityModel {
     @JsonKey(name: 'default_checkout_time') String? defaultCheckoutTime,
     @JsonKey(name: 'default_checkout_duration_minutes') @Default(120) int defaultCheckoutDurationMinutes,
     @JsonKey(name: 'batch_management_enabled') @Default(false) bool batchManagementEnabled,
+    @JsonKey(name: 'attendance_management_enabled') @Default(false) bool attendanceManagementEnabled,
     @JsonKey(name: 'ble_verification_enabled') @Default(false) bool bleVerificationEnabled,
     @JsonKey(name: 'ble_strict_mode') @Default(false) bool bleStrictMode,
     @JsonKey(name: 'ble_service_uuid') String? bleServiceUuid,

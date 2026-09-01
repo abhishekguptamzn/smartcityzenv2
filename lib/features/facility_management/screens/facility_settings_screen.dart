@@ -267,6 +267,19 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                 onTap: () => _showTimePickerForAutoCheckout(context, f?.defaultCheckoutTime),
               ),
             ],
+            const SizedBox(height: 8),
+            _buildSettingsToggleTile(
+              context: context,
+              icon: Icons.fact_check_rounded,
+              iconColor: const Color(0xFF10B981),
+              iconBg: const Color(0xFFECFDF5),
+              title: 'Attendance Management',
+              subtitle: f?.attendanceManagementEnabled == true
+                  ? 'Active: Explicit Present & Absent tracking, user notifications & attendance breakdown reports.'
+                  : 'Disabled: Single-scan presence logging without explicit absent marking.',
+              value: f?.attendanceManagementEnabled ?? false,
+              onChanged: (val) => _saveFacilitySetting('attendance_management_enabled', val),
+            ),
             const SizedBox(height: 24),
 
             // SECTION 3: BATCH MANAGEMENT

@@ -527,8 +527,8 @@ class _FacilityDashboardScreenState
                             },
                           ),
 
-                          // 7. Batches (Shown only if enabled in Settings)
-                          if (activeFacility.batchManagementEnabled)
+                          // 7. Batches & Attendance (Shown only if enabled in Settings)
+                          if (activeFacility.batchManagementEnabled) ...[
                             _OperationsCard(
                               icon: Icons.groups_rounded,
                               iconColor: const Color(0xFF0284C7),
@@ -548,6 +548,25 @@ class _FacilityDashboardScreenState
                                 );
                               },
                             ),
+                            _OperationsCard(
+                              icon: Icons.fact_check_rounded,
+                              iconColor: const Color(0xFF059669),
+                              iconBg: const Color(0xFFECFDF5),
+                              title: 'Attendance',
+                              subtitle: 'Mark batch attendance & rosters',
+                              onTap: () async {
+                                await context.push(
+                                  '/client/manage/batch-attendance/${activeKind.pathSegment}/${activeFacility.id}',
+                                  extra: activeFacility,
+                                );
+                                ref.invalidate(
+                                  facilityStatsProvider(
+                                    (activeKind, activeFacility.id),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
 
                           // 8. Communication
                           _OperationsCard(

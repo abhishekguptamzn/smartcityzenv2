@@ -103,58 +103,78 @@ class FacilityAttendanceScreen extends ConsumerWidget {
                 final checkInAt = l['check_in_at']?.toString() ?? '—';
                 final duration = l['duration_minutes'];
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: scheme.outlineVariant.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle_outline_rounded,
-                        color: Color(0xFF0D9488),
-                        size: 22,
+                  final isAbsent = l['status']?.toString().toLowerCase() == 'absent';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.3),
                       ),
                     ),
-                    title: Text(
-                      user['name']?.toString() ?? 'Citizen Check-in',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Time: $checkInAt',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isAbsent
+                              ? const Color(0xFFDC2626).withValues(alpha: 0.12)
+                              : const Color(0xFF0D9488).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isAbsent ? Icons.cancel_outlined : Icons.check_circle_outline_rounded,
+                          color: isAbsent ? const Color(0xFFDC2626) : const Color(0xFF0D9488),
+                          size: 22,
+                        ),
                       ),
+                      title: Text(
+                        user['name']?.toString() ?? 'Citizen Check-in',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Time: $checkInAt',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: isAbsent
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Absent',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              ),
+                            )
+                          : (duration != null
+                              ? Text(
+                                  formatMinutes(duration),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.primary,
+                                  ),
+                                )
+                              : const Text(
+                                  'Active',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0D9488),
+                                  ),
+                                )),
                     ),
-                    trailing: duration != null
-                        ? Text(
-                            formatMinutes(duration),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.primary,
-                            ),
-                          )
-                        : const Text(
-                            'Active',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D9488),
-                            ),
-                          ),
-                  ),
-                );
+                  );
               },
             );
           },
