@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/errors/exceptions.dart';
+import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
+import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
 import 'facility_batch_detail_screen.dart';
@@ -97,7 +98,7 @@ class _FacilityBatchAttendanceScreenState extends ConsumerState<FacilityBatchAtt
     setState(() => _savingRoster = true);
     final dateStr = DateFormat('yyyy-MM-dd').format(_attendanceDate);
 
-    final records = members.map((m) {
+    final List<Map<String, dynamic>> records = members.map<Map<String, dynamic>>((m) {
       final status = _rosterStatus[m.memberId] ?? _rosterStatus[m.id] ?? 'present';
       return {
         'member_id': m.id,
@@ -274,11 +275,10 @@ class _FacilityBatchAttendanceScreenState extends ConsumerState<FacilityBatchAtt
                                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          if (b.timeFormatted != null)
-                                            Text(
-                                              '${b.timeFormatted!} • ${b.category ?? "General"}',
-                                              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-                                            ),
+                                          Text(
+                                            '${b.timingDisplay} • ${b.category ?? "General"}',
+                                            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -289,7 +289,7 @@ class _FacilityBatchAttendanceScreenState extends ConsumerState<FacilityBatchAtt
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        '${b.activeMembersCount ?? 0}/${b.capacity ?? "—"}',
+                                        '${b.enrolledCount}/${b.capacity}',
                                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
                                       ),
                                     ),
