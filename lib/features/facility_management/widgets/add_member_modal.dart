@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/fee_plan_model.dart';
@@ -376,10 +377,25 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
       );
     } catch (err) {
       if (!mounted) return;
+      final errorMessage = AppException.extractMessage(err, fallback: 'Enrollment failed. Please try again.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Enrollment failed: $err'),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {

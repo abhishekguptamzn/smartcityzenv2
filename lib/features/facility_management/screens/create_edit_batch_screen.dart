@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/repositories/client_facility_repository.dart';
@@ -493,8 +494,20 @@ class _CreateEditBatchScreenState extends ConsumerState<CreateEditBatchScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = AppException.extractMessage(e, fallback: 'Operation failed. Please try again.');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Operation failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text(errorMsg, style: const TextStyle(fontWeight: FontWeight.w600))),
+              ],
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
       }
     } finally {

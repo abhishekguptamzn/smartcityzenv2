@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../data/api/app_exception.dart';
 import '../../../data/models/facility_batch_model.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
@@ -633,7 +634,8 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red));
+            final errorMsg = AppException.extractMessage(e, fallback: 'Failed to unenroll member');
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg), backgroundColor: const Color(0xFFDC2626)));
           }
         }
       }
@@ -709,8 +711,9 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
                   }
                 } catch (e) {
                   if (mounted) {
+                    final errorMsg = AppException.extractMessage(e, fallback: 'Batch switch failed');
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Switch failed: $e'), backgroundColor: Colors.red),
+                      SnackBar(content: Text(errorMsg), backgroundColor: const Color(0xFFDC2626)),
                     );
                   }
                 }
