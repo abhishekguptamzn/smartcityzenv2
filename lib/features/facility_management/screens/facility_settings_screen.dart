@@ -448,6 +448,9 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
         if (patch.containsKey('checkout_enabled')) {
           updated = updated.copyWith(checkoutEnabled: patch['checkout_enabled'] as bool);
         }
+        if (patch.containsKey('attendance_management_enabled')) {
+          updated = updated.copyWith(attendanceManagementEnabled: patch['attendance_management_enabled'] as bool);
+        }
         if (patch.containsKey('batch_management_enabled')) {
           updated = updated.copyWith(batchManagementEnabled: patch['batch_management_enabled'] as bool);
         }
