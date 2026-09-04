@@ -216,7 +216,8 @@ Dio dio(Ref ref) {
 @Riverpod(keepAlive: true)
 Dio healthDio(Ref ref) {
   final config = ref.watch(appConfigControllerProvider);
-  final unversioned = config.apiBaseUrl.replaceFirst(RegExp(r'/api/v1/?$'), '');
+  final unversioned =
+      config.apiBaseUrl.replaceFirst(RegExp(r'/api/v\d+/?$'), '');
   return Dio(
     BaseOptions(
       baseUrl: unversioned,

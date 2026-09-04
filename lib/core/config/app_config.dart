@@ -30,6 +30,9 @@ class AppConfig {
   /// default and not hardcoded elsewhere in the app.
   static String platformDefaultBaseUrl() {
     if (_compileTimeApiBaseUrl.isNotEmpty) return _compileTimeApiBaseUrl;
+    if (kIsWeb) {
+      return 'https://admin.smartct.online/api/v2';
+    }
     return 'https://admin.smartct.online/api/v1';
   }
 
@@ -80,6 +83,9 @@ class AppConfigController extends _$AppConfigController {
     var url = prefs.getString(_Keys.apiBaseUrl);
     if (url == null || url.contains('127.0.0.1') || url.contains('localhost')) {
       url = defaults.apiBaseUrl;
+    }
+    if (kIsWeb && url.contains('/api/v1')) {
+      url = url.replaceAll('/api/v1', '/api/v2');
     }
     ImageUrlResolver.setActiveBaseUrl(url);
     state = AppConfig(
