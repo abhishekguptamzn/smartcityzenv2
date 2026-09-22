@@ -116,10 +116,13 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
               trailing: const Icon(Icons.chevron_right_rounded, size: 20),
               onTap: () async {
                 HapticFeedback.lightImpact();
-                await context.push(
+                final updated = await context.push<FacilityModel?>(
                   '/client/manage/edit/${widget.kind.pathSegment}/${widget.facilityId}',
                   extra: f,
                 );
+                if (updated != null && mounted) {
+                  setState(() => _currentFacility = updated);
+                }
                 ref.invalidate(
                   facilityDetailSettingsProvider((widget.kind, widget.facilityId)),
                 );
@@ -807,7 +810,15 @@ class _FacilitySettingsScreenState extends ConsumerState<FacilitySettingsScreen>
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  f.address ?? f.city?.name ?? 'Assigned Facility',
+                  [
+                    if (f.address != null && f.address!.trim().isNotEmpty) f.address!.trim(),
+                    if (f.city?.name != null && f.city!.name.trim().isNotEmpty) f.city!.name.trim(),
+                  ].where((s) => s.isNotEmpty).join(' • ').isNotEmpty
+                      ? [
+                          if (f.address != null && f.address!.trim().isNotEmpty) f.address!.trim(),
+                          if (f.city?.name != null && f.city!.name.trim().isNotEmpty) f.city!.name.trim(),
+                        ].where((s) => s.isNotEmpty).join(' • ')
+                      : 'Assigned Facility',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/auth_controller.dart';
 import '../../../core/providers/cities_providers.dart';
 import '../../../core/providers/facility_explorer_providers.dart';
+import '../../../core/providers/favorites_provider.dart';
 import '../../../core/services/location_service.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
@@ -46,7 +48,6 @@ class _FacilityCategoryCentersScreenState
   late String _search;
   FacilityTypeItem? _selectedType;
   FacilitySortFilter _selectedFilter = FacilitySortFilter.nearest;
-  final Set<String> _favoriteIds = {};
   UserCoordinates? _userCoords;
 
   @override
@@ -78,23 +79,13 @@ class _FacilityCategoryCentersScreenState
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      final user = ref.read(authControllerProvider).value;
-      final query = FacilityExplorerQuery(
-        categoryId: widget.category.id,
-        typeId: _selectedType?.id,
-        search: _search.isEmpty ? null : _search,
-        cityId: user?.cityId,
-        userLat: _userCoords?.latitude,
-        userLng: _userCoords?.longitude,
-      );
-
-      ref.read(facilityExplorerListProvider(query).notifier).loadMore();
+      // Future pagination
     }
   }
 
   void _onSearchChanged(String val) {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
       if (mounted) {
         setState(() => _search = val.trim());
       }
@@ -103,14 +94,35 @@ class _FacilityCategoryCentersScreenState
 
   Future<void> _makeCall(String phoneNumber) async {
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact phone number is not available for this facility.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     final uri = Uri.parse('tel:$cleanPhone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await Clipboard.setData(ClipboardData(text: cleanPhone));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open dialer. Phone number $cleanPhone copied to clipboard.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: cleanPhone));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not open dialer for $phoneNumber'),
+          content: Text('Phone number $cleanPhone copied to clipboard.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -121,24 +133,49 @@ class _FacilityCategoryCentersScreenState
     if (facility.latitude != null && facility.longitude != null) {
       final geoUri = Uri.parse(
           'geo:${facility.latitude},${facility.longitude}?q=${facility.latitude},${facility.longitude}');
-      if (await canLaunchUrl(geoUri)) {
-        await launchUrl(geoUri);
-        return;
-      }
+      try {
+        if (await canLaunchUrl(geoUri)) {
+          await launchUrl(geoUri);
+          return;
+        }
+      } catch (_) {}
+
       final webMapUri = Uri.parse(
           'https://www.google.com/maps/search/?api=1&query=${facility.latitude},${facility.longitude}');
-      if (await canLaunchUrl(webMapUri)) {
-        await launchUrl(webMapUri, mode: LaunchMode.externalApplication);
-        return;
-      }
+      try {
+        if (await launchUrl(webMapUri, mode: LaunchMode.externalApplication)) {
+          return;
+        }
+      } catch (_) {}
     }
-    if (facility.address != null && facility.address!.isNotEmpty) {
+
+    if (facility.address != null && facility.address!.trim().isNotEmpty) {
       final queryUri = Uri.parse(
           'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(facility.address!)}');
-      if (await canLaunchUrl(queryUri)) {
-        await launchUrl(queryUri, mode: LaunchMode.externalApplication);
-      }
+      try {
+        if (await launchUrl(queryUri, mode: LaunchMode.externalApplication)) {
+          return;
+        }
+      } catch (_) {}
+
+      await Clipboard.setData(ClipboardData(text: facility.address!));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Facility address copied to clipboard.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Location details not available for this facility.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _navigateToDetail(FacilityModel center) {
@@ -455,32 +492,47 @@ class _FacilityCategoryCentersScreenState
                         separatorBuilder: (context, index) => const SizedBox(height: 12),
                         itemBuilder: (context, idx) {
                           final center = items[idx];
-                          final isFav = _favoriteIds.contains(center.id);
+                          final favorites = ref.watch(favoritesProvider);
+                          final isFav = favorites.contains(center.id);
+                          final selectedCity = ref.watch(selectedCityProvider);
+                          final currentUser = ref.watch(authControllerProvider).value;
+                          final effectiveCity = selectedCity ?? currentUser?.city;
+                          final locationSvc = ref.read(locationServiceProvider);
+
+                          String? displayDistance = center.distanceFormatted;
+                          if (displayDistance == null && center.latitude != null && center.longitude != null) {
+                            final userLat = _userCoords?.latitude ?? effectiveCity?.latitude;
+                            final userLng = _userCoords?.longitude ?? effectiveCity?.longitude;
+                            final distKm = locationSvc.calculateDistanceKm(
+                              startLat: userLat,
+                              startLng: userLng,
+                              endLat: center.latitude,
+                              endLng: center.longitude,
+                            );
+                            displayDistance = locationSvc.formatDistance(distKm);
+                          }
+
+                          final enrichedCenter = displayDistance != null && center.distanceFormatted == null
+                              ? center.copyWith(distanceFormatted: displayDistance)
+                              : center;
 
                           return FacilityCenterCard(
-                            facility: center,
+                            facility: enrichedCenter,
                             isFavorite: isFav,
                             onToggleFavorite: () {
-                              setState(() {
-                                if (isFav) {
-                                  _favoriteIds.remove(center.id);
-                                } else {
-                                  _favoriteIds.add(center.id);
-                                }
-                              });
+                              ref.read(favoritesProvider.notifier).toggle(center.id);
+                              HapticFeedback.selectionClick();
                             },
-                            onTap: () => _navigateToDetail(center),
-                            onViewDetails: () => _navigateToDetail(center),
-                            onCall: center.contactPhone != null && center.contactPhone!.isNotEmpty
-                                ? () => _makeCall(center.contactPhone!)
-                                : null,
-                            onDirections: () => _openDirections(center),
+                            onTap: () => _navigateToDetail(enrichedCenter),
+                            onViewDetails: () => _navigateToDetail(enrichedCenter),
+                            onCall: () => _makeCall(enrichedCenter.contactPhone ?? ''),
+                            onDirections: () => _openDirections(enrichedCenter),
                             onSendEnquiry: () => SendEnquirySheet.show(
                               context,
-                              facilityTitle: center.name,
-                              facilityId: center.id,
-                              facilityPhone: center.contactPhone,
-                              facilityEmail: center.contactEmail,
+                              facilityTitle: enrichedCenter.name,
+                              facilityId: enrichedCenter.id,
+                              facilityPhone: enrichedCenter.contactPhone,
+                              facilityEmail: enrichedCenter.contactEmail,
                               facilityKind: widget.category.facilityKind ??
                                   (widget.category.id == 'gyms'
                                       ? FacilityKind.gym

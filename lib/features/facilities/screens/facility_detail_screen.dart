@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/activities_providers.dart';
 import '../../../core/providers/facilities_providers.dart';
+import '../../../core/providers/favorites_provider.dart';
+import '../../../core/services/location_service.dart';
 import '../../../core/utils/share_helper.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../shared/widgets/error_state_view.dart';
@@ -35,35 +38,107 @@ class FacilityDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
-  bool _isFavorite = false;
 
   Future<void> _makeCall(String? phone) async {
-    if (phone == null || phone.isEmpty) return;
+    if (phone == null || phone.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact phone number is not available for this facility.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final clean = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     final uri = Uri.parse('tel:$clean');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
-  }
-
-  Future<void> _openDirections(FacilityModel facility) async {
-    if (facility.latitude != null && facility.longitude != null) {
-      final uri = Uri.parse('geo:${facility.latitude},${facility.longitude}?q=${facility.latitude},${facility.longitude}');
+    try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
         return;
       }
-      final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${facility.latitude},${facility.longitude}');
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    if (!mounted) return;
+    Clipboard.setData(ClipboardData(text: clean));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Phone number copied to clipboard: $clean'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'OK',
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDirections(FacilityModel facility) async {
+    final hasCoords = facility.latitude != null && facility.longitude != null;
+    final address = facility.address?.trim();
+    final name = facility.name.trim();
+
+    if (!hasCoords && (address == null || address.isEmpty)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location address is not available for this facility.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final String geoString;
+    final String webString;
+    if (hasCoords) {
+      geoString = 'geo:${facility.latitude},${facility.longitude}?q=${facility.latitude},${facility.longitude}';
+      webString = 'https://www.google.com/maps/search/?api=1&query=${facility.latitude},${facility.longitude}';
+    } else {
+      final query = Uri.encodeComponent('$name, $address');
+      geoString = 'geo:0,0?q=$query';
+      webString = 'https://www.google.com/maps/search/?api=1&query=$query';
+    }
+
+    // 1. Try native geo URI (Maps app)
+    try {
+      final geoUri = Uri.parse(geoString);
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri);
+        return;
+      }
+      final launchedGeo = await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      if (launchedGeo) return;
+    } catch (_) {}
+
+    // 2. Try web maps URL in external application / browser
+    try {
+      final webUri = Uri.parse(webString);
       if (await canLaunchUrl(webUri)) {
         await launchUrl(webUri, mode: LaunchMode.externalApplication);
         return;
       }
-    }
-    if (facility.address != null && facility.address!.isNotEmpty) {
-      final query = Uri.encodeComponent(facility.address!);
-      final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
-      if (await canLaunchUrl(webUri)) {
-        await launchUrl(webUri, mode: LaunchMode.externalApplication);
-      }
-    }
+      final launchedWeb = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (launchedWeb) return;
+    } catch (_) {}
+
+    // 3. Fallback: Copy address to clipboard
+    if (!mounted) return;
+    final textToCopy = address ?? '$name (${facility.latitude}, ${facility.longitude})';
+    Clipboard.setData(ClipboardData(text: textToCopy));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Address copied to clipboard: $textToCopy'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'OK',
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 
   void _shareFacility(FacilityModel facility) {
@@ -133,10 +208,31 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: _isFavorite ? const Color(0xFFE11D48) : null,
+              ref.watch(favoritesProvider).contains(widget.id)
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              color: ref.watch(favoritesProvider).contains(widget.id)
+                  ? const Color(0xFFE11D48)
+                  : null,
             ),
-            onPressed: () => setState(() => _isFavorite = !_isFavorite),
+            onPressed: () async {
+              final facName = detailAsync.value?.name ?? 'Facility';
+              final nowFav = await ref.read(favoritesProvider.notifier).toggle(widget.id);
+              if (!context.mounted) return;
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    nowFav
+                        ? 'Added "$facName" to favorites'
+                        : 'Removed "$facName" from favorites',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.share_rounded),
@@ -161,9 +257,45 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
           },
         ),
         data: (facility) {
+          final isFavorite = ref.watch(favoritesProvider).contains(facility.id);
           final gallery = facility.galleryImageUrls;
           final isOpen = facility.isOpenNow;
           final activeAmenities = facility.activeAmenities;
+
+          // Compute distance from user location
+          final userCoords = ref.watch(currentUserCoordinatesProvider).value;
+          String? displayDistance = facility.distanceFormatted;
+          if ((displayDistance == null || displayDistance.isEmpty) &&
+              userCoords != null &&
+              facility.latitude != null &&
+              facility.longitude != null) {
+            final locationSvc = ref.read(locationServiceProvider);
+            final distKm = locationSvc.calculateDistanceKm(
+              startLat: userCoords.latitude,
+              startLng: userCoords.longitude,
+              endLat: facility.latitude,
+              endLng: facility.longitude,
+            );
+            displayDistance = locationSvc.formatDistance(distKm);
+          }
+
+          Future<void> onToggleFav() async {
+            final nowFav = await ref.read(favoritesProvider.notifier).toggle(facility.id);
+            if (!context.mounted) return;
+            HapticFeedback.lightImpact();
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  nowFav
+                      ? 'Added "${facility.name}" to favorites'
+                      : 'Removed "${facility.name}" from favorites',
+                ),
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
 
           return Column(
             children: [
@@ -176,8 +308,8 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                       facility: facility,
                       galleryUrls: gallery,
                       isOpen: isOpen,
-                      isFavorite: _isFavorite,
-                      onToggleFavorite: () => setState(() => _isFavorite = !_isFavorite),
+                      isFavorite: isFavorite,
+                      onToggleFavorite: onToggleFav,
                     ),
                     const SizedBox(height: 16),
 
@@ -220,6 +352,34 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                                   ),
                                 ],
                               ),
+                              if (displayDistance != null && displayDistance.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.near_me_rounded, size: 12, color: Color(0xFF0284C7)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        displayDistance,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0284C7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -230,9 +390,7 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                     // 3. Quick Action Buttons Row
                     FacilityQuickActionsRow(
                       phone: facility.contactPhone,
-                      onCall: facility.contactPhone != null
-                          ? () => _makeCall(facility.contactPhone!)
-                          : null,
+                      onCall: () => _makeCall(facility.contactPhone),
                       onDirections: () => _openDirections(facility),
                       onShare: () => _shareFacility(facility),
                       onSendEnquiry: () => _openEnquirySheet(facility),

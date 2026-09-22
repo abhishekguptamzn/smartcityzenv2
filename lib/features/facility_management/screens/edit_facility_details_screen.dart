@@ -18,6 +18,7 @@ import '../../../shared/widgets/searchable_city_picker.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/amenity_selector_sheet.dart';
 import 'facility_dashboard_screen.dart';
+import 'facility_settings_screen.dart';
 
 final facilityMediaProvider = FutureProvider.autoDispose
     .family<List<FacilityMediaModel>, (FacilityKind, String)>((ref, args) async {
@@ -78,6 +79,23 @@ class _EditFacilityDetailsScreenState
     _selectedAmenities = widget.facility?.amenities ?? [];
 
     _loadFacilityAmenities();
+    if (_selectedCityId == null || _selectedCityName == null) {
+      _loadFacilityDetails();
+    }
+  }
+
+  Future<void> _loadFacilityDetails() async {
+    try {
+      final repo = ref.read(clientFacilityRepositoryProvider);
+      final details =
+          await repo.getFacilityDetails(widget.kind, widget.facilityId);
+      if (mounted) {
+        setState(() {
+          _selectedCityId ??= details.cityId ?? details.city?.id;
+          _selectedCityName ??= details.city?.name;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -202,6 +220,7 @@ class _EditFacilityDetailsScreenState
     ref.invalidate(myOwnedFacilitiesProvider);
     ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
     ref.invalidate(facilityDetailProvider(widget.kind, widget.facilityId));
+    ref.invalidate(facilityDetailSettingsProvider((widget.kind, widget.facilityId)));
   }
 
   Future<void> _submitDetails() async {
@@ -264,7 +283,7 @@ class _EditFacilityDetailsScreenState
         'amenity_ids': _selectedAmenities.map((a) => a.id).toList(),
       };
 
-      await repo.updateFacilityDetails(widget.kind, widget.facilityId, payload);
+      final updated = await repo.updateFacilityDetails(widget.kind, widget.facilityId, payload);
 
       _invalidateAllFacilityData();
 
@@ -286,7 +305,7 @@ class _EditFacilityDetailsScreenState
         ),
       );
       if (context.canPop()) {
-        context.pop();
+        context.pop(updated);
       } else {
         context.go('/client/facilities');
       }

@@ -46,7 +46,7 @@ class FacilityQuickActionsRow extends StatelessWidget {
             label: 'Call',
             color: const Color(0xFF059669),
             onTap: onCall,
-            enabled: phone != null && phone!.isNotEmpty,
+            enabled: onCall != null,
           ),
           _ActionButton(
             icon: Icons.directions_rounded,
