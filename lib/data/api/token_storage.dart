@@ -18,18 +18,39 @@ class TokenStorage {
   // bootstrap from stalling forever on a blank splash screen.
   static const _timeout = Duration(seconds: 5);
 
-  Future<String?> readToken() =>
-      _storage.read(key: _tokenKey).timeout(_timeout, onTimeout: () => null);
+  Future<String?> readToken() async {
+    try {
+      return await _storage
+          .read(key: _tokenKey)
+          .timeout(_timeout, onTimeout: () => null);
+    } catch (_) {
+      try {
+        await _storage.delete(key: _tokenKey);
+      } catch (_) {}
+      return null;
+    }
+  }
 
-  Future<void> saveToken(String token) => _storage
-      .write(key: _tokenKey, value: token)
-      .timeout(_timeout, onTimeout: () {});
+  Future<void> saveToken(String token) async {
+    try {
+      await _storage
+          .write(key: _tokenKey, value: token)
+          .timeout(_timeout, onTimeout: () {});
+    } catch (_) {}
+  }
 
-  Future<void> clearToken() =>
-      _storage.delete(key: _tokenKey).timeout(_timeout, onTimeout: () {});
+  Future<void> clearToken() async {
+    try {
+      await _storage.delete(key: _tokenKey).timeout(_timeout, onTimeout: () {});
+    } catch (_) {}
+  }
 }
 
 @Riverpod(keepAlive: true)
 TokenStorage tokenStorage(Ref ref) {
-  return TokenStorage(const FlutterSecureStorage());
+  return TokenStorage(
+    const FlutterSecureStorage(
+      aOptions: AndroidOptions(resetOnError: true),
+    ),
+  );
 }

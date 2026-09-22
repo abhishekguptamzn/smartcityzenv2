@@ -830,30 +830,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
         const SizedBox(height: 12),
 
-        // 2-Col Row: Email & Phone
-        Row(
-          children: [
-            Expanded(
-              child: _buildInputField(
-                label: 'Email Address *',
-                icon: Icons.email_outlined,
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildInputField(
-                label: 'Mobile Number *',
-                icon: Icons.phone_outlined,
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ],
-              ),
-            ),
+        // Email Address
+        _buildInputField(
+          label: 'Email Address *',
+          icon: Icons.email_outlined,
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 12),
+
+        // Mobile Number
+        _buildInputField(
+          label: 'Mobile Number *',
+          icon: Icons.phone_outlined,
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
           ],
         ),
         const SizedBox(height: 8),

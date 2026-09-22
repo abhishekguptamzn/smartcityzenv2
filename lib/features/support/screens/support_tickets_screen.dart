@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/tickets_providers.dart';
+import '../../../data/api/app_exception.dart';
 import '../../../data/models/ticket_model.dart';
 import '../../../data/repositories/tickets_repository.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -731,9 +732,13 @@ class _NewTicketBottomSheetState extends ConsumerState<_NewTicketBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final message = AppException.extractMessage(
+          e,
+          fallback: 'Failed to create ticket. Please verify your entries.',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create ticket: $e'),
+            content: Text(message),
             backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -822,8 +827,15 @@ class _NewTicketBottomSheetState extends ConsumerState<_NewTicketBottomSheet> {
                   ),
                   prefixIcon: const Icon(Icons.subject_rounded, size: 20),
                 ),
-                validator: (val) =>
-                    (val == null || val.trim().isEmpty) ? 'Please enter a subject' : null,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter a subject';
+                  }
+                  if (val.trim().length < 3) {
+                    return 'Subject must be at least 3 characters';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 14),
@@ -896,9 +908,15 @@ class _NewTicketBottomSheetState extends ConsumerState<_NewTicketBottomSheet> {
                   ),
                   alignLabelWithHint: true,
                 ),
-                validator: (val) => (val == null || val.trim().isEmpty)
-                    ? 'Please enter your message'
-                    : null,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter your message';
+                  }
+                  if (val.trim().length < 5) {
+                    return 'Message must be at least 5 characters';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 22),

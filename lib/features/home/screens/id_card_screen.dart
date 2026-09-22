@@ -41,9 +41,9 @@ class IdCardScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               child: Column(
                 children: [
-                  // 1. Header matching screenshot
+                  // 1. Header
                   _IdentityHeader(
-                    onMenuTap: () {
+                    onBackTap: () {
                       if (context.canPop()) {
                         context.pop();
                       } else {
@@ -79,11 +79,11 @@ class IdCardScreen extends ConsumerWidget {
 
 class _IdentityHeader extends StatelessWidget {
   const _IdentityHeader({
-    required this.onMenuTap,
+    required this.onBackTap,
     required this.onNotificationTap,
   });
 
-  final VoidCallback onMenuTap;
+  final VoidCallback onBackTap;
   final VoidCallback onNotificationTap;
 
   @override
@@ -93,10 +93,10 @@ class _IdentityHeader extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Left menu button
+            // Left back button
             _HeaderCircleButton(
-              icon: Icons.menu_rounded,
-              onTap: onMenuTap,
+              icon: Icons.arrow_back_rounded,
+              onTap: onBackTap,
             ),
 
             // Center Title with blue shield check badge

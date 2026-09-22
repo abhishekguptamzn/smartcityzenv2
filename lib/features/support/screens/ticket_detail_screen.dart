@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/tickets_providers.dart';
+import '../../../data/api/app_exception.dart';
 import '../../../data/repositories/tickets_repository.dart';
 import '../../facility_management/widgets/facility_management_skeletons.dart';
 
@@ -51,9 +52,13 @@ class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
       });
     } catch (e) {
       if (mounted) {
+        final message = AppException.extractMessage(
+          e,
+          fallback: 'Failed to send reply. Please try again.',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send reply: $e'),
+            content: Text(message),
             backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
           ),

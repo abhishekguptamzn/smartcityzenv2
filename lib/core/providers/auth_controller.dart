@@ -14,16 +14,11 @@ class AuthController extends _$AuthController {
   Future<UserModel?> build() async {
     final repo = ref.watch(authRepositoryProvider);
     try {
-      return await repo.me().timeout(const Duration(seconds: 10));
-    } catch (e) {
-      final appEx = AppException.from(e);
-      if (appEx != null &&
-          (appEx.code == AppExceptionCode.authentication ||
-              appEx.code == AppExceptionCode.authorization)) {
-        return null;
-      }
-      // Re-throw server/network errors so state hasError is true
-      rethrow;
+      return await repo.me().timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // On startup, any network/server failure or invalid token means the user
+      // starts unauthenticated, allowing smooth navigation to onboarding or login.
+      return null;
     }
   }
 

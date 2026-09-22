@@ -106,10 +106,11 @@ GoRouter goRouter(Ref ref) {
       final authState = ref.read(authControllerProvider);
       final isLoggedIn = authState.value != null;
       final isLoading = authState.isLoading && !authState.hasValue;
-      final hasError = authState.hasError && !authState.hasValue;
       final path = state.matchedLocation;
 
-      if (isLoading || hasError) {
+      // Only stay on splash while actively awaiting the initial auth check.
+      // If auth check finished (even with an error or unauthenticated), allow navigation.
+      if (isLoading) {
         return path == '/splash' ? null : '/splash';
       }
       final isPublic = _publicPaths.contains(path) || path.startsWith('/onboard');
@@ -377,6 +378,10 @@ GoRouter goRouter(Ref ref) {
           // Facility Management Dashboard & Sub-Routes (All retain the global bottom navigation bar)
           GoRoute(
             path: '/client/facilities',
+            builder: (context, state) => const FacilityDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/client/manage',
             builder: (context, state) => const FacilityDashboardScreen(),
           ),
           GoRoute(

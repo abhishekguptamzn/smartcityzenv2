@@ -31,7 +31,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Health check is best-effort diagnostics only — never blocks navigation.
     unawaited(_pingHealth());
 
-    await ref.read(authControllerProvider.future).catchError((_) => null);
+    try {
+      await ref
+          .read(authControllerProvider.future)
+          .timeout(const Duration(seconds: 2))
+          .catchError((_) => null);
+    } catch (_) {
+      // Graceful timeout or error fallback: proceed immediately
+    }
     if (!mounted) return;
 
     final session = ref.read(authControllerProvider).value;
