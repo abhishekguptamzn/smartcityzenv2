@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/location_service.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/activity_model.dart';
 import '../../../shared/widgets/app_network_image.dart';
 
-class ActivityCard extends StatelessWidget {
+class ActivityCard extends ConsumerWidget {
   const ActivityCard({
     super.key,
     required this.activity,
@@ -18,9 +20,27 @@ class ActivityCard extends StatelessWidget {
   static const Color _primary = Color(0xFF1565D8);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final locSvc = ref.read(locationServiceProvider);
+    final userCoords = ref.watch(currentUserCoordinatesProvider).value ?? locSvc.cachedCoordinates;
+
+    String? distance = activity.distanceFormatted;
+    if (activity.latitude != null && activity.longitude != null) {
+      final userLat = userCoords?.latitude ?? 28.611033;
+      final userLng = userCoords?.longitude ?? 77.442592;
+      final distKm = locSvc.calculateDistanceKm(
+        startLat: userLat,
+        startLng: userLng,
+        endLat: activity.latitude,
+        endLng: activity.longitude,
+      );
+      if (distKm != null) {
+        distance = locSvc.formatDistance(distKm);
+      }
+    }
 
     final primaryFeePlan = activity.feePlans.isNotEmpty ? activity.feePlans.first : null;
 
@@ -203,17 +223,17 @@ class ActivityCard extends StatelessWidget {
                         ),
                       ],
                       const Spacer(),
-                      if (activity.distanceFormatted != null) ...[
+                      if (distance != null && distance.isNotEmpty) ...[
                         Row(
                           children: [
-                            const Icon(Icons.near_me_rounded, size: 12, color: Colors.white70),
+                            const Icon(Icons.near_me_rounded, size: 12, color: Color(0xFF38BDF8)),
                             const SizedBox(width: 3),
                             Text(
-                              activity.distanceFormatted!,
+                              distance,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],

@@ -262,22 +262,30 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
           final isOpen = facility.isOpenNow;
           final activeAmenities = facility.activeAmenities;
 
-          // Compute distance from user location
-          final userCoords = ref.watch(currentUserCoordinatesProvider).value;
+          // Compute distance directly from user's live GPS location
+          final locSvc = ref.read(locationServiceProvider);
+          final userCoords = ref.watch(currentUserCoordinatesProvider).value ??
+              locSvc.cachedCoordinates;
           String? displayDistance = facility.distanceFormatted;
-          if ((displayDistance == null || displayDistance.isEmpty) &&
-              userCoords != null &&
-              facility.latitude != null &&
-              facility.longitude != null) {
-            final locationSvc = ref.read(locationServiceProvider);
-            final distKm = locationSvc.calculateDistanceKm(
-              startLat: userCoords.latitude,
-              startLng: userCoords.longitude,
-              endLat: facility.latitude,
-              endLng: facility.longitude,
+          final facLat = facility.effectiveLatitude ?? facility.city?.latitude;
+          final facLng = facility.effectiveLongitude ?? facility.city?.longitude;
+          if (facLat != null && facLng != null) {
+            final userLat = userCoords?.latitude ?? 28.611033;
+            final userLng = userCoords?.longitude ?? 77.442592;
+            final distKm = locSvc.calculateDistanceKm(
+              startLat: userLat,
+              startLng: userLng,
+              endLat: facLat,
+              endLng: facLng,
             );
-            displayDistance = locationSvc.formatDistance(distKm);
+            if (distKm != null) {
+              displayDistance = locSvc.formatDistance(distKm);
+            }
           }
+
+          final enrichedFacility = displayDistance != null
+              ? facility.copyWith(distanceFormatted: displayDistance)
+              : facility;
 
           Future<void> onToggleFav() async {
             final nowFav = await ref.read(favoritesProvider.notifier).toggle(facility.id);
@@ -468,7 +476,7 @@ class _FacilityDetailScreenState extends ConsumerState<FacilityDetailScreen> {
                     ),
                     const SizedBox(height: 10),
                     FacilityLocationMapCard(
-                      facility: facility,
+                      facility: enrichedFacility,
                       onOpenDirections: () => _openDirections(facility),
                     ),
                     const SizedBox(height: 20),

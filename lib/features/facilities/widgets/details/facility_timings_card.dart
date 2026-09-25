@@ -12,23 +12,39 @@ class FacilityTimingsCard extends StatelessWidget {
   final FacilityModel facility;
   final bool isOpen;
 
+  static const _dayKeys = [
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  ];
+
+  static const _dayLabels = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ];
+
+  String _formatTime(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '—';
+    try {
+      final parts = raw.trim().split(':');
+      if (parts.length >= 2) {
+        final h = int.parse(parts[0]);
+        final m = int.parse(parts[1]);
+        final period = h >= 12 ? 'PM' : 'AM';
+        final hour = h % 12 == 0 ? 12 : h % 12;
+        return '$hour:${m.toString().padLeft(2, '0')} $period';
+      }
+    } catch (_) {}
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final openTime = facility.openingTimeShort ?? facility.openingTime ?? '06:00';
-    final closeTime = facility.closingTimeShort ?? facility.closingTime ?? '22:00';
-    final timeRange = '$openTime - $closeTime';
 
-    final days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    final currentDayIndex = DateTime.now().weekday - 1; // 0 for Monday
+    final opHours = facility.operatingHoursMap;
+    final fallbackOpen = facility.openingTimeShort ?? facility.openingTime ?? '07:00';
+    final fallbackClose = facility.closingTimeShort ?? facility.closingTime ?? '20:00';
+    final headerOpen = _formatTime(fallbackOpen);
+    final headerClose = _formatTime(fallbackClose);
+    final currentDayIndex = DateTime.now().weekday - 1;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -53,7 +69,9 @@ class FacilityTimingsCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isOpen ? 'Open Now ($timeRange)' : 'Closed Now (Opens at $openTime)',
+                  isOpen
+                      ? 'Open Now ($headerOpen – $headerClose)'
+                      : 'Closed Now (Opens at $headerOpen)',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
@@ -64,8 +82,47 @@ class FacilityTimingsCard extends StatelessWidget {
             ],
           ),
           const Divider(height: 20),
-          ...List.generate(days.length, (i) {
+          ...List.generate(_dayKeys.length, (i) {
+            final key = _dayKeys[i];
+            final label = _dayLabels[i];
             final isToday = i == currentDayIndex;
+
+            String dayTimeLabel;
+            bool isClosed = false;
+
+            if (opHours != null && opHours[key] is Map) {
+              final dayMap = (opHours[key] as Map).cast<String, dynamic>();
+              isClosed = dayMap['is_closed'] == true ||
+                  dayMap['closed'] == true ||
+                  dayMap['is_off'] == true;
+              if (!isClosed) {
+                final open = _formatTime(
+                  dayMap['open']?.toString() ??
+                      dayMap['opening_time']?.toString() ??
+                      dayMap['start']?.toString(),
+                );
+                final close = _formatTime(
+                  dayMap['close']?.toString() ??
+                      dayMap['closing_time']?.toString() ??
+                      dayMap['end']?.toString(),
+                );
+                dayTimeLabel = '$open – $close';
+              } else {
+                dayTimeLabel = 'Closed';
+              }
+            } else {
+              dayTimeLabel = '$headerOpen – $headerClose';
+            }
+
+            final labelColor = isToday
+                ? const Color(0xFF0F766E)
+                : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569));
+            final timeColor = isClosed
+                ? const Color(0xFFDC2626)
+                : (isToday
+                    ? const Color(0xFF0F766E)
+                    : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)));
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
@@ -84,25 +141,21 @@ class FacilityTimingsCard extends StatelessWidget {
                           ),
                         ),
                       Text(
-                        days[i],
+                        label,
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                          color: isToday
-                              ? const Color(0xFF0F766E)
-                              : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
+                          color: labelColor,
                         ),
                       ),
                     ],
                   ),
                   Text(
-                    timeRange,
+                    dayTimeLabel,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                      color: isToday
-                          ? const Color(0xFF0F766E)
-                          : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      color: timeColor,
                     ),
                   ),
                 ],

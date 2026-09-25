@@ -98,7 +98,10 @@ class ClientFacilityRepository {
       'today_checkins_count': data['today_checkins_count'] ?? 0,
       'today_unique_users_count': data['today_unique_users_count'] ?? 0,
       'last_updated': data['last_updated'] ?? '',
-      'members_inside': listRaw.map((j) => LiveSessionMember.fromJson(j as Map<String, dynamic>)).toList(),
+      'members_inside': listRaw.map((j) {
+        if (j is LiveSessionMember) return j;
+        return LiveSessionMember.fromJson(Map<String, dynamic>.from(j as Map));
+      }).toList(),
     };
   }
 
@@ -120,7 +123,10 @@ class ClientFacilityRepository {
       'unique_users': data['unique_users'] ?? 0,
       'avg_duration_minutes': data['avg_duration_minutes'] ?? 0,
       'avg_duration_text': data['avg_duration_text'] ?? '--',
-      'records': recordsRaw.map((j) => DailyCheckinRecord.fromJson(j as Map<String, dynamic>)).toList(),
+      'records': recordsRaw.map((j) {
+        if (j is DailyCheckinRecord) return j;
+        return DailyCheckinRecord.fromJson(Map<String, dynamic>.from(j as Map));
+      }).toList(),
     };
   }
 
@@ -145,7 +151,10 @@ class ClientFacilityRepository {
       'month_label': data['month_label'] ?? '',
       'unpaid_count': data['unpaid_count'] ?? 0,
       'total_unpaid_amount': (data['total_unpaid_amount'] as num?)?.toDouble() ?? 0.0,
-      'members': membersRaw.map((j) => UnpaidMemberItem.fromJson(j as Map<String, dynamic>)).toList(),
+      'members': membersRaw.map((j) {
+        if (j is UnpaidMemberItem) return j;
+        return UnpaidMemberItem.fromJson(Map<String, dynamic>.from(j as Map));
+      }).toList(),
     };
   }
 
@@ -165,7 +174,10 @@ class ClientFacilityRepository {
       'date_range': data['date_range'] ?? '',
       'total_collection': (data['total_collection'] as num?)?.toDouble() ?? 0.0,
       'total_transactions': data['total_transactions'] ?? 0,
-      'transactions': txsRaw.map((j) => CollectionTransaction.fromJson(j as Map<String, dynamic>)).toList(),
+      'transactions': txsRaw.map((j) {
+        if (j is CollectionTransaction) return j;
+        return CollectionTransaction.fromJson(Map<String, dynamic>.from(j as Map));
+      }).toList(),
     };
   }
 

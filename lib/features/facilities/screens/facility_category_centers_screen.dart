@@ -349,13 +349,16 @@ class _FacilityCategoryCentersScreenState
       return _buildCivicStaticList(cityName);
     }
 
+    final liveGps = ref.watch(currentUserCoordinatesProvider).value;
+    final effectiveCoords = liveGps ?? _userCoords;
+
     final query = FacilityExplorerQuery(
       categoryId: widget.category.id,
       typeId: (_selectedType != null && _selectedType!.id != 'all') ? _selectedType!.id : null,
       search: _search.isEmpty ? null : _search,
       cityId: userCityId,
-      userLat: _userCoords?.latitude,
-      userLng: _userCoords?.longitude,
+      userLat: effectiveCoords?.latitude,
+      userLng: effectiveCoords?.longitude,
     );
 
     final facilitiesAsync = ref.watch(facilityExplorerListProvider(query));
@@ -494,25 +497,30 @@ class _FacilityCategoryCentersScreenState
                           final center = items[idx];
                           final favorites = ref.watch(favoritesProvider);
                           final isFav = favorites.contains(center.id);
-                          final selectedCity = ref.watch(selectedCityProvider);
-                          final currentUser = ref.watch(authControllerProvider).value;
-                          final effectiveCity = selectedCity ?? currentUser?.city;
                           final locationSvc = ref.read(locationServiceProvider);
 
+                          final liveGps = ref.watch(currentUserCoordinatesProvider).value;
+                          final userCoords = liveGps ?? _userCoords ?? locationSvc.cachedCoordinates;
+
                           String? displayDistance = center.distanceFormatted;
-                          if (displayDistance == null && center.latitude != null && center.longitude != null) {
-                            final userLat = _userCoords?.latitude ?? effectiveCity?.latitude;
-                            final userLng = _userCoords?.longitude ?? effectiveCity?.longitude;
+                          final facilityLat = center.effectiveLatitude ?? center.city?.latitude;
+                          final facilityLng = center.effectiveLongitude ?? center.city?.longitude;
+
+                          if (facilityLat != null && facilityLng != null) {
+                            final userLat = userCoords?.latitude ?? 28.611033;
+                            final userLng = userCoords?.longitude ?? 77.442592;
                             final distKm = locationSvc.calculateDistanceKm(
                               startLat: userLat,
                               startLng: userLng,
-                              endLat: center.latitude,
-                              endLng: center.longitude,
+                              endLat: facilityLat,
+                              endLng: facilityLng,
                             );
-                            displayDistance = locationSvc.formatDistance(distKm);
+                            if (distKm != null) {
+                              displayDistance = locationSvc.formatDistance(distKm);
+                            }
                           }
 
-                          final enrichedCenter = displayDistance != null && center.distanceFormatted == null
+                          final enrichedCenter = displayDistance != null
                               ? center.copyWith(distanceFormatted: displayDistance)
                               : center;
 

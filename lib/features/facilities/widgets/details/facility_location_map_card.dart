@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/auth_controller.dart';
+import '../../../../core/providers/cities_providers.dart';
+import '../../../../core/services/location_service.dart';
+import '../../../../data/models/city_model.dart';
 import '../../../../data/models/facility_model.dart';
 
-class FacilityLocationMapCard extends StatelessWidget {
+class FacilityLocationMapCard extends ConsumerWidget {
   const FacilityLocationMapCard({
     super.key,
     required this.facility,
@@ -14,10 +19,47 @@ class FacilityLocationMapCard extends StatelessWidget {
   final VoidCallback onOpenDirections;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final address = facility.address ?? 'Address provided upon booking';
-    final distance = facility.distanceFormatted;
+
+    final locSvc = ref.read(locationServiceProvider);
+    final userCoords = ref.watch(currentUserCoordinatesProvider).value ?? locSvc.cachedCoordinates;
+    final selectedCity = ref.watch(selectedCityProvider);
+    final currentUser = ref.watch(authControllerProvider).value;
+    final effectiveCity = selectedCity ?? currentUser?.city;
+    final cities = ref.watch(citiesListProvider).value ?? const [];
+
+    double? facilityLat = facility.effectiveLatitude;
+    double? facilityLng = facility.effectiveLongitude;
+
+    if (facilityLat == null || facilityLng == null) {
+      if (facility.cityId != null && cities.isNotEmpty) {
+        final matched = cities.firstWhere(
+          (c) => c.id == facility.cityId,
+          orElse: () => const CityModel(id: '', name: '', state: ''),
+        );
+        facilityLat = matched.latitude;
+        facilityLng = matched.longitude;
+      }
+    }
+
+    facilityLat ??= effectiveCity?.latitude ?? 29.4727;
+    facilityLng ??= effectiveCity?.longitude ?? 77.7085;
+
+    double? userLat = userCoords?.latitude ?? locSvc.cachedCoordinates?.latitude ?? effectiveCity?.latitude ?? 28.611033;
+    double? userLng = userCoords?.longitude ?? locSvc.cachedCoordinates?.longitude ?? effectiveCity?.longitude ?? 77.442592;
+
+    String? distance = facility.distanceFormatted;
+    final distKm = locSvc.calculateDistanceKm(
+      startLat: userLat,
+      startLng: userLng,
+      endLat: facilityLat,
+      endLng: facilityLng,
+    );
+    if (distKm != null) {
+      distance = locSvc.formatDistance(distKm);
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),

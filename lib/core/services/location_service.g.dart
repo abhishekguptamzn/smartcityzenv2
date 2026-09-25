@@ -68,7 +68,7 @@ final class CurrentUserCoordinatesProvider
         argument: null,
         retry: null,
         name: r'currentUserCoordinatesProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );

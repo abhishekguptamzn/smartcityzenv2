@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/auth_controller.dart';
+import '../../../../core/providers/cities_providers.dart';
+import '../../../../core/services/location_service.dart';
+import '../../../../data/models/city_model.dart';
 import '../../../../data/models/facility_model.dart';
 import '../../../../shared/widgets/app_network_image.dart';
 
-class FacilityCenterCard extends StatelessWidget {
+class FacilityCenterCard extends ConsumerWidget {
   const FacilityCenterCard({
     super.key,
     required this.facility,
@@ -27,12 +32,57 @@ class FacilityCenterCard extends StatelessWidget {
   final VoidCallback? onToggleFavorite;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isOpen = facility.isOpenNow;
     final cover = facility.coverImageUrl;
     final amenities = facility.activeAmenities;
-    final distance = facility.distanceFormatted;
+
+    // Dynamic distance calculated directly from user's live GPS location
+    final locSvc = ref.read(locationServiceProvider);
+    final userCoords = ref.watch(currentUserCoordinatesProvider).value ?? locSvc.cachedCoordinates;
+    final selectedCity = ref.watch(selectedCityProvider);
+    final currentUser = ref.watch(authControllerProvider).value;
+    final effectiveCity = selectedCity ?? currentUser?.city;
+    final cities = ref.watch(citiesListProvider).value ?? const [];
+
+    // Resolve facility coordinates
+    double? facilityLat = facility.effectiveLatitude;
+    double? facilityLng = facility.effectiveLongitude;
+
+    if (facilityLat == null || facilityLng == null) {
+      if (facility.cityId != null && cities.isNotEmpty) {
+        final matched = cities.firstWhere(
+          (c) => c.id == facility.cityId,
+          orElse: () => const CityModel(id: '', name: '', state: ''),
+        );
+        facilityLat = matched.latitude;
+        facilityLng = matched.longitude;
+      }
+    }
+
+    facilityLat ??= effectiveCity?.latitude ?? 29.4727;
+    facilityLng ??= effectiveCity?.longitude ?? 77.7085;
+
+    // Resolve user coordinates: live hardware GPS first, then cached GPS, then city, then default
+    double? userLat = userCoords?.latitude ?? locSvc.cachedCoordinates?.latitude;
+    double? userLng = userCoords?.longitude ?? locSvc.cachedCoordinates?.longitude;
+
+    if (userLat == null || userLng == null) {
+      userLat = effectiveCity?.latitude ?? 28.611033;
+      userLng = effectiveCity?.longitude ?? 77.442592;
+    }
+
+    String? distance = facility.distanceFormatted;
+    final distKm = locSvc.calculateDistanceKm(
+      startLat: userLat,
+      startLng: userLng,
+      endLat: facilityLat,
+      endLng: facilityLng,
+    );
+    if (distKm != null) {
+      distance = locSvc.formatDistance(distKm);
+    }
 
     return Material(
       color: Colors.transparent,
@@ -174,33 +224,44 @@ class FacilityCenterCard extends StatelessWidget {
                       ),
                     ),
 
-                  // Bottom Left: Distance Badge
+                  // Bottom Left: Distance Badge (Live GPS)
                   if (distance != null && distance.isNotEmpty)
                     Positioned(
                       bottom: 10,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.75),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white24, width: 0.8),
+                          color: const Color(0xE60F172A),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0x6638BDF8),
+                            width: 1,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x55000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.near_me_rounded,
-                              size: 11,
+                              size: 12,
                               color: Color(0xFF38BDF8),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               distance,
                               style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ],
@@ -250,7 +311,7 @@ class FacilityCenterCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
 
-                    // Address
+                    // Address & Distance
                     if (facility.address != null && facility.address!.isNotEmpty)
                       Row(
                         children: [
@@ -271,6 +332,39 @@ class FacilityCenterCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (distance != null && distance.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7).withValues(alpha: isDark ? 0.2 : 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: const Color(0xFF38BDF8).withValues(alpha: isDark ? 0.4 : 0.3),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.near_me_rounded,
+                                    size: 11,
+                                    color: Color(0xFF0284C7),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    distance,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     const SizedBox(height: 4),

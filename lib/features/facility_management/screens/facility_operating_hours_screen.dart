@@ -120,6 +120,7 @@ class FacilityOperatingHoursScreen extends ConsumerStatefulWidget {
 class _FacilityOperatingHoursScreenState
     extends ConsumerState<FacilityOperatingHoursScreen> {
   bool _saving = false;
+  bool _initializedFromApi = false;
   late List<DayScheduleConfig> _days;
 
   @override
@@ -298,9 +299,10 @@ class _FacilityOperatingHoursScreenState
       }
 
       // Determine general opening and closing time (first open day or Monday)
+      // Send in HH:mm:ss format as required by the API time column
       final firstOpenDay = _days.firstWhere((d) => !d.isClosed, orElse: () => _days[0]);
-      final primaryOpen24 = '${firstOpenDay.openTime.hour.toString().padLeft(2, '0')}:${firstOpenDay.openTime.minute.toString().padLeft(2, '0')}';
-      final primaryClose24 = '${firstOpenDay.closeTime.hour.toString().padLeft(2, '0')}:${firstOpenDay.closeTime.minute.toString().padLeft(2, '0')}';
+      final primaryOpen24 = '${firstOpenDay.openTime.hour.toString().padLeft(2, '0')}:${firstOpenDay.openTime.minute.toString().padLeft(2, '0')}:00';
+      final primaryClose24 = '${firstOpenDay.closeTime.hour.toString().padLeft(2, '0')}:${firstOpenDay.closeTime.minute.toString().padLeft(2, '0')}:00';
 
       final payload = {
         'opening_time': primaryOpen24,
@@ -332,13 +334,26 @@ class _FacilityOperatingHoursScreenState
       );
 
       context.pop();
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('❌ Save operating hours error: $e\n$st');
+      // Try to extract a human-readable API error message if available
+      String errorMsg = 'Failed to save operating hours.';
+      try {
+        // DioException carries response data
+        final dynamic err = e;
+        final dynamic respData = err.response?.data;
+        if (respData is Map) {
+          final msg = respData['message'] ?? respData['error'];
+          if (msg is String && msg.isNotEmpty) errorMsg = msg;
+        }
+      } catch (_) {}
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save operating hours: $e'),
+          content: Text(errorMsg),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
         ),
       );
     } finally {
@@ -350,6 +365,24 @@ class _FacilityOperatingHoursScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+
+    // Watch for fresh facility data from the API and re-initialise schedule
+    // once (before the user makes any changes).
+    final freshFacAsync = ref.watch(
+      facilityDetailSettingsProvider((widget.kind, widget.facilityId)),
+    );
+    freshFacAsync.whenData((freshFac) {
+      if (!_initializedFromApi) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_initializedFromApi) {
+            setState(() {
+              _initializedFromApi = true;
+              _initSchedule(freshFac);
+            });
+          }
+        });
+      }
+    });
 
     final openDaysCount = _days.where((d) => !d.isClosed).length;
     final totalWeeklyHours = _days

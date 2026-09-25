@@ -111,6 +111,28 @@ abstract class FacilityModel with _$FacilityModel {
     return null;
   }
 
+  /// Effective latitude resolved from root field, location object, or city relationship.
+  double? get effectiveLatitude {
+    if (latitude != null && latitude != 0.0) return latitude;
+    if (location != null) {
+      final locLat = _toDouble(location!['latitude'] ?? location!['lat']);
+      if (locLat != null && locLat != 0.0) return locLat;
+    }
+    if (city?.latitude != null && city!.latitude != 0.0) return city!.latitude;
+    return null;
+  }
+
+  /// Effective longitude resolved from root field, location object, or city relationship.
+  double? get effectiveLongitude {
+    if (longitude != null && longitude != 0.0) return longitude;
+    if (location != null) {
+      final locLng = _toDouble(location!['longitude'] ?? location!['lng']);
+      if (locLng != null && locLng != 0.0) return locLng;
+    }
+    if (city?.longitude != null && city!.longitude != 0.0) return city!.longitude;
+    return null;
+  }
+
   /// Primary cover image URL from image_url, image object, or first item in images list.
   String? get coverImageUrl {
     String? raw;

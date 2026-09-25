@@ -17,13 +17,31 @@ class UserCoordinates {
 }
 
 class LocationService {
-  LocationService();
+  LocationService() {
+    _initFastLocation();
+  }
+
+  static UserCoordinates? _cachedCoordinates;
+
+  void _initFastLocation() {
+    Geolocator.getLastKnownPosition().then((last) {
+      if (last != null) {
+        _cachedCoordinates = UserCoordinates(
+          latitude: last.latitude,
+          longitude: last.longitude,
+          isExactGps: true,
+        );
+      }
+    }).catchError((_) {});
+  }
+
+  UserCoordinates? get cachedCoordinates => _cachedCoordinates;
 
   Future<UserCoordinates?> getCurrentLocation({bool requestPermission = true}) async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        return null;
+        return _cachedCoordinates;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
@@ -33,34 +51,57 @@ class LocationService {
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        return null;
+        return _cachedCoordinates;
       }
 
+      // Fast path: Immediately check last known position from OS (returns in ~5ms)
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          _cachedCoordinates = UserCoordinates(
+            latitude: last.latitude,
+            longitude: last.longitude,
+            isExactGps: true,
+          );
+        }
+      } catch (_) {}
+
+      // If we already have live coordinates, return them immediately and update in background
+      if (_cachedCoordinates != null) {
+        Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 4),
+          ),
+        ).then((position) {
+          _cachedCoordinates = UserCoordinates(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            isExactGps: true,
+          );
+        }).catchError((_) {});
+
+        return _cachedCoordinates;
+      }
+
+      // Otherwise await fresh GPS fix
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,
-          timeLimit: Duration(seconds: 6),
+          timeLimit: Duration(seconds: 5),
         ),
       );
 
-      return UserCoordinates(
+      _cachedCoordinates = UserCoordinates(
         latitude: position.latitude,
         longitude: position.longitude,
         isExactGps: true,
       );
+
+      return _cachedCoordinates;
     } catch (e) {
       debugPrint('LocationService getCurrentLocation error: $e');
-      try {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) {
-          return UserCoordinates(
-            latitude: last.latitude,
-            longitude: last.longitude,
-            isExactGps: false,
-          );
-        }
-      } catch (_) {}
-      return null;
+      return _cachedCoordinates;
     }
   }
 
@@ -87,6 +128,24 @@ class LocationService {
     }
     return '${distanceKm.toStringAsFixed(1)} km away';
   }
+
+  /// Live position stream when user moves.
+  Stream<UserCoordinates> get positionStream {
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 25,
+      ),
+    ).map((pos) {
+      final coords = UserCoordinates(
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        isExactGps: true,
+      );
+      _cachedCoordinates = coords;
+      return coords;
+    });
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -94,7 +153,7 @@ LocationService locationService(Ref ref) {
   return LocationService();
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<UserCoordinates?> currentUserCoordinates(Ref ref) async {
   final service = ref.watch(locationServiceProvider);
   return service.getCurrentLocation();

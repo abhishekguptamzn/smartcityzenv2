@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
@@ -21,6 +22,11 @@ final Logger appLogger = Logger();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Lock app to portrait-only — no landscape rotation allowed
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   setAppPathUrlStrategy();
   UiTierDetector.detect();
   await IncidentReporter.initialize();
