@@ -395,7 +395,7 @@ abstract class AppLocalizations {
   /// No description provided for @createIdentity.
   ///
   /// In en, this message translates to:
-  /// **'Create Identity'**
+  /// **'Sign Up'**
   String get createIdentity;
 
   /// No description provided for @orContinueWith.
@@ -445,6 +445,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to Login'**
   String get backToLogin;
+
+  /// No description provided for @signInWithOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In with OTP'**
+  String get signInWithOtp;
+
+  /// No description provided for @verifyMobileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Mobile Number'**
+  String get verifyMobileTitle;
+
+  /// No description provided for @enterOtpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code sent to {phone}'**
+  String enterOtpSubtitle(String phone);
+
+  /// No description provided for @testOtpBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Code: {otp}'**
+  String testOtpBanner(String otp);
+
+  /// No description provided for @tapToAutoFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to auto-fill'**
+  String get tapToAutoFill;
+
+  /// No description provided for @resendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Code'**
+  String get resendCode;
+
+  /// No description provided for @resendCodeIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {seconds}s'**
+  String resendCodeIn(int seconds);
+
+  /// No description provided for @verifyAndProceed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify & Proceed'**
+  String get verifyAndProceed;
+
+  /// No description provided for @invalidOtpLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid 6-digit OTP'**
+  String get invalidOtpLength;
 
   /// No description provided for @home.
   ///

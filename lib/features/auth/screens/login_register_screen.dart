@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
@@ -10,6 +12,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/api/app_exception.dart';
+import '../../../data/models/otp_sent_result.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/loading/loading_button.dart';
@@ -31,8 +35,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
   final _loginFormKey = GlobalKey<FormBuilderState>();
   final _registerFormKey = GlobalKey<FormBuilderState>();
 
-  bool _loginObscure = true;
-  bool _registerObscure = true;
   bool _submitting = false;
   String? _registerCityId;
 
@@ -74,8 +76,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     _recentFailedAttempts.removeWhere(
       (t) => now.difference(t) > const Duration(minutes: 1),
     );
-    // Mirrors the server's auth.login 5/min throttle so the UI doesn't wait
-    // for a 429 before disabling the button.
     if (_recentFailedAttempts.length >= 5) {
       setState(() => _cooldownUntil = now.add(const Duration(minutes: 1)));
     }
@@ -88,28 +88,29 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     if (form == null || !form.saveAndValidate()) return;
 
     setState(() => _submitting = true);
-    final email = form.value['email'] as String;
-    final password = form.value['password'] as String;
-    await ref
-        .read(authControllerProvider.notifier)
-        .login(email: email, password: password);
-    if (!mounted) return;
-    setState(() => _submitting = false);
+    final phone = (form.value['phone'] as String).trim();
 
-    final state = ref.read(authControllerProvider);
-    state.whenOrNull(
-      error: (error, _) {
-        final appException = AppException.from(error);
-        if (appException?.fieldErrors != null) {
-          _applyServerFieldErrors(form, appException!.fieldErrors!);
-        }
-        _registerFailedAttempt();
-        _showError(error, l10n);
-      },
-      data: (user) {
-        if (user != null) context.go('/home');
-      },
-    );
+    try {
+      final result =
+          await ref.read(authRepositoryProvider).sendLoginOtp(phone: phone);
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      _openOtpSheet(
+        phone: phone,
+        isLogin: true,
+        initialResult: result,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final appException = AppException.from(error);
+      if (appException?.fieldErrors != null) {
+        _applyServerFieldErrors(form, appException!.fieldErrors!);
+      }
+      _registerFailedAttempt();
+      _showError(error, l10n);
+    }
   }
 
   Future<void> _submitRegister() async {
@@ -119,32 +120,66 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
 
     setState(() => _submitting = true);
     final v = form.value;
+    final name = (v['name'] as String).trim();
+    final email = (v['email'] as String).trim();
+    final phone = (v['phone'] as String).trim();
     final cityId = _registerCityId ?? (v['city'] as String?) ?? '';
-    await ref
-        .read(authControllerProvider.notifier)
-        .register(
-          name: v['name'] as String,
-          email: v['email'] as String,
-          phone: v['phone'] as String?,
-          cityId: cityId,
-          password: v['password'] as String,
-          passwordConfirmation: v['confirmPassword'] as String,
-        );
-    if (!mounted) return;
-    setState(() => _submitting = false);
 
-    final state = ref.read(authControllerProvider);
-    state.whenOrNull(
-      error: (error, _) {
-        final appException = AppException.from(error);
-        if (appException?.fieldErrors != null) {
-          _applyServerFieldErrors(form, appException!.fieldErrors!);
-        }
-        _showError(error, l10n);
-      },
-      data: (user) {
-        if (user != null) context.go('/home');
-      },
+    try {
+      final result = await ref.read(authRepositoryProvider).sendRegisterOtp(
+            name: name,
+            email: email,
+            phone: phone,
+            cityId: cityId,
+          );
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      _openOtpSheet(
+        phone: phone,
+        isLogin: false,
+        initialResult: result,
+        registerName: name,
+        registerEmail: email,
+        registerCityId: cityId,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final appException = AppException.from(error);
+      if (appException?.fieldErrors != null) {
+        _applyServerFieldErrors(form, appException!.fieldErrors!);
+      }
+      _showError(error, l10n);
+    }
+  }
+
+  void _openOtpSheet({
+    required String phone,
+    required bool isLogin,
+    required OtpSentResult initialResult,
+    String? registerName,
+    String? registerEmail,
+    String? registerCityId,
+  }) {
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: _OtpVerificationSheet(
+          phone: phone,
+          isLogin: isLogin,
+          initialOtp: initialResult.otp,
+          cooldownSeconds: initialResult.cooldownSeconds,
+          registerName: registerName,
+          registerEmail: registerEmail,
+          registerCityId: registerCityId,
+        ),
+      ),
     );
   }
 
@@ -157,7 +192,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
       'email': 'email',
       'phone': 'phone',
       'city_id': 'city',
-      'password': 'password',
     };
     for (final entry in fieldErrors.entries) {
       final fieldName = serverToFormField[entry.key];
@@ -180,15 +214,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     );
   }
 
-  /// Prefer the API's own message for codes where the backend already crafts
-  /// a specific, safe-to-display reason (wrong credentials, validation
-  /// failures, duplicate account, etc.) — showing a generic string there hides
-  /// real information the user needs. The top-level `message` on a 422 is a
-  /// generic "The given data was invalid.", so the *specific* reason (e.g.
-  /// "credentials do not match") lives in `fieldErrors` instead — prefer that
-  /// when present. Codes that can carry sensitive internal detail, or that
-  /// benefit from bespoke client-side phrasing (rate-limit countdown, offline
-  /// detection), keep their localized strings instead.
   String _messageFor(AppException e, AppLocalizations l10n) {
     return switch (e.code) {
       AppExceptionCode.validation ||
@@ -205,8 +230,8 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
       AppExceptionCode.accountInactive =>
         e.message.isNotEmpty ? e.message : l10n.errorAccountInactive,
       AppExceptionCode.rateLimited => l10n.errorRateLimited(
-        e.retryAfterSeconds ?? 60,
-      ),
+          e.retryAfterSeconds ?? 60,
+        ),
       AppExceptionCode.network => l10n.noInternetConnection,
       _ => e.message.isNotEmpty ? e.message : l10n.errorGeneric,
     };
@@ -332,10 +357,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                             ],
                           ),
                           const SizedBox(height: 24),
-                          // Content determines height here (no TabBarView, which
-                          // requires a bounded/guessed height from its parent) so
-                          // the outer SingleChildScrollView can size to whichever
-                          // form — login or the longer register form — is active.
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
                             child: _activeTab == 0
@@ -373,7 +394,8 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                                     onPressed: _submitting
                                         ? null
                                         : _handleGoogleSignIn,
-                                    icon: const ExcludeSemantics(child: _GoogleGlyph()),
+                                    icon: const ExcludeSemantics(
+                                        child: _GoogleGlyph()),
                                     label: Text(l10n.continueWithGoogle),
                                   ),
                                 ),
@@ -384,10 +406,10 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                                   onPressed: _submitting
                                       ? null
                                       : _handleFacebookSignIn,
-                                  icon: Icon(
+                                  icon: const Icon(
                                     Icons.facebook_rounded,
                                     size: 20,
-                                    color: const Color(0xFF1877F2),
+                                    color: Color(0xFF1877F2),
                                   ),
                                   label: Text(l10n.continueWithFacebook),
                                 ),
@@ -414,52 +436,32 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           FormBuilderTextField(
-            name: 'email',
-            decoration: InputDecoration(labelText: l10n.emailAddress),
-            keyboardType: TextInputType.emailAddress,
+            name: 'phone',
+            decoration: InputDecoration(
+              labelText: l10n.mobileNumber,
+              hintText: '10-digit mobile number',
+              prefixText: '+91 ',
+            ),
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
             validator: FormBuilderValidators.compose([
               FormBuilderValidators.required(errorText: l10n.requiredField),
-              FormBuilderValidators.email(errorText: l10n.invalidEmail),
+              FormBuilderValidators.match(
+                RegExp(r'^\d{10}$'),
+                errorText: 'Mobile number must be exactly 10 digits',
+              ),
             ]),
           ),
-          const SizedBox(height: 16),
-          StatefulBuilder(
-            builder: (context, setInner) => FormBuilderTextField(
-              name: 'password',
-              obscureText: _loginObscure,
-              decoration: InputDecoration(
-                labelText: l10n.password,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _loginObscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                  ),
-                  onPressed: () =>
-                      setInner(() => _loginObscure = !_loginObscure),
-                ),
-              ),
-              validator: FormBuilderValidators.required(
-                errorText: l10n.requiredField,
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _submitting
-                  ? null
-                  : () => GoRouter.of(context).push('/forgot-password'),
-              child: Text(l10n.forgotPassword),
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           LoadingButton.filled(
             width: double.infinity,
             isLoading: _submitting,
-            loadingText: 'Signing in...',
+            loadingText: 'Sending OTP...',
             onPressed: (_submitting || _isCoolingDown) ? null : _submitLogin,
-            child: Text(l10n.accessPortal),
+            child: Text(l10n.signInWithOtp),
           ),
         ],
       ),
@@ -492,7 +494,11 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
           const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'phone',
-            decoration: InputDecoration(labelText: l10n.mobileNumber, hintText: '10-digit mobile number'),
+            decoration: InputDecoration(
+              labelText: l10n.mobileNumber,
+              hintText: '10-digit mobile number',
+              prefixText: '+91 ',
+            ),
             keyboardType: TextInputType.phone,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
@@ -523,49 +529,11 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
               _registerFormKey.currentState?.patchValue({'city': city.id});
             },
           ),
-          const SizedBox(height: 16),
-          StatefulBuilder(
-            builder: (context, setInner) => FormBuilderTextField(
-              name: 'password',
-              obscureText: _registerObscure,
-              decoration: InputDecoration(
-                labelText: l10n.createPassword,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _registerObscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                  ),
-                  onPressed: () =>
-                      setInner(() => _registerObscure = !_registerObscure),
-                ),
-              ),
-              validator: FormBuilderValidators.compose([
-                FormBuilderValidators.required(errorText: l10n.requiredField),
-                FormBuilderValidators.minLength(
-                  8,
-                  errorText: l10n.passwordTooShort,
-                ),
-              ]),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FormBuilderTextField(
-            name: 'confirmPassword',
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.confirmPassword),
-            validator: (value) {
-              final password =
-                  _registerFormKey.currentState?.fields['password']?.value;
-              if (value != password) return l10n.passwordsDoNotMatch;
-              return null;
-            },
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           LoadingButton.filled(
             width: double.infinity,
             isLoading: _submitting,
-            loadingText: 'Creating Identity...',
+            loadingText: 'Sending OTP...',
             onPressed: _submitting ? null : _submitRegister,
             child: Text(l10n.createIdentity),
           ),
@@ -575,9 +543,385 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
   }
 }
 
-/// A Material-icon-only "G" badge in Google's brand colors, used instead of
-/// [Icons.g_mobiledata_rounded] — that glyph is an Android data-status icon,
-/// not a brand mark, and reads as a placeholder rather than a real button.
+class _OtpVerificationSheet extends ConsumerStatefulWidget {
+  const _OtpVerificationSheet({
+    required this.phone,
+    required this.isLogin,
+    this.initialOtp,
+    this.cooldownSeconds = 60,
+    this.registerName,
+    this.registerEmail,
+    this.registerCityId,
+  });
+
+  final String phone;
+  final bool isLogin;
+  final String? initialOtp;
+  final int cooldownSeconds;
+  final String? registerName;
+  final String? registerEmail;
+  final String? registerCityId;
+
+  @override
+  ConsumerState<_OtpVerificationSheet> createState() =>
+      _OtpVerificationSheetState();
+}
+
+class _OtpVerificationSheetState extends ConsumerState<_OtpVerificationSheet> {
+  late final TextEditingController _otpController;
+  String? _currentOtp;
+  late int _secondsLeft;
+  Timer? _timer;
+  bool _isVerifying = false;
+  bool _isResending = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _otpController = TextEditingController();
+    _currentOtp = widget.initialOtp;
+    _secondsLeft = widget.cooldownSeconds;
+    _startCooldownTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _startCooldownTimer() {
+    _timer?.cancel();
+    if (_secondsLeft <= 0) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsLeft <= 1) {
+        setState(() {
+          _secondsLeft = 0;
+          timer.cancel();
+        });
+      } else {
+        setState(() {
+          _secondsLeft--;
+        });
+      }
+    });
+  }
+
+  Future<void> _resendOtp() async {
+    if (_secondsLeft > 0 || _isResending) return;
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      final OtpSentResult result;
+      if (widget.isLogin) {
+        result = await repo.sendLoginOtp(phone: widget.phone);
+      } else {
+        result = await repo.sendRegisterOtp(
+          name: widget.registerName ?? '',
+          email: widget.registerEmail ?? '',
+          phone: widget.phone,
+          cityId: widget.registerCityId ?? '',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _currentOtp = result.otp;
+        _secondsLeft = result.cooldownSeconds;
+        _isResending = false;
+      });
+      _startCooldownTimer();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verification code resent successfully'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final appException = AppException.from(e);
+      setState(() {
+        _isResending = false;
+        _errorMessage = appException?.message ?? 'Failed to resend code';
+      });
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final l10n = AppLocalizations.of(context);
+    final code = _otpController.text.trim();
+    if (code.length != 6) {
+      setState(() {
+        _errorMessage = l10n.invalidOtpLength;
+      });
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    if (widget.isLogin) {
+      await ref.read(authControllerProvider.notifier).loginWithOtp(
+            phone: widget.phone,
+            otp: code,
+          );
+    } else {
+      await ref.read(authControllerProvider.notifier).registerWithOtp(
+            phone: widget.phone,
+            otp: code,
+            name: widget.registerName,
+            email: widget.registerEmail,
+            cityId: widget.registerCityId,
+          );
+    }
+
+    if (!mounted) return;
+    setState(() => _isVerifying = false);
+
+    final state = ref.read(authControllerProvider);
+    state.whenOrNull(
+      error: (error, _) {
+        final appException = AppException.from(error);
+        setState(() {
+          _errorMessage = appException?.message ?? 'Verification failed';
+        });
+      },
+      data: (user) {
+        if (user != null) {
+          Navigator.of(context).pop(true);
+          context.go('/home');
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.verifyMobileTitle,
+                style: GoogleFonts.sora(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.enterOtpSubtitle('+91 ${widget.phone}'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 18),
+          if (_currentOtp != null) ...[
+            InkWell(
+              onTap: () {
+                _otpController.text = _currentOtp!;
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.security_rounded,
+                      color: scheme.primary,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.testOtpBanner(_currentOtp!),
+                            style: GoogleFonts.sora(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              letterSpacing: 1.5,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.tapToAutoFill,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.touch_app_outlined,
+                      color: scheme.primary,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFDC2626),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          TextField(
+            controller: _otpController,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.sora(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 12,
+              color: scheme.onSurface,
+            ),
+            maxLength: 6,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: '------',
+              hintStyle: GoogleFonts.sora(
+                fontSize: 26,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 12,
+                color: scheme.outlineVariant,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            onSubmitted: (_) => _verifyOtp(),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_secondsLeft > 0)
+                Text(
+                  l10n.resendCodeIn(_secondsLeft),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                )
+              else
+                TextButton(
+                  onPressed: _isResending ? null : _resendOtp,
+                  child: _isResending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.resendCode),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LoadingButton.filled(
+            width: double.infinity,
+            isLoading: _isVerifying,
+            loadingText: 'Verifying...',
+            onPressed: _isVerifying ? null : _verifyOtp,
+            child: Text(l10n.verifyAndProceed),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GoogleGlyph extends StatelessWidget {
   const _GoogleGlyph();
 

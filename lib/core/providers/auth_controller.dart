@@ -29,6 +29,37 @@ class AuthController extends _$AuthController {
     );
   }
 
+  Future<void> loginWithOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    state = const AsyncLoading();
+    final repo = ref.read(authRepositoryProvider);
+    state = await AsyncValue.guard(
+      () => repo.verifyLoginOtp(phone: phone, otp: otp),
+    );
+  }
+
+  Future<void> registerWithOtp({
+    required String phone,
+    required String otp,
+    String? name,
+    String? email,
+    String? cityId,
+  }) async {
+    state = const AsyncLoading();
+    final repo = ref.read(authRepositoryProvider);
+    state = await AsyncValue.guard(
+      () => repo.verifyRegisterOtp(
+        phone: phone,
+        otp: otp,
+        name: name,
+        email: email,
+        cityId: cityId,
+      ),
+    );
+  }
+
   Future<void> register({
     required String name,
     required String email,

@@ -190,6 +190,39 @@ class AppLocalizationsFr extends AppLocalizations {
   String get backToLogin => 'Retour à la connexion';
 
   @override
+  String get signInWithOtp => 'Sign In with OTP';
+
+  @override
+  String get verifyMobileTitle => 'Verify Mobile Number';
+
+  @override
+  String enterOtpSubtitle(String phone) {
+    return 'Enter the 6-digit code sent to $phone';
+  }
+
+  @override
+  String testOtpBanner(String otp) {
+    return 'Verification Code: $otp';
+  }
+
+  @override
+  String get tapToAutoFill => 'Tap to auto-fill';
+
+  @override
+  String get resendCode => 'Resend Code';
+
+  @override
+  String resendCodeIn(int seconds) {
+    return 'Resend in ${seconds}s';
+  }
+
+  @override
+  String get verifyAndProceed => 'Verify & Proceed';
+
+  @override
+  String get invalidOtpLength => 'Please enter a valid 6-digit OTP';
+
+  @override
   String get home => 'Accueil';
 
   @override

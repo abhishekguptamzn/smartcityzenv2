@@ -53,7 +53,7 @@
   "createPassword": "Create Password",
   "forgotPassword": "Forgot Password?",
   "accessPortal": "Access Portal",
-  "createIdentity": "Create Identity",
+  "createIdentity": "Sign Up",
   "orContinueWith": "Or continue with",
   "continueWithGoogle": "Google",
   "continueWithFacebook": "Facebook",
@@ -63,6 +63,25 @@
   "resetCode": "Reset Code",
   "newPassword": "New Password",
   "backToLogin": "Back to Login",
+
+  "signInWithOtp": "Sign In with OTP",
+  "verifyMobileTitle": "Verify Mobile Number",
+  "enterOtpSubtitle": "Enter the 6-digit code sent to {phone}",
+  "@enterOtpSubtitle": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+  "testOtpBanner": "Verification Code: {otp}",
+  "@testOtpBanner": {
+    "placeholders": { "otp": { "type": "String" } }
+  },
+  "tapToAutoFill": "Tap to auto-fill",
+  "resendCode": "Resend Code",
+  "resendCodeIn": "Resend in {seconds}s",
+  "@resendCodeIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "verifyAndProceed": "Verify & Proceed",
+  "invalidOtpLength": "Please enter a valid 6-digit OTP",
 
   "home": "Home",
   "services": "Services",

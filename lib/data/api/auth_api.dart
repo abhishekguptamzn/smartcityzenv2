@@ -41,6 +41,56 @@ class AuthApi {
     );
   }
 
+  Future<Response<dynamic>> sendLoginOtp({required String phone}) {
+    return _dio.post('/auth/login/send-otp', data: {'phone': phone});
+  }
+
+  Future<Response<dynamic>> verifyLoginOtp({
+    required String phone,
+    required String otp,
+  }) {
+    return _dio.post(
+      '/auth/login/verify-otp',
+      data: {'phone': phone, 'otp': otp},
+    );
+  }
+
+  Future<Response<dynamic>> sendRegisterOtp({
+    required String name,
+    required String email,
+    required String phone,
+    required String cityId,
+  }) {
+    return _dio.post(
+      '/auth/register/send-otp',
+      data: {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'city_id': cityId,
+      },
+    );
+  }
+
+  Future<Response<dynamic>> verifyRegisterOtp({
+    required String phone,
+    required String otp,
+    String? name,
+    String? email,
+    String? cityId,
+  }) {
+    return _dio.post(
+      '/auth/register/verify-otp',
+      data: {
+        'phone': phone,
+        'otp': otp,
+        if (name != null) 'name': name,
+        if (email != null) 'email': email,
+        if (cityId != null) 'city_id': cityId,
+      },
+    );
+  }
+
   Future<Response<dynamic>> oauthLogin({
     required String provider,
     String? accessToken,

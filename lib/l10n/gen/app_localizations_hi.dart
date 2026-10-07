@@ -158,7 +158,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get accessPortal => 'पोर्टल तक पहुंचें';
 
   @override
-  String get createIdentity => 'पहचान बनाएं';
+  String get createIdentity => 'साइन अप करें';
 
   @override
   String get orContinueWith => 'या इसके साथ जारी रखें';
@@ -183,6 +183,39 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get backToLogin => 'लॉगिन पर वापस जाएं';
+
+  @override
+  String get signInWithOtp => 'ओटीपी से साइन इन करें';
+
+  @override
+  String get verifyMobileTitle => 'मोबाइल नंबर सत्यापित करें';
+
+  @override
+  String enterOtpSubtitle(String phone) {
+    return '$phone पर भेजा गया 6-अंकों का कोड दर्ज करें';
+  }
+
+  @override
+  String testOtpBanner(String otp) {
+    return 'सत्यापन कोड: $otp';
+  }
+
+  @override
+  String get tapToAutoFill => 'स्वतः भरने के लिए टैप करें';
+
+  @override
+  String get resendCode => 'कोड पुनः भेजें';
+
+  @override
+  String resendCodeIn(int seconds) {
+    return '$seconds सेकंड में पुनः भेजें';
+  }
+
+  @override
+  String get verifyAndProceed => 'सत्यापित करें और आगे बढ़ें';
+
+  @override
+  String get invalidOtpLength => 'कृपया एक वैध 6-अंकीय ओटीपी दर्ज करें';
 
   @override
   String get home => 'होम';

@@ -6,6 +6,7 @@ import '../api/auth_api.dart';
 import '../api/notifications_api.dart';
 import '../api/token_storage.dart';
 import '../models/login_history_model.dart';
+import '../models/otp_sent_result.dart';
 import '../models/pagination_meta.dart';
 import '../models/user_model.dart';
 import '../../core/services/push_notification_service.dart';
@@ -38,11 +39,56 @@ class AuthRepository {
     return _persistAndExtractUser(response.data);
   }
 
+  Future<OtpSentResult> sendRegisterOtp({
+    required String name,
+    required String email,
+    required String phone,
+    required String cityId,
+  }) async {
+    final response = await _api.sendRegisterOtp(
+      name: name,
+      email: email,
+      phone: phone,
+      cityId: cityId,
+    );
+    return OtpSentResult.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<UserModel> verifyRegisterOtp({
+    required String phone,
+    required String otp,
+    String? name,
+    String? email,
+    String? cityId,
+  }) async {
+    final response = await _api.verifyRegisterOtp(
+      phone: phone,
+      otp: otp,
+      name: name,
+      email: email,
+      cityId: cityId,
+    );
+    return _persistAndExtractUser(response.data);
+  }
+
   Future<UserModel> login({
     required String email,
     required String password,
   }) async {
     final response = await _api.login(email: email, password: password);
+    return _persistAndExtractUser(response.data);
+  }
+
+  Future<OtpSentResult> sendLoginOtp({required String phone}) async {
+    final response = await _api.sendLoginOtp(phone: phone);
+    return OtpSentResult.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<UserModel> verifyLoginOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    final response = await _api.verifyLoginOtp(phone: phone, otp: otp);
     return _persistAndExtractUser(response.data);
   }
 
