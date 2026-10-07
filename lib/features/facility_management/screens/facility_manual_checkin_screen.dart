@@ -618,11 +618,6 @@ class _FacilityManualCheckinScreenState
         facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
 
     final activeOccupancy = occupancyAsync.value;
-    final liveInsideCount =
-        (activeOccupancy?['currently_inside_count'] as num?)?.toInt() ??
-        (activeOccupancy?['current_inside'] as num?)?.toInt() ??
-        0;
-
     final rawInsideList = activeOccupancy?['members_inside'] ??
         activeOccupancy?['active_members'];
     final activeMap = <String, Map<String, dynamic>>{};
@@ -684,63 +679,94 @@ class _FacilityManualCheckinScreenState
 
     final allMembers = membersAsync.value ?? [];
 
-    // Accurately compute optimistic additions and removals
-    final locallyAddedKeys = <String>{};
+    // Build canonical person key resolver so all identifiers of a person map to 1 key
+    String getCanonicalPersonKey(Map<String, dynamic> item) {
+      final uId = item['user_id']?.toString() ?? item['user']?['id']?.toString() ?? '';
+      final memNum = item['membership_number']?.toString() ?? '';
+      final id = item['member_id']?.toString() ?? item['id']?.toString() ?? '';
+      final phone = item['user']?['phone']?.toString() ?? item['phone']?.toString() ?? '';
+      final email = item['user']?['email']?.toString() ?? item['email']?.toString() ?? '';
+
+      if (uId.isNotEmpty) return 'usr_$uId';
+      if (memNum.isNotEmpty) return 'memnum_$memNum';
+      if (id.isNotEmpty) return 'mem_$id';
+      if (phone.isNotEmpty) return 'phone_$phone';
+      if (email.isNotEmpty) return 'email_$email';
+      return 'item_${item.hashCode}';
+    }
+
+    final idToCanonicalKey = <String, String>{};
     for (final m in allMembers) {
+      final cKey = getCanonicalPersonKey(m);
       final id = m['id']?.toString() ?? '';
       final uId = m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '';
       final memNum = m['membership_number']?.toString() ?? '';
+      final phone = m['user']?['phone']?.toString() ?? m['phone']?.toString() ?? '';
+      final email = m['user']?['email']?.toString() ?? m['email']?.toString() ?? '';
 
-      final isServerInside = (id.isNotEmpty && activeMap.containsKey(id)) ||
-          (uId.isNotEmpty && activeMap.containsKey(uId)) ||
-          (memNum.isNotEmpty && activeMap.containsKey(memNum));
-
-      final isLocallyIn = (id.isNotEmpty && _recentlyCheckedInIds.contains(id)) ||
-          (uId.isNotEmpty && _recentlyCheckedInIds.contains(uId)) ||
-          (memNum.isNotEmpty && _recentlyCheckedInIds.contains(memNum));
-
-      final isLocallyOut = (id.isNotEmpty && _recentlyCheckedOutIds.contains(id)) ||
-          (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
-          (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum));
-
-      if (isLocallyIn && !isServerInside && !isLocallyOut) {
-        locallyAddedKeys.add(id.isNotEmpty ? id : (uId.isNotEmpty ? uId : memNum));
-      }
-    }
-    for (final q in _recentlyCheckedInIds) {
-      if (!activeMap.containsKey(q) && !_recentlyCheckedOutIds.contains(q) && !locallyAddedKeys.contains(q)) {
-        locallyAddedKeys.add(q);
-      }
+      if (id.isNotEmpty) idToCanonicalKey[id] = cKey;
+      if (uId.isNotEmpty) idToCanonicalKey[uId] = cKey;
+      if (memNum.isNotEmpty) idToCanonicalKey[memNum] = cKey;
+      if (phone.isNotEmpty) idToCanonicalKey[phone] = cKey;
+      if (email.isNotEmpty) idToCanonicalKey[email] = cKey;
     }
 
-    final locallyRemovedKeys = <String>{};
+    String resolvePersonKey(Map<String, dynamic> item) {
+      final id = item['member_id']?.toString() ?? item['id']?.toString() ?? '';
+      final uId = item['user_id']?.toString() ?? item['user']?['id']?.toString() ?? '';
+      final memNum = item['membership_number']?.toString() ?? '';
+      final phone = item['user']?['phone']?.toString() ?? item['phone']?.toString() ?? '';
+      final email = item['user']?['email']?.toString() ?? item['email']?.toString() ?? '';
+
+      if (id.isNotEmpty && idToCanonicalKey.containsKey(id)) return idToCanonicalKey[id]!;
+      if (uId.isNotEmpty && idToCanonicalKey.containsKey(uId)) return idToCanonicalKey[uId]!;
+      if (memNum.isNotEmpty && idToCanonicalKey.containsKey(memNum)) return idToCanonicalKey[memNum]!;
+      if (phone.isNotEmpty && idToCanonicalKey.containsKey(phone)) return idToCanonicalKey[phone]!;
+      if (email.isNotEmpty && idToCanonicalKey.containsKey(email)) return idToCanonicalKey[email]!;
+
+      return getCanonicalPersonKey(item);
+    }
+
+    // Strictly compute unique individuals currently inside
+    final insidePersonKeys = <String>{};
     for (final m in allMembers) {
-      final id = m['id']?.toString() ?? '';
-      final uId = m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '';
-      final memNum = m['membership_number']?.toString() ?? '';
-
-      final isServerInside = (id.isNotEmpty && activeMap.containsKey(id)) ||
-          (uId.isNotEmpty && activeMap.containsKey(uId)) ||
-          (memNum.isNotEmpty && activeMap.containsKey(memNum));
-
-      final isLocallyOut = (id.isNotEmpty && _recentlyCheckedOutIds.contains(id)) ||
-          (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
-          (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum));
-
-      if (isServerInside && isLocallyOut) {
-        locallyRemovedKeys.add(id.isNotEmpty ? id : (uId.isNotEmpty ? uId : memNum));
+      if (_isMemberInside(m, activeMap)) {
+        insidePersonKeys.add(resolvePersonKey(m));
       }
     }
-    for (final q in _recentlyCheckedOutIds) {
-      if (activeMap.containsKey(q) && !locallyRemovedKeys.contains(q)) {
-        locallyRemovedKeys.add(q);
+    // Also include any active session from backend not in current filtered list
+    if (rawInsideList is List) {
+      for (final raw in rawInsideList) {
+        final Map<String, dynamic> item;
+        if (raw is LiveSessionMember) {
+          item = {
+            'member_id': raw.memberId,
+            'user_id': raw.userId,
+            'membership_type': raw.membershipType,
+            'check_in_method': raw.checkInMethod,
+          };
+        } else if (raw is Map) {
+          item = Map<String, dynamic>.from(raw);
+        } else {
+          continue;
+        }
+
+        final mId = item['member_id']?.toString() ?? item['id']?.toString() ?? '';
+        final uId = item['user_id']?.toString() ?? '';
+        final memNum = item['membership_number']?.toString() ?? '';
+        final phone = item['phone']?.toString() ?? '';
+
+        final isOut = (mId.isNotEmpty && _recentlyCheckedOutIds.contains(mId)) ||
+            (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
+            (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum)) ||
+            (phone.isNotEmpty && _recentlyCheckedOutIds.contains(phone));
+
+        if (!isOut) {
+          insidePersonKeys.add(resolvePersonKey(item));
+        }
       }
     }
-
-    final baseCount = confirmedInsideSessionKeys.isNotEmpty
-        ? confirmedInsideSessionKeys.length
-        : liveInsideCount;
-    final currentInsideCount = (baseCount + locallyAddedKeys.length - locallyRemovedKeys.length).clamp(0, 999999);
+    final currentInsideCount = insidePersonKeys.length;
 
     final memberById = <String, Map<String, dynamic>>{};
     for (final m in allMembers) {
@@ -1164,63 +1190,65 @@ class _FacilityManualCheckinScreenState
                 data: (members) {
                   var filtered = members;
                   if (_activeFilter == CheckinFilter.insideNow) {
-                    final insideList = members.where((m) => _isMemberInside(m, activeMap)).toList();
+                    final insideList = <Map<String, dynamic>>[];
+                    final seenInsideKeys = <String>{};
 
-                    final existingMemberIds = insideList.map((m) => m['id']?.toString() ?? '').toSet();
-                    final existingUserIds = insideList.map((m) => m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '').toSet();
+                    for (final m in members) {
+                      if (_isMemberInside(m, activeMap)) {
+                        final key = resolvePersonKey(m);
+                        if (seenInsideKeys.add(key)) {
+                          insideList.add(m);
+                        }
+                      }
+                    }
 
                     if (rawInsideList is List) {
-                      for (final item in rawInsideList) {
-                        String mId = '';
-                        String uId = '';
-                        String uName = 'Citizen Member';
-                        String? uAvatar;
-                        String? checkInTime;
-                        String? mType;
-                        String? sId;
-                        String checkInMethod = 'manual';
-
-                        if (item is LiveSessionMember) {
-                          mId = item.memberId;
-                          uId = item.userId ?? '';
-                          uName = item.userName;
-                          uAvatar = item.userAvatar;
-                          checkInTime = item.checkInTime;
-                          mType = item.membershipType;
-                          sId = item.sessionId;
-                          checkInMethod = item.checkInMethod;
-                        } else if (item is Map) {
-                          final mapItem = Map<String, dynamic>.from(item);
-                          mId = mapItem['member_id']?.toString() ?? mapItem['id']?.toString() ?? '';
-                          uId = mapItem['user_id']?.toString() ?? '';
-                          uName = mapItem['user_name']?.toString() ?? mapItem['user']?['name']?.toString() ?? 'Citizen Member';
-                          uAvatar = mapItem['user_avatar']?.toString() ?? mapItem['user']?['avatar']?.toString();
-                          checkInTime = mapItem['check_in_time']?.toString();
-                          mType = mapItem['membership_type']?.toString();
-                          sId = mapItem['session_id']?.toString();
-                          checkInMethod = mapItem['check_in_method']?.toString() ?? 'manual';
-                        }
-
-                        if (_recentlyCheckedOutIds.contains(mId) || (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId))) {
+                      for (final raw in rawInsideList) {
+                        final Map<String, dynamic> item;
+                        if (raw is LiveSessionMember) {
+                          item = {
+                            'session_id': raw.sessionId,
+                            'member_id': raw.memberId,
+                            'user_id': raw.userId,
+                            'user_name': raw.userName,
+                            'user_avatar': raw.userAvatar,
+                            'user_email': raw.userEmail,
+                            'membership_type': raw.membershipType,
+                            'check_in_time': raw.checkInTime,
+                            'check_in_method': raw.checkInMethod,
+                          };
+                        } else if (raw is Map) {
+                          item = Map<String, dynamic>.from(raw);
+                        } else {
                           continue;
                         }
 
-                        final alreadyInList = (mId.isNotEmpty && existingMemberIds.contains(mId)) ||
-                            (uId.isNotEmpty && existingUserIds.contains(uId));
+                        final mId = item['member_id']?.toString() ?? item['id']?.toString() ?? '';
+                        final uId = item['user_id']?.toString() ?? '';
+                        final memNum = item['membership_number']?.toString() ?? '';
+                        final phone = item['phone']?.toString() ?? '';
 
-                        if (!alreadyInList) {
+                        final isOut = (mId.isNotEmpty && _recentlyCheckedOutIds.contains(mId)) ||
+                            (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
+                            (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum)) ||
+                            (phone.isNotEmpty && _recentlyCheckedOutIds.contains(phone));
+
+                        if (isOut) continue;
+
+                        final key = resolvePersonKey(item);
+                        if (seenInsideKeys.add(key)) {
                           insideList.add({
-                            'id': mId.isNotEmpty ? mId : sId,
+                            'id': mId.isNotEmpty ? mId : item['session_id'],
                             'user_id': uId,
-                            'session_id': sId,
+                            'session_id': item['session_id'],
                             'user': {
                               'id': uId,
-                              'name': uName,
-                              'avatar': uAvatar,
+                              'name': item['user_name'] ?? item['user']?['name'] ?? 'Citizen Member',
+                              'avatar': item['user_avatar'] ?? item['user']?['avatar'],
                             },
-                            'membership_type': mType ?? 'Standard',
-                            'check_in_time': checkInTime,
-                            'check_in_method': checkInMethod,
+                            'membership_type': item['membership_type'] ?? 'Standard',
+                            'check_in_time': item['check_in_time'],
+                            'check_in_method': item['check_in_method'] ?? 'manual',
                           });
                         }
                       }
