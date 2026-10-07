@@ -162,11 +162,11 @@
   "status": "Status",
   "paymentMethod": "Payment Method",
   "transactionReference": "Transaction Reference",
-  "invoiceNumber": "Invoice Number",
+  "invoiceNumber": "Receipt Number",
   "dueDate": "Due Date",
   "paidOn": "Paid On",
   "notes": "Notes",
-  "invoiceEmailedNotice": "A detailed PDF invoice was emailed to you when this payment was recorded.",
+  "invoiceEmailedNotice": "An official PDF payment receipt was emailed to you when this payment was recorded.",
 
   "myProfile": "My Profile",
   "editProfile": "Edit Profile",

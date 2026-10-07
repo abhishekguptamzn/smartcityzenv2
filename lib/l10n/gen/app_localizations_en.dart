@@ -409,7 +409,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionReference => 'Transaction Reference';
 
   @override
-  String get invoiceNumber => 'Invoice Number';
+  String get invoiceNumber => 'Receipt Number';
 
   @override
   String get dueDate => 'Due Date';
@@ -422,7 +422,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invoiceEmailedNotice =>
-      'A detailed PDF invoice was emailed to you when this payment was recorded.';
+      'An official PDF payment receipt was emailed to you when this payment was recorded.';
 
   @override
   String get myProfile => 'My Profile';

@@ -170,7 +170,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'This payment was refunded. A refund confirmation has been sent to your registered email and the tax invoice has been cancelled.',
+                            'This payment was refunded. An official refund confirmation and refund payment receipt have been sent to your registered email.',
                             style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFD97706), fontWeight: FontWeight.w600),
                           ),
                         ),

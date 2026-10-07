@@ -82,7 +82,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
     try {
       final repo = ref.read(clientFacilityRepositoryProvider);
       final res = await repo.emailPaymentInvoice(widget.kind, widget.facilityId, widget.paymentId);
-      final msg = res['message'] ?? 'Invoice PDF emailed successfully to $email';
+      final msg = res['message'] ?? 'Payment receipt PDF emailed successfully to $email';
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,7 +102,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to email invoice: $e'),
+          content: Text('Failed to email receipt: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -132,7 +132,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not open invoice URL: $rawUrl'),
+          content: Text('Could not open receipt URL: $rawUrl'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -208,11 +208,11 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Issue Invoice Refund',
+                          'Issue Refund',
                           style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Invoice #$invoiceNumber • $userName',
+                          'Receipt #$invoiceNumber • $userName',
                           style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
                         ),
                       ],
@@ -237,7 +237,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                   prefixText: '₹ ',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  helperText: 'Original invoice total: ₹${originalAmount.toStringAsFixed(2)}',
+                  helperText: 'Original payment total: ₹${originalAmount.toStringAsFixed(2)}',
                 ),
               ),
               const SizedBox(height: 14),
@@ -343,7 +343,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                                         children: [
                                           const Icon(Icons.check_circle_rounded, color: Colors.white),
                                           const SizedBox(width: 10),
-                                          Expanded(child: Text(res['meta']?['message'] ?? 'Invoice refunded successfully!')),
+                                          Expanded(child: Text(res['meta']?['message'] ?? 'Payment refunded successfully!')),
                                         ],
                                       ),
                                       backgroundColor: const Color(0xFF059669),
@@ -443,7 +443,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                     ),
                     const SizedBox(width: 12),
                     const Text(
-                      'Payment & Invoice Details',
+                      'Payment & Receipt Details',
                       style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
                     ),
                   ],
@@ -837,7 +837,7 @@ class _PaymentDetailModalState extends ConsumerState<PaymentDetailModal> {
                     );
                   },
                 ),
-              _buildInfoRow('Invoice Number', invoiceNumber, isDark),
+              _buildInfoRow('Receipt Number', invoiceNumber, isDark),
             ],
           ),
         ),
