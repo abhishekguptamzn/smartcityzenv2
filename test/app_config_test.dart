@@ -7,7 +7,7 @@ void main() {
     test('returns correct versioned API URL according to platform', () {
       final defaultUrl = AppConfig.platformDefaultBaseUrl();
       if (kIsWeb) {
-        expect(defaultUrl, equals('https://admin.smartct.online/api/v2'));
+        expect(defaultUrl, equals('https://admin.smartct.online/api/v1'));
       } else {
         expect(defaultUrl, equals('https://admin.smartct.online/api/v1'));
       }

@@ -31,7 +31,7 @@ class AppConfig {
   static String platformDefaultBaseUrl() {
     if (_compileTimeApiBaseUrl.isNotEmpty) return _compileTimeApiBaseUrl;
     if (kIsWeb) {
-      return 'https://admin.smartct.online/api/v2';
+      return 'https://admin.smartct.online/api/v1';
     }
     return 'https://admin.smartct.online/api/v1';
   }
@@ -85,7 +85,7 @@ class AppConfigController extends _$AppConfigController {
       url = defaults.apiBaseUrl;
     }
     if (kIsWeb && url.contains('/api/v1')) {
-      url = url.replaceAll('/api/v1', '/api/v2');
+      url = url.replaceAll('/api/v1', '/api/v1');
     }
     ImageUrlResolver.setActiveBaseUrl(url);
     state = AppConfig(
