@@ -229,8 +229,11 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
   void _onBarcodeDetected(BarcodeCapture capture) {
     final barcodes = capture.barcodes;
     for (final barcode in barcodes) {
-      final raw = barcode.rawValue?.trim();
-      if (raw != null && raw.isNotEmpty) {
+      final rawCandidate = barcode.rawValue?.trim();
+      if (rawCandidate != null && rawCandidate.isNotEmpty) {
+        final raw = rawCandidate.toUpperCase().startsWith('CITIZEN-')
+            ? rawCandidate.substring(8).trim()
+            : rawCandidate;
         HapticFeedback.mediumImpact();
         setState(() {
           _citizenIdCtrl.text = raw;
@@ -333,7 +336,10 @@ class _AddMemberModalState extends ConsumerState<AddMemberModal> {
     final repo = ref.read(clientFacilityRepositoryProvider);
 
     try {
-      final citizenId = _selectedCitizen?.id ?? code;
+      var citizenId = (_selectedCitizen?.id ?? code).trim();
+      if (citizenId.toUpperCase().startsWith('CITIZEN-')) {
+        citizenId = citizenId.substring(8).trim();
+      }
       final payload = <String, dynamic>{
         'user_id': citizenId,
         'citizen_id': citizenId,

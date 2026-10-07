@@ -157,19 +157,27 @@ class _CitizenManualCheckinQrModalState
   }
 
   String _extractCitizenCode(String raw) {
-    if (raw.startsWith('{') && raw.endsWith('}')) {
+    var code = raw.trim();
+    if (code.toUpperCase().startsWith('CITIZEN-')) {
+      code = code.substring(8).trim();
+    }
+    if (code.startsWith('{') && code.endsWith('}')) {
       try {
-        final decoded = jsonDecode(raw) as Map<String, dynamic>;
-        return decoded['member_id']?.toString() ??
+        final decoded = jsonDecode(code) as Map<String, dynamic>;
+        final extracted = decoded['member_id']?.toString() ??
             decoded['citizen_id']?.toString() ??
             decoded['user_id']?.toString() ??
             decoded['pass_id']?.toString() ??
             decoded['code']?.toString() ??
             decoded['id']?.toString() ??
-            raw;
+            code;
+        if (extracted.toUpperCase().startsWith('CITIZEN-')) {
+          return extracted.substring(8).trim();
+        }
+        return extracted;
       } catch (_) {}
     }
-    return raw;
+    return code;
   }
 
   Future<void> _executeDeskAction(bool isCheckIn) async {
