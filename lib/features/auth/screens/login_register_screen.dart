@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers/auth_controller.dart';
 import '../../../data/api/app_exception.dart';
@@ -29,8 +27,6 @@ class LoginRegisterScreen extends ConsumerStatefulWidget {
 
 class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     with SingleTickerProviderStateMixin {
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
-
   late final TabController _tabController;
   final _loginFormKey = GlobalKey<FormBuilderState>();
   final _registerFormKey = GlobalKey<FormBuilderState>();
@@ -244,67 +240,7 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
     return firstList.isNotEmpty ? firstList.first : null;
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
-    final l10n = AppLocalizations.of(context);
-    try {
-      final account = await _googleSignIn.signIn();
-      if (account == null) return;
-      final auth = await account.authentication;
-      await ref
-          .read(authControllerProvider.notifier)
-          .oauthLogin(
-            'google',
-            idToken: auth.idToken,
-            email: account.email,
-            name: account.displayName,
-            avatar: account.photoUrl,
-            providerId: account.id,
-          );
-      if (!mounted) return;
-      final state = ref.read(authControllerProvider);
-      state.whenOrNull(
-        error: (error, _) => _showError(error, l10n),
-        data: (user) {
-          if (user != null) context.go('/home');
-        },
-      );
-    } catch (_) {
-      if (!mounted) return;
-      _showError(null, l10n);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
 
-  Future<void> _handleFacebookSignIn() async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
-    final l10n = AppLocalizations.of(context);
-    try {
-      final result = await FacebookAuth.instance.login();
-      if (result.status != LoginStatus.success || result.accessToken == null) {
-        return;
-      }
-      await ref
-          .read(authControllerProvider.notifier)
-          .oauthLogin('facebook', accessToken: result.accessToken!.tokenString);
-      if (!mounted) return;
-      final state = ref.read(authControllerProvider);
-      state.whenOrNull(
-        error: (error, _) => _showError(error, l10n),
-        data: (user) {
-          if (user != null) context.go('/home');
-        },
-      );
-    } catch (_) {
-      if (!mounted) return;
-      _showError(null, l10n);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -363,59 +299,7 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen>
                                 ? _buildLoginForm(l10n)
                                 : _buildRegisterForm(l10n),
                           ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Divider(color: scheme.outlineVariant),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  l10n.orContinueWith,
-                                  style: Theme.of(context).textTheme.labelSmall,
-                                ),
-                              ),
-                              Expanded(
-                                child: Divider(color: scheme.outlineVariant),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Semantics(
-                                  label: l10n.continueWithGoogle,
-                                  button: true,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _submitting
-                                        ? null
-                                        : _handleGoogleSignIn,
-                                    icon: const ExcludeSemantics(
-                                        child: _GoogleGlyph()),
-                                    label: Text(l10n.continueWithGoogle),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _submitting
-                                      ? null
-                                      : _handleFacebookSignIn,
-                                  icon: const Icon(
-                                    Icons.facebook_rounded,
-                                    size: 20,
-                                    color: Color(0xFF1877F2),
-                                  ),
-                                  label: Text(l10n.continueWithFacebook),
-                                ),
-                              ),
-                            ],
-                          ),
+
                         ],
                       ),
                     ),
@@ -922,30 +806,4 @@ class _OtpVerificationSheetState extends ConsumerState<_OtpVerificationSheet> {
   }
 }
 
-class _GoogleGlyph extends StatelessWidget {
-  const _GoogleGlyph();
 
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => const SweepGradient(
-        colors: [
-          Color(0xFF4285F4),
-          Color(0xFF34A853),
-          Color(0xFFFBBC05),
-          Color(0xFFEA4335),
-          Color(0xFF4285F4),
-        ],
-      ).createShader(bounds),
-      child: const Text(
-        'G',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w900,
-          height: 1,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-}
