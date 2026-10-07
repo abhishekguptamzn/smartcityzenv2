@@ -66,12 +66,21 @@ class ClientFacilityRepository {
     return FacilityDashboardStats.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<Map<String, dynamic>> checkIn(FacilityKind kind, String facilityId, {String? memberId, String? userId, String? code, bool allowOverride = false}) async {
+  Future<Map<String, dynamic>> checkIn(
+    FacilityKind kind,
+    String facilityId, {
+    String? memberId,
+    String? userId,
+    String? code,
+    bool allowOverride = false,
+    String checkInMethod = 'manual',
+  }) async {
     final res = await _api.checkIn(kind.pathSegment, facilityId, {
       if (memberId != null) 'member_id': memberId,
       if (userId != null) 'user_id': userId,
       if (code != null) 'code': code,
       if (allowOverride) 'allow_override': true,
+      'check_in_method': checkInMethod,
     });
     final data = res.data is Map ? (res.data['data'] ?? res.data) : {};
     return data is Map ? data.cast<String, dynamic>() : {};

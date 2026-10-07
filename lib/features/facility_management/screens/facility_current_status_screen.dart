@@ -6,6 +6,7 @@ import '../../../core/utils/duration_formatter.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/check_in_method_badge.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/facility_management_skeletons.dart';
 
@@ -319,9 +320,21 @@ class _FacilityCurrentStatusScreenState extends ConsumerState<FacilityCurrentSta
                                   ),
                                 ),
                                 title: Text(mem.userName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                                subtitle: Text(
-                                  'Check-in: ${mem.checkInTime} (${formatMinutes(mem.elapsedMinutes)} ago)',
-                                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Row(
+                                    children: [
+                                      CheckInMethodBadge(method: mem.checkInMethod, compact: true),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '${mem.checkInTime} (${formatMinutes(mem.elapsedMinutes)} ago)',
+                                          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,

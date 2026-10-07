@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/check_in_method_badge.dart';
 import '../../../shared/widgets/show_confirm_dialog.dart';
 import '../widgets/citizen_manual_checkin_qr_modal.dart';
 import '../widgets/facility_management_skeletons.dart';
@@ -75,14 +76,22 @@ class _FacilityManualCheckinScreenState
     super.dispose();
   }
 
-  void _refreshAll() {
-    ref.invalidate(facilityCheckinMembersProvider(
-        (widget.kind, widget.facilityId, _searchQuery)));
-    ref.invalidate(
-        facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
+  Future<void> _refreshAll() async {
     ref.invalidate(facilityMembersProvider((widget.kind, widget.facilityId)));
     ref.invalidate(facilityStatsProvider((widget.kind, widget.facilityId)));
     ref.invalidate(myOwnedFacilitiesProvider);
+    try {
+      await Future.wait([
+        ref.refresh(facilityCheckinMembersProvider((widget.kind, widget.facilityId, _searchQuery)).future),
+        ref.refresh(facilityLiveOccupancyProvider((widget.kind, widget.facilityId)).future),
+      ]);
+      _recentlyCheckedInIds.clear();
+      _recentlyCheckedOutIds.clear();
+    } catch (_) {
+      ref.invalidate(facilityCheckinMembersProvider((widget.kind, widget.facilityId, _searchQuery)));
+      ref.invalidate(facilityLiveOccupancyProvider((widget.kind, widget.facilityId)));
+    }
+    if (mounted) setState(() {});
   }
 
   void _toggleMemberSelection(String memberId) {
@@ -235,7 +244,7 @@ class _FacilityManualCheckinScreenState
     }
 
     _selectedMemberIds.clear();
-    _refreshAll();
+    await _refreshAll();
     if (mounted) {
       setState(() => _bulkActionLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +348,7 @@ class _FacilityManualCheckinScreenState
     }
 
     _selectedMemberIds.clear();
-    _refreshAll();
+    await _refreshAll();
     if (mounted) {
       setState(() => _bulkActionLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -364,6 +373,7 @@ class _FacilityManualCheckinScreenState
         widget.facilityId,
         memberId: memberId,
         allowOverride: true,
+        checkInMethod: 'manual',
       );
       final already = res['already_checked_in'] == true;
       final resMemberId = res['member_id']?.toString() ?? memberId;
@@ -373,7 +383,7 @@ class _FacilityManualCheckinScreenState
         _recentlyCheckedOutIds.remove(resMemberId);
         _recentlyCheckedOutIds.remove(memberId);
       });
-      _refreshAll();
+      await _refreshAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -424,7 +434,7 @@ class _FacilityManualCheckinScreenState
         _recentlyCheckedOutIds.add(memberId);
         _recentlyCheckedInIds.remove(memberId);
       });
-      _refreshAll();
+      await _refreshAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -494,6 +504,7 @@ class _FacilityManualCheckinScreenState
           widget.facilityId,
           memberId: query,
           allowOverride: true,
+          checkInMethod: 'manual',
         );
         final already = res['already_checked_in'] == true;
         final resMemberId = res['member_id']?.toString() ?? query;
@@ -504,7 +515,7 @@ class _FacilityManualCheckinScreenState
           _recentlyCheckedOutIds.remove(query);
         });
         _quickCodeController.clear();
-        _refreshAll();
+        await _refreshAll();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -527,7 +538,7 @@ class _FacilityManualCheckinScreenState
           _recentlyCheckedInIds.remove(query);
         });
         _quickCodeController.clear();
-        _refreshAll();
+        await _refreshAll();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -615,6 +626,7 @@ class _FacilityManualCheckinScreenState
     final rawInsideList = activeOccupancy?['members_inside'] ??
         activeOccupancy?['active_members'];
     final activeMap = <String, Map<String, dynamic>>{};
+    final confirmedInsideSessionKeys = <String>{};
 
     if (rawInsideList is List) {
       for (final item in rawInsideList) {
@@ -629,7 +641,12 @@ class _FacilityManualCheckinScreenState
             'membership_type': item.membershipType,
             'check_in_time': item.checkInTime,
             'elapsed_minutes': item.elapsedMinutes,
+            'check_in_method': item.checkInMethod,
           };
+          final sKey = item.sessionId.isNotEmpty
+              ? 'sess_${item.sessionId}'
+              : (item.memberId.isNotEmpty ? 'mem_${item.memberId}' : 'usr_${item.userId}');
+          confirmedInsideSessionKeys.add(sKey);
           if (item.memberId.isNotEmpty) {
             activeMap[item.memberId] = data;
           }
@@ -638,31 +655,92 @@ class _FacilityManualCheckinScreenState
           }
         } else if (item is Map) {
           final mapItem = Map<String, dynamic>.from(item);
+          final sId = mapItem['session_id']?.toString() ?? '';
           final mId =
-              mapItem['member_id']?.toString() ?? mapItem['id']?.toString();
-          if (mId != null && mId.isNotEmpty) {
+              mapItem['member_id']?.toString() ?? mapItem['id']?.toString() ?? '';
+          final uId = mapItem['user_id']?.toString() ?? '';
+          final memNum = mapItem['membership_number']?.toString() ?? '';
+          final checkInMethod = mapItem['check_in_method']?.toString() ?? 'manual';
+          mapItem['check_in_method'] = checkInMethod;
+
+          final sKey = sId.isNotEmpty
+              ? 'sess_$sId'
+              : (mId.isNotEmpty ? 'mem_$mId' : 'usr_$uId');
+          if (sKey.isNotEmpty) {
+            confirmedInsideSessionKeys.add(sKey);
+          }
+          if (mId.isNotEmpty) {
             activeMap[mId] = mapItem;
           }
-          final uId = mapItem['user_id']?.toString();
-          if (uId != null && uId.isNotEmpty) {
+          if (uId.isNotEmpty) {
             activeMap[uId] = mapItem;
+          }
+          if (memNum.isNotEmpty) {
+            activeMap[memNum] = mapItem;
           }
         }
       }
     }
 
-    final effectiveInsideSet = <String>{};
-    for (final v in activeMap.values) {
-      final s = v['session_id']?.toString() ?? v['member_id']?.toString() ?? '';
-      if (s.isNotEmpty) effectiveInsideSet.add(s);
-    }
-    effectiveInsideSet.addAll(_recentlyCheckedInIds);
-    effectiveInsideSet.removeAll(_recentlyCheckedOutIds);
-    final currentInsideCount = effectiveInsideSet.isNotEmpty
-        ? effectiveInsideSet.length
-        : liveInsideCount;
-
     final allMembers = membersAsync.value ?? [];
+
+    // Accurately compute optimistic additions and removals
+    final locallyAddedKeys = <String>{};
+    for (final m in allMembers) {
+      final id = m['id']?.toString() ?? '';
+      final uId = m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '';
+      final memNum = m['membership_number']?.toString() ?? '';
+
+      final isServerInside = (id.isNotEmpty && activeMap.containsKey(id)) ||
+          (uId.isNotEmpty && activeMap.containsKey(uId)) ||
+          (memNum.isNotEmpty && activeMap.containsKey(memNum));
+
+      final isLocallyIn = (id.isNotEmpty && _recentlyCheckedInIds.contains(id)) ||
+          (uId.isNotEmpty && _recentlyCheckedInIds.contains(uId)) ||
+          (memNum.isNotEmpty && _recentlyCheckedInIds.contains(memNum));
+
+      final isLocallyOut = (id.isNotEmpty && _recentlyCheckedOutIds.contains(id)) ||
+          (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
+          (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum));
+
+      if (isLocallyIn && !isServerInside && !isLocallyOut) {
+        locallyAddedKeys.add(id.isNotEmpty ? id : (uId.isNotEmpty ? uId : memNum));
+      }
+    }
+    for (final q in _recentlyCheckedInIds) {
+      if (!activeMap.containsKey(q) && !_recentlyCheckedOutIds.contains(q) && !locallyAddedKeys.contains(q)) {
+        locallyAddedKeys.add(q);
+      }
+    }
+
+    final locallyRemovedKeys = <String>{};
+    for (final m in allMembers) {
+      final id = m['id']?.toString() ?? '';
+      final uId = m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '';
+      final memNum = m['membership_number']?.toString() ?? '';
+
+      final isServerInside = (id.isNotEmpty && activeMap.containsKey(id)) ||
+          (uId.isNotEmpty && activeMap.containsKey(uId)) ||
+          (memNum.isNotEmpty && activeMap.containsKey(memNum));
+
+      final isLocallyOut = (id.isNotEmpty && _recentlyCheckedOutIds.contains(id)) ||
+          (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId)) ||
+          (memNum.isNotEmpty && _recentlyCheckedOutIds.contains(memNum));
+
+      if (isServerInside && isLocallyOut) {
+        locallyRemovedKeys.add(id.isNotEmpty ? id : (uId.isNotEmpty ? uId : memNum));
+      }
+    }
+    for (final q in _recentlyCheckedOutIds) {
+      if (activeMap.containsKey(q) && !locallyRemovedKeys.contains(q)) {
+        locallyRemovedKeys.add(q);
+      }
+    }
+
+    final baseCount = confirmedInsideSessionKeys.isNotEmpty
+        ? confirmedInsideSessionKeys.length
+        : liveInsideCount;
+    final currentInsideCount = (baseCount + locallyAddedKeys.length - locallyRemovedKeys.length).clamp(0, 999999);
 
     final memberById = <String, Map<String, dynamic>>{};
     for (final m in allMembers) {
@@ -1086,18 +1164,7 @@ class _FacilityManualCheckinScreenState
                 data: (members) {
                   var filtered = members;
                   if (_activeFilter == CheckinFilter.insideNow) {
-                    final insideList = members.where((m) {
-                      final id = m['id']?.toString() ?? '';
-                      final uId = m['user_id']?.toString() ??
-                          m['user']?['id']?.toString();
-                      final live = activeMap[id] ??
-                          (uId != null ? activeMap[uId] : null);
-                      return (live != null ||
-                              _recentlyCheckedInIds.contains(id) ||
-                              (uId != null && _recentlyCheckedInIds.contains(uId))) &&
-                          !_recentlyCheckedOutIds.contains(id) &&
-                          !(uId != null && _recentlyCheckedOutIds.contains(uId));
-                    }).toList();
+                    final insideList = members.where((m) => _isMemberInside(m, activeMap)).toList();
 
                     final existingMemberIds = insideList.map((m) => m['id']?.toString() ?? '').toSet();
                     final existingUserIds = insideList.map((m) => m['user_id']?.toString() ?? m['user']?['id']?.toString() ?? '').toSet();
@@ -1111,6 +1178,7 @@ class _FacilityManualCheckinScreenState
                         String? checkInTime;
                         String? mType;
                         String? sId;
+                        String checkInMethod = 'manual';
 
                         if (item is LiveSessionMember) {
                           mId = item.memberId;
@@ -1120,6 +1188,7 @@ class _FacilityManualCheckinScreenState
                           checkInTime = item.checkInTime;
                           mType = item.membershipType;
                           sId = item.sessionId;
+                          checkInMethod = item.checkInMethod;
                         } else if (item is Map) {
                           final mapItem = Map<String, dynamic>.from(item);
                           mId = mapItem['member_id']?.toString() ?? mapItem['id']?.toString() ?? '';
@@ -1129,6 +1198,7 @@ class _FacilityManualCheckinScreenState
                           checkInTime = mapItem['check_in_time']?.toString();
                           mType = mapItem['membership_type']?.toString();
                           sId = mapItem['session_id']?.toString();
+                          checkInMethod = mapItem['check_in_method']?.toString() ?? 'manual';
                         }
 
                         if (_recentlyCheckedOutIds.contains(mId) || (uId.isNotEmpty && _recentlyCheckedOutIds.contains(uId))) {
@@ -1150,6 +1220,7 @@ class _FacilityManualCheckinScreenState
                             },
                             'membership_type': mType ?? 'Standard',
                             'check_in_time': checkInTime,
+                            'check_in_method': checkInMethod,
                           });
                         }
                       }
@@ -1357,7 +1428,12 @@ class _FacilityManualCheckinScreenState
                                                     ),
                                                   ),
                                                 ),
-                                              if (isCheckedIn)
+                                              if (isCheckedIn) ...[
+                                                CheckInMethodBadge(
+                                                  method: (liveSession?['check_in_method'] ?? member['check_in_method'])?.toString() ?? 'manual',
+                                                  compact: true,
+                                                ),
+                                                const SizedBox(width: 5),
                                                 InkWell(
                                                   onTap: isActionLoading
                                                       ? null
@@ -1409,8 +1485,8 @@ class _FacilityManualCheckinScreenState
                                                       ],
                                                     ),
                                                   ),
-                                                )
-                                              else
+                                                ),
+                                              ] else
                                                 InkWell(
                                                   onTap: isActionLoading
                                                       ? null
@@ -1467,14 +1543,19 @@ class _FacilityManualCheckinScreenState
                                         ],
                                       ),
                                       const SizedBox(height: 2),
-                                      Text(
-                                        '#$memberId • $planName ${userPhone.isNotEmpty ? "• $userPhone" : ""}',
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                      Builder(builder: (context) {
+                                        final displayCode = member['membership_number']?.toString().isNotEmpty == true
+                                            ? member['membership_number'].toString()
+                                            : memberId;
+                                        return Text(
+                                          '${displayCode.startsWith("#") ? displayCode : "#$displayCode"} • $planName ${userPhone.isNotEmpty ? "• $userPhone" : ""}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        );
+                                      }),
                                       if (endDate != null) ...[
                                         const SizedBox(height: 2),
                                         Text(

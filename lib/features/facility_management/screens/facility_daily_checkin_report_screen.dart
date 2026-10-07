@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/facility_model.dart';
 import '../../../data/models/facility_operations_models.dart';
 import '../../../data/repositories/client_facility_repository.dart';
+import '../../../shared/widgets/check_in_method_badge.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../widgets/facility_report_skeletons.dart';
 
@@ -276,9 +277,17 @@ class _FacilityDailyCheckinReportScreenState extends ConsumerState<FacilityDaily
                             ),
                             Expanded(
                               flex: 2,
-                              child: Text(
-                                rec.checkInTime,
-                                style: const TextStyle(fontSize: 11),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    rec.checkInTime,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  CheckInMethodBadge(method: rec.checkInMethod, compact: true),
+                                ],
                               ),
                             ),
                             Expanded(

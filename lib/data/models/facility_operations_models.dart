@@ -225,6 +225,7 @@ class LiveSessionMember {
     required this.checkInAt,
     required this.checkInTime,
     required this.elapsedMinutes,
+    this.checkInMethod = 'manual',
   });
 
   final String sessionId;
@@ -237,6 +238,7 @@ class LiveSessionMember {
   final String checkInAt;
   final String checkInTime;
   final int elapsedMinutes;
+  final String checkInMethod;
 
   factory LiveSessionMember.fromJson(Map<String, dynamic> json) {
     return LiveSessionMember(
@@ -250,6 +252,7 @@ class LiveSessionMember {
       checkInAt: json['check_in_at']?.toString() ?? '',
       checkInTime: json['check_in_time']?.toString() ?? '--',
       elapsedMinutes: (json['elapsed_minutes'] as num?)?.toInt() ?? 0,
+      checkInMethod: json['check_in_method']?.toString() ?? 'manual',
     );
   }
 }
@@ -266,6 +269,7 @@ class DailyCheckinRecord {
     required this.durationText,
     required this.durationMinutes,
     required this.isCurrentlyInside,
+    this.checkInMethod = 'manual',
   });
 
   final String sessionId;
@@ -278,6 +282,7 @@ class DailyCheckinRecord {
   final String durationText;
   final int durationMinutes;
   final bool isCurrentlyInside;
+  final String checkInMethod;
 
   factory DailyCheckinRecord.fromJson(Map<String, dynamic> json) {
     final durMinutes = (json['duration_minutes'] as num?)?.toInt() ?? 0;
@@ -298,6 +303,7 @@ class DailyCheckinRecord {
       durationText: durationText,
       durationMinutes: durMinutes,
       isCurrentlyInside: isInside,
+      checkInMethod: json['check_in_method']?.toString() ?? 'manual',
     );
   }
 }

@@ -200,6 +200,7 @@ class _CitizenManualCheckinQrModalState
           widget.facilityId,
           memberId: _scannedCode,
           allowOverride: true,
+          checkInMethod: 'qr_scan',
         );
         final already = res['already_checked_in'] == true;
         _actionTimestamp = DateTime.now();
