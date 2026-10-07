@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -107,7 +106,7 @@ class _FacilityBatchAttendanceScreenState extends ConsumerState<FacilityBatchAtt
     }).toList();
 
     try {
-      final res = await ref.read(clientFacilityRepositoryProvider).markBatchAttendance(
+      await ref.read(clientFacilityRepositoryProvider).markBatchAttendance(
             widget.kind,
             widget.facilityId,
             _selectedBatchId!,
@@ -143,7 +142,6 @@ class _FacilityBatchAttendanceScreenState extends ConsumerState<FacilityBatchAtt
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final primaryColor = widget.kind == FacilityKind.gym
         ? const Color(0xFF0D9488)
         : (widget.kind == FacilityKind.activity

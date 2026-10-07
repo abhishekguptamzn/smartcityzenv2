@@ -1000,7 +1000,7 @@ class _FacilityBatchDetailScreenState extends ConsumerState<FacilityBatchDetailS
     }
 
     try {
-      final res = await ref.read(clientFacilityRepositoryProvider).markBatchAttendance(
+      await ref.read(clientFacilityRepositoryProvider).markBatchAttendance(
             widget.kind,
             widget.facilityId,
             widget.batchId,
