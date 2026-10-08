@@ -28,16 +28,9 @@ class HomeSkeleton extends StatelessWidget {
               );
             }),
           ),
-          const SizedBox(height: 20),
-
-          // 2. Search bar skeleton
-          const SkeletonBox(
-            height: 48,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
           const SizedBox(height: 24),
 
-          // 3. Service Categories Section
+          // 2. Service Categories Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
@@ -49,12 +42,12 @@ class HomeSkeleton extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: 6,
+            itemCount: 8,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.0,
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.95,
             ),
             itemBuilder: (context, index) => const SkeletonCard(
               margin: EdgeInsets.zero,

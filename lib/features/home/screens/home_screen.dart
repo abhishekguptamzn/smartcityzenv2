@@ -25,32 +25,11 @@ import '../widgets/citizen_qr_modal.dart';
 /// NOTE: Role checks here (isClientUser, isOnboardingUser) are presentation-only
 /// toggles to show/hide relevant dashboard sections. All protected backend actions
 /// remain strictly enforced by Laravel Sanctum middleware and policies.
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _submitSearch(String value) {
-    if (value.trim().isEmpty) {
-      context.push('/services');
-      return;
-    }
-    context.push('/services?search=${Uri.encodeQueryComponent(value.trim())}');
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final user = ref.watch(authControllerProvider).value;
     final membershipsAsync = ref.watch(myMembershipSummariesProvider);
@@ -154,35 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(height: 16),
                 const _OnboardHubBanner(),
               ],
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onSubmitted: _submitSearch,
-                      decoration: InputDecoration(
-                        hintText: l10n.searchServicesHint,
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        filled: true,
-                        fillColor: scheme.surfaceContainerHighest.withValues(
-                          alpha: 0.5,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(999),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _SearchFilterButton(onTap: () => context.push('/services')),
-                ],
-              ),
+
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -283,30 +234,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 }
 
-class _SearchFilterButton extends StatelessWidget {
-  const _SearchFilterButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 56,
-          height: 56,
-          alignment: Alignment.center,
-          child: Icon(Icons.tune_rounded, color: scheme.onSurfaceVariant),
-        ),
-      ),
-    );
-  }
-}
 
 class _MyCitySection extends StatelessWidget {
   const _MyCitySection({required this.l10n});
@@ -863,13 +790,17 @@ class _ServiceGrid extends StatelessWidget {
         const Color(0xFFEC4899),
         () => context.push('/activities?category=arts-dance-music'),
       ),
-      (
-        Icons.explore_rounded,
-        l10n.more,
-        scheme.primary,
-        () => context.push('/services'),
-      ),
+      if (user?.isClientUser != true)
+        (
+          Icons.explore_rounded,
+          l10n.more,
+          scheme.primary,
+          () => context.push('/services'),
+        ),
     ];
+
+    // Ensure exactly 8 icons are displayed (2 rows of 4 on standard screens)
+    final displayItems = items.take(8).toList();
 
     final width = MediaQuery.sizeOf(context).width;
     final crossCount = width > 900 ? 8 : (width > 600 ? 6 : 4);
@@ -877,15 +808,15 @@ class _ServiceGrid extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
+      itemCount: displayItems.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossCount,
-        mainAxisSpacing: 16,
+        mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: width > 900 ? 0.95 : (width > 600 ? 0.9 : 0.8),
+        childAspectRatio: width > 900 ? 1.05 : (width > 600 ? 1.0 : 0.95),
       ),
       itemBuilder: (context, i) {
-        final (icon, label, accent, onTap) = items[i];
+        final (icon, label, accent, onTap) = displayItems[i];
         final enabled = onTap != null;
         return InkWell(
           borderRadius: BorderRadius.circular(999),
@@ -895,6 +826,7 @@ class _ServiceGrid extends StatelessWidget {
                   context,
                 ).showSnackBar(SnackBar(content: Text(l10n.comingSoon))),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 56,
@@ -913,7 +845,7 @@ class _ServiceGrid extends StatelessWidget {
                 ),
                 child: Icon(icon, color: accent, size: 26),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 label,
                 textAlign: TextAlign.center,
