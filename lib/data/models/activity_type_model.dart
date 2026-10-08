@@ -7,7 +7,7 @@ part 'activity_type_model.g.dart';
 abstract class ActivityTypeModel with _$ActivityTypeModel {
   const factory ActivityTypeModel({
     required String id,
-    @JsonKey(name: 'category_id') required String categoryId,
+    @JsonKey(name: 'category_id') @Default('') String categoryId,
     @JsonKey(name: 'category_name') String? categoryName,
     @JsonKey(name: 'category_slug') String? categorySlug,
     required String name,

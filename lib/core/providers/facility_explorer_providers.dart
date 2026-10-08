@@ -133,7 +133,9 @@ class FacilityExplorerList extends _$FacilityExplorerList {
     } else {
       // Activity Category / Academies
       final repo = ref.read(activitiesRepositoryProvider);
+      final isCatId = query.categoryId.startsWith('CAT');
       final res = await repo.list(
+        categoryId: isCatId ? query.categoryId : null,
         category: query.categoryId,
         typeId: (query.typeId != null && query.typeId != 'all') ? query.typeId : null,
         search: query.search?.trim().isEmpty == true ? null : query.search,

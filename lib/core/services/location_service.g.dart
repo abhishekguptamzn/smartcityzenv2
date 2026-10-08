@@ -89,4 +89,4 @@ final class CurrentUserCoordinatesProvider
 }
 
 String _$currentUserCoordinatesHash() =>
-    r'78d3798e1c1ff4c74f363717fd3c90131262f02c';
+    r'7fa56d38a965bc985ed767ba4c9e81afe39147b5';

@@ -219,7 +219,7 @@ return $default(_that.id,_that.categoryId,_that.categoryName,_that.categorySlug,
 @JsonSerializable()
 
 class _ActivityTypeModel implements ActivityTypeModel {
-  const _ActivityTypeModel({required this.id, @JsonKey(name: 'category_id') required this.categoryId, @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'category_slug') this.categorySlug, required this.name, required this.slug, this.description, this.icon, @JsonKey(name: 'sort_order') this.sortOrder = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'activities_count') this.activitiesCount = 0});
+  const _ActivityTypeModel({required this.id, @JsonKey(name: 'category_id') this.categoryId = '', @JsonKey(name: 'category_name') this.categoryName, @JsonKey(name: 'category_slug') this.categorySlug, required this.name, required this.slug, this.description, this.icon, @JsonKey(name: 'sort_order') this.sortOrder = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'activities_count') this.activitiesCount = 0});
   factory _ActivityTypeModel.fromJson(Map<String, dynamic> json) => _$ActivityTypeModelFromJson(json);
 
 @override final  String id;

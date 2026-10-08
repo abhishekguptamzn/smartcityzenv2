@@ -515,7 +515,7 @@ return $default(_that.id,_that.categoryId,_that.name,_that.slug,_that.icon,_that
 @JsonSerializable()
 
 class _ActivityTypeSummaryModel implements ActivityTypeSummaryModel {
-  const _ActivityTypeSummaryModel({required this.id, @JsonKey(name: 'category_id') required this.categoryId, required this.name, required this.slug, this.icon, @JsonKey(name: 'sort_order') this.sortOrder = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'activities_count') this.activitiesCount = 0});
+  const _ActivityTypeSummaryModel({required this.id, @JsonKey(name: 'category_id') this.categoryId = '', required this.name, required this.slug, this.icon, @JsonKey(name: 'sort_order') this.sortOrder = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'activities_count') this.activitiesCount = 0});
   factory _ActivityTypeSummaryModel.fromJson(Map<String, dynamic> json) => _$ActivityTypeSummaryModelFromJson(json);
 
 @override final  String id;

@@ -101,4 +101,4 @@ final class HealthDioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$healthDioHash() => r'67aff506a2a751b1a5eab33bf0afa1ede157a58a';
+String _$healthDioHash() => r'549fb21bde575d56495a73e9004b66052dc2a539';

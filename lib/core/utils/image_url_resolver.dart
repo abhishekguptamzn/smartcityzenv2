@@ -31,7 +31,11 @@ class ImageUrlResolver {
         trimmed == 'undefined' ||
         trimmed == 'none' ||
         trimmed == '[]' ||
-        trimmed == '{}') {
+        trimmed == '{}' ||
+        trimmed == 'storage/0' ||
+        trimmed == '/storage/0' ||
+        trimmed.endsWith('/0') ||
+        trimmed.endsWith('/storage/0')) {
       return null;
     }
 
@@ -96,6 +100,9 @@ class ImageUrlResolver {
       if (isLocalOrEmulatorHost || trimmed.contains('/storage/')) {
         // Rewrite to match the active API origin completely (scheme, host, and target port)
         final path = uri.path.startsWith('/') ? uri.path : '/${uri.path}';
+        if (path == '/0' || path == '/storage/0' || path.endsWith('/0')) {
+          return null;
+        }
         final query = uri.hasQuery ? '?${uri.query}' : '';
         return '$effectiveOrigin$path$query';
       }

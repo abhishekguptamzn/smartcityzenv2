@@ -48,7 +48,7 @@ _ActivityTypeSummaryModel _$ActivityTypeSummaryModelFromJson(
   Map<String, dynamic> json,
 ) => _ActivityTypeSummaryModel(
   id: json['id'] as String,
-  categoryId: json['category_id'] as String,
+  categoryId: json['category_id'] as String? ?? '',
   name: json['name'] as String,
   slug: json['slug'] as String,
   icon: json['icon'] as String?,

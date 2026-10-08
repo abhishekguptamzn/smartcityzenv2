@@ -9,7 +9,7 @@ part of 'activity_type_model.dart';
 _ActivityTypeModel _$ActivityTypeModelFromJson(Map<String, dynamic> json) =>
     _ActivityTypeModel(
       id: json['id'] as String,
-      categoryId: json['category_id'] as String,
+      categoryId: json['category_id'] as String? ?? '',
       categoryName: json['category_name'] as String?,
       categorySlug: json['category_slug'] as String?,
       name: json['name'] as String,

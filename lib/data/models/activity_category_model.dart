@@ -27,7 +27,7 @@ abstract class ActivityCategoryModel with _$ActivityCategoryModel {
 abstract class ActivityTypeSummaryModel with _$ActivityTypeSummaryModel {
   const factory ActivityTypeSummaryModel({
     required String id,
-    @JsonKey(name: 'category_id') required String categoryId,
+    @JsonKey(name: 'category_id') @Default('') String categoryId,
     required String name,
     required String slug,
     String? icon,

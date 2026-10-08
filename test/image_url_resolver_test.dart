@@ -11,6 +11,9 @@ void main() {
       expect(ImageUrlResolver.resolve('null'), isNull);
       expect(ImageUrlResolver.resolve('false'), isNull);
       expect(ImageUrlResolver.resolve('invalidstring'), isNull);
+      expect(ImageUrlResolver.resolve('storage/0'), isNull);
+      expect(ImageUrlResolver.resolve('/storage/0'), isNull);
+      expect(ImageUrlResolver.resolve('https://admin.smartct.online/storage/0'), isNull);
     });
 
     test('resolves relative storage paths using baseApiUrl', () {

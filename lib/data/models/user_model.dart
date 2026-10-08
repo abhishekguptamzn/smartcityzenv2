@@ -75,7 +75,7 @@ abstract class UserModel with _$UserModel {
     final url = photoUrl ?? avatar;
     if (url == null || url.trim().isEmpty) return null;
     final resolved = ImageUrlResolver.resolve(url);
-    if (resolved == null) return null;
+    if (resolved == null || resolved.endsWith('/0') || resolved.contains('/storage/0')) return null;
     if (updatedAt != null) {
       final sep = resolved.contains('?') ? '&' : '?';
       return '$resolved${sep}t=${updatedAt!.millisecondsSinceEpoch}';
