@@ -504,25 +504,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => _confirmLogout(context, ref),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // 7. App Version Footer
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                final version = snapshot.data?.version ?? '1.0.0';
-                return Center(
-                  child: Text(
-                    'Smart Cityzen v$version • Build 2026',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
-                    ),
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
