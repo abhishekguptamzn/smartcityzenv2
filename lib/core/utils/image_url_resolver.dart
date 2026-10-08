@@ -24,7 +24,20 @@ class ImageUrlResolver {
   static String? resolve(String? rawUrl, {String? baseApiUrl}) {
     if (rawUrl == null) return null;
     final trimmed = rawUrl.trim();
-    if (trimmed.isEmpty) return null;
+    if (trimmed.isEmpty ||
+        trimmed == '0' ||
+        trimmed == 'null' ||
+        trimmed == 'false' ||
+        trimmed == 'undefined' ||
+        trimmed == 'none' ||
+        trimmed == '[]' ||
+        trimmed == '{}') {
+      return null;
+    }
+
+    if (!trimmed.contains('/') && !trimmed.contains('.')) {
+      return null;
+    }
 
     final String activeBase =
         baseApiUrl ?? activeBaseUrl ?? AppConfig.platformDefaultBaseUrl();

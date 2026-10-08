@@ -3,10 +3,14 @@ import 'package:smartcityzenv2/core/utils/image_url_resolver.dart';
 
 void main() {
   group('ImageUrlResolver', () {
-    test('resolves null and empty strings to null', () {
+    test('resolves null, empty, 0, null, and non-path strings to null', () {
       expect(ImageUrlResolver.resolve(null), isNull);
       expect(ImageUrlResolver.resolve(''), isNull);
       expect(ImageUrlResolver.resolve('   '), isNull);
+      expect(ImageUrlResolver.resolve('0'), isNull);
+      expect(ImageUrlResolver.resolve('null'), isNull);
+      expect(ImageUrlResolver.resolve('false'), isNull);
+      expect(ImageUrlResolver.resolve('invalidstring'), isNull);
     });
 
     test('resolves relative storage paths using baseApiUrl', () {
