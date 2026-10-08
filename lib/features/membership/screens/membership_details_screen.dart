@@ -1072,9 +1072,53 @@ class _CheckInTab extends ConsumerWidget {
               final accent = isInside
                   ? const Color(0xFFF59E0B)
                   : const Color(0xFF10B981);
-              final checkInTime = r['check_in_time'] ?? '--';
-              final checkOutTime = r['check_out_time'] ?? '--';
-              final dateFormatted = r['date_formatted'] ?? r['date'] ?? 'Session';
+              final rawCheckIn = r['check_in_time_formatted'] ??
+                  r['check_in_time'] ??
+                  r['check_in_at'] ??
+                  r['check_in'];
+              final rawCheckOut = r['check_out_time_formatted'] ??
+                  r['check_out_time'] ??
+                  r['check_out_at'] ??
+                  r['check_out'];
+              final rawDate = r['date_formatted'] ??
+                  r['date'] ??
+                  r['check_in_at'] ??
+                  r['check_in'];
+
+              String formatTimeVal(dynamic val) {
+                if (val == null) return '--';
+                final s = val.toString().trim();
+                if (s.isEmpty || s == '--' || s == '—') return '--';
+                if (RegExp(r'^\d{1,2}:\d{2}(\s*[A-Za-z]{2})?$').hasMatch(s)) {
+                  return s;
+                }
+                try {
+                  final dt = DateTime.parse(s).toLocal();
+                  return DateFormat('h:mm a').format(dt);
+                } catch (_) {
+                  return s;
+                }
+              }
+
+              String formatDateVal(dynamic val) {
+                if (val == null) return 'Session';
+                final s = val.toString().trim();
+                if (s.isEmpty || s == 'Session') return 'Session';
+                if (RegExp(r'^[A-Za-z]{3},\s*\d{1,2}\s+[A-Za-z]{3}').hasMatch(s) ||
+                    RegExp(r'^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}').hasMatch(s)) {
+                  return s;
+                }
+                try {
+                  final dt = DateTime.parse(s).toLocal();
+                  return DateFormat('EEE, d MMM yyyy').format(dt);
+                } catch (_) {
+                  return s;
+                }
+              }
+
+              final checkInTime = formatTimeVal(rawCheckIn);
+              final checkOutTime = formatTimeVal(rawCheckOut);
+              final dateFormatted = formatDateVal(rawDate);
               final durText = r['duration_text'] ?? (isInside ? 'In Session' : (r['duration_minutes'] != null ? formatMinutes(r['duration_minutes']) : 'Recorded'));
 
               return Container(
