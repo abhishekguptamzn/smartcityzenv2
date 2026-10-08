@@ -24,15 +24,18 @@ class LocationService {
   static UserCoordinates? _cachedCoordinates;
 
   void _initFastLocation() {
-    Geolocator.getLastKnownPosition().then((last) {
-      if (last != null) {
-        _cachedCoordinates = UserCoordinates(
-          latitude: last.latitude,
-          longitude: last.longitude,
-          isExactGps: true,
-        );
-      }
-    }).catchError((_) {});
+    if (kIsWeb) return;
+    try {
+      Geolocator.getLastKnownPosition().then((last) {
+        if (last != null) {
+          _cachedCoordinates = UserCoordinates(
+            latitude: last.latitude,
+            longitude: last.longitude,
+            isExactGps: true,
+          );
+        }
+      }).catchError((_) {});
+    } catch (_) {}
   }
 
   UserCoordinates? get cachedCoordinates => _cachedCoordinates;
@@ -54,17 +57,19 @@ class LocationService {
         return _cachedCoordinates;
       }
 
-      // Fast path: Immediately check last known position from OS (returns in ~5ms)
-      try {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) {
-          _cachedCoordinates = UserCoordinates(
-            latitude: last.latitude,
-            longitude: last.longitude,
-            isExactGps: true,
-          );
-        }
-      } catch (_) {}
+      // Fast path: Immediately check last known position from OS (not supported on web)
+      if (!kIsWeb) {
+        try {
+          final last = await Geolocator.getLastKnownPosition();
+          if (last != null) {
+            _cachedCoordinates = UserCoordinates(
+              latitude: last.latitude,
+              longitude: last.longitude,
+              isExactGps: true,
+            );
+          }
+        } catch (_) {}
+      }
 
       // If we already have live coordinates, return them immediately and update in background
       if (_cachedCoordinates != null) {
@@ -155,6 +160,11 @@ LocationService locationService(Ref ref) {
 
 @Riverpod(keepAlive: true)
 Future<UserCoordinates?> currentUserCoordinates(Ref ref) async {
-  final service = ref.watch(locationServiceProvider);
-  return service.getCurrentLocation();
+  try {
+    final service = ref.watch(locationServiceProvider);
+    return await service.getCurrentLocation();
+  } catch (e) {
+    debugPrint('currentUserCoordinates error: $e');
+    return null;
+  }
 }

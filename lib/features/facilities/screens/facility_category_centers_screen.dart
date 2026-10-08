@@ -69,10 +69,14 @@ class _FacilityCategoryCentersScreenState
   }
 
   Future<void> _fetchGpsLocation() async {
-    final locationSvc = ref.read(locationServiceProvider);
-    final coords = await locationSvc.getCurrentLocation();
-    if (mounted && coords != null) {
-      setState(() => _userCoords = coords);
+    try {
+      final locationSvc = ref.read(locationServiceProvider);
+      final coords = await locationSvc.getCurrentLocation();
+      if (mounted && coords != null) {
+        setState(() => _userCoords = coords);
+      }
+    } catch (e) {
+      debugPrint('FacilityCategoryCentersScreen _fetchGpsLocation error: $e');
     }
   }
 
